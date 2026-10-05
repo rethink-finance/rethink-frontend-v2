@@ -50,6 +50,7 @@
 import {
   type IRawPermissionCodeEntry,
   parseRawPermissionCode,
+  retargetBuiltInRoleCalls,
 } from "~/composables/permissions/parseRawPermissionCode";
 import type { ChainId } from "~/types/enums/chain_id";
 
@@ -71,6 +72,11 @@ const props = defineProps<{
   baseToken?: string;
   /** The role the step is showing; queued calls naming another are tagged. */
   contextRole?: string;
+  /**
+   * The key of the role whose card this is (label or bytes32). Pasted calls
+   * naming a built-in role are rewritten for it; see retargetBuiltInRoleCalls.
+   */
+  roleKey?: string;
 }>();
 
 const emit = defineEmits<{
@@ -88,6 +94,7 @@ const addEntries = () => {
   let entries: IRawPermissionCodeEntry[];
   try {
     entries = parseRawPermissionCode(input.value);
+    if (props.roleKey) entries = retargetBuiltInRoleCalls(entries, props.roleKey);
   } catch (e: any) {
     // Keep the pasted text so the entry can be fixed in place.
     error.value = e.message;

@@ -54,6 +54,7 @@
             :roles-mod-address="rolesModAddress"
             :base-token="baseToken"
             :context-role="contextRole"
+            :role-key="roleKey"
             @update:model-value="(v) => emit('update:rawEntries', v)"
           />
         </div>
@@ -396,6 +397,8 @@ const props = defineProps<{
   baseToken?: string;
   /** The role the grants go to, as raw calls print it. */
   contextRole?: string;
+  /** That role's key (label or bytes32), which pasted raw calls are written for. */
+  roleKey?: string;
 }>();
 
 const emit = defineEmits<{

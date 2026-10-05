@@ -186,6 +186,14 @@ const revertPayload = (error: any): string | undefined => {
 };
 
 /**
+ * How long one RPC gets before the next is tried. An endpoint can stop
+ * answering heavy calls while still answering light ones (purroofgroup on
+ * HyperEVM, eth_estimateGas of a permissions batch, 2026-10-05), and a fetch
+ * has no deadline of its own.
+ */
+const RPC_REQUEST_TIMEOUT_MS = 10_000;
+
+/**
  * One JSON-RPC request over the chain's configured RPCs. Mirrors the fallback
  * pattern in services/onchain/delegates.ts: try each RPC until one answers,
  * and treat an execution revert as the answer.
@@ -205,6 +213,7 @@ const rpcRequest = async (
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+        signal: AbortSignal.timeout(RPC_REQUEST_TIMEOUT_MS),
       });
       const json = await response.json();
       if (!json.error) return { result: json.result };
@@ -475,6 +484,22 @@ export const estimateGasFrom = async (
     console.warn("Could not estimate gas for the call", error);
     return undefined;
   }
+};
+
+/**
+ * The gas limit for `from` sending `call` straight to a contract, worked out
+ * from the app's RPCs with the same headroom and block ceiling as a role
+ * execution (see gasLimit.ts). Undefined when it cannot be estimated, and the
+ * wallet then chooses, as it always did.
+ */
+export const planCallGas = async (
+  chainId: ChainId,
+  from: string,
+  call: IRoleCall,
+): Promise<IGasPlan | undefined> => {
+  const required = await estimateGasFrom(chainId, from, call);
+  if (required === undefined) return undefined;
+  return planGasLimit(required, await standardBlockGasLimit(chainId), TX_GAS_CAPS[chainId]);
 };
 
 const OWNER_SELECTOR = rolesIface.getFunction("owner")!.selector;

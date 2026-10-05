@@ -3,7 +3,17 @@
     <div class="queue__head">
       <span class="queue__title">{{ title }}</span>
       <span class="queue__summary">{{ summary }}</span>
-      <span class="queue__head_action"><slot name="head-action" /></span>
+      <span class="queue__head_action">
+        <button
+          type="button"
+          class="queue__copy"
+          :title="`Copy all ${entries.length} calls' calldata as a JSON array`"
+          @click="copyAll"
+        >
+          {{ copied === "all" ? "Copied" : "Copy as JSON" }}
+        </button>
+        <slot name="head-action" />
+      </span>
     </div>
 
     <!-- One block per contract: where the role is let in, and what it may
@@ -189,9 +199,57 @@
           >
             {{ notes[call.index].text }}
           </p>
+
+          <!-- The call as it is: the exact rule, argument by argument, and
+               the calldata that will be sent. -->
+          <div v-if="isRawOpen(call)" class="queue__raw">
+            <p class="queue__raw_call">
+              {{ entries[call.index]?.label }}
+            </p>
+            <template v-if="exactRule(call).length">
+              <p class="queue__raw_label">
+                Exact rule
+              </p>
+              <ul class="queue__raw_rule">
+                <li
+                  v-for="(line, i) in exactRule(call)"
+                  :key="i"
+                  :class="{ 'queue__raw_rule--muted': line.muted }"
+                  :style="line.depth ? { paddingLeft: `${line.depth}rem` } : undefined"
+                >
+                  {{ line.label ? `${line.label}: ${line.text}` : line.text }}
+                </li>
+              </ul>
+            </template>
+            <p v-if="call.description.executionOption" class="queue__raw_option">
+              Execution: {{ call.description.executionOption }}
+            </p>
+            <div class="queue__raw_head">
+              <span class="queue__raw_label">Calldata</span>
+              <button type="button" class="queue__copy" @click="copyOne(call)">
+                {{ copied === call.index ? "Copied" : "Copy" }}
+              </button>
+            </div>
+            <code class="queue__raw_code">{{ entries[call.index]?.data }}</code>
+          </div>
         </div>
 
-        <span class="queue__call" :title="`Roles modifier call: ${call.name}`">{{ call.name }}</span>
+        <button
+          type="button"
+          class="queue__call"
+          :aria-expanded="isRawOpen(call)"
+          :title="`${isRawOpen(call) ? 'Hide' : 'Show'} the raw ${call.name} call`"
+          @click="toggleRaw(call)"
+        >
+          {{ call.name }}
+          <Icon
+            class="queue__chevron"
+            :class="{ 'queue__chevron--open': isRawOpen(call) }"
+            icon="material-symbols:keyboard-arrow-down-rounded"
+            width="0.875rem"
+            height="0.875rem"
+          />
+        </button>
         <button
           v-if="!lockedSet.has(call.index)"
           type="button"
@@ -561,12 +619,14 @@ const limitsOf = (call: IQueuedCall): ILimitLine[] => {
     .filter((line, i) => !line.text.endsWith(":") || (tree[i + 1]?.depth ?? -1) > line.depth)
     .map((line): ILimitLine => {
       const label = line.label.replace(/ \((?:tuple|[a-z0-9[\]]+)[^)]*\)$/, "");
+      // A line without a label is a heading ("One of these 9 combinations:").
+      const lead = label ? `${label}: ` : "";
       const address = line.text.match(ADDRESS_AT_END)?.[1];
       if (!address) {
-        return { parts: [withRoleNames(`${label}: ${line.text}`)], depth: line.depth };
+        return { parts: [withRoleNames(`${lead}${line.text}`)], depth: line.depth };
       }
       return {
-        parts: [`${label}: ${line.text.replace(ADDRESS_AT_END, "").trimEnd()} `, { address }],
+        parts: [`${lead}${line.text.replace(ADDRESS_AT_END, "").trimEnd()} `, { address }],
         depth: line.depth,
       };
     });
@@ -630,6 +690,46 @@ const caution = (call: IQueuedCall): string => {
   return "";
 };
 
+/* ---- The raw call --------------------------------------------------------- */
+
+const rawOpen = ref<number[]>([]);
+const isRawOpen = (call: IQueuedCall) => rawOpen.value.includes(call.index);
+const toggleRaw = (call: IQueuedCall) => {
+  rawOpen.value = isRawOpen(call)
+    ? rawOpen.value.filter((index) => index !== call.index)
+    : [...rawOpen.value, call.index];
+};
+
+/**
+ * A scoped function's condition tree, every argument listed, the
+ * unrestricted ones too: the plain lines above say what matters, this is
+ * the whole rule.
+ */
+const exactRule = (call: IQueuedCall) => {
+  const { action, conditions } = call.description;
+  if (action !== "scope-function" && action !== "scope-parameter") return [];
+  return describeConditionTree(conditions, namedFunction(call)?.inputs).map((line) => ({
+    ...line,
+    text: withRoleNames(line.text),
+  }));
+};
+
+const copied = ref<number | "all" | null>(null);
+let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+const copy = async (text: string, what: number | "all") => {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    return;
+  }
+  copied.value = what;
+  clearTimeout(copiedTimer);
+  copiedTimer = setTimeout(() => (copied.value = null), 1500);
+};
+const copyOne = (call: IQueuedCall) => copy(props.entries[call.index]?.data ?? "", call.index);
+const copyAll = () =>
+  copy(JSON.stringify(props.entries.map((entry) => entry.data), null, 2), "all");
+
 const refillText = (call: IQueuedCall): string => {
   const allowance = call.description.allowance;
   if (!allowance || allowance.refill === "0") return "No refill: once spent, it is gone";
@@ -656,6 +756,9 @@ const refillText = (call: IQueuedCall): string => {
   }
 
   &__head_action {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     margin-left: auto;
   }
 
@@ -846,15 +949,117 @@ const refillText = (call: IQueuedCall): string => {
     color: $color-warning;
   }
 
-  /* The Roles function behind the row, for whoever is matching it against
-     the calldata they pasted. */
+  /* The Roles function behind the row; opens the raw call under it. */
   &__call {
-    padding-top: 0.1875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.1875rem 0 0;
+    border: none;
+    background: none;
     font-family: $font-mono;
     font-size: 10.5px;
     color: $color-steel-blue;
-    opacity: 0.75;
     white-space: nowrap;
+    cursor: pointer;
+    transition: color $default-transition-time ease;
+
+    &:hover,
+    &:focus-visible,
+    &[aria-expanded="true"] {
+      outline: none;
+      color: $color-white;
+    }
+  }
+
+  &__copy {
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color $default-transition-time ease;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      color: $color-white;
+    }
+  }
+
+  &__raw {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+  }
+
+  &__raw_call {
+    font-family: $font-mono;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: $color-white;
+    word-break: break-word;
+  }
+
+  &__raw_label {
+    font-family: $font-mono;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__raw_rule {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: $font-mono;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: $color-white;
+    word-break: break-word;
+
+    &--muted {
+      color: $color-steel-blue;
+    }
+  }
+
+  &__raw_option {
+    font-size: 12px;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  &__raw_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  &__raw_code {
+    display: block;
+    max-height: 7.5rem;
+    overflow: auto;
+    padding: 0.5rem 0.625rem;
+    border-radius: $default-border-radius;
+    background: $color-surface;
+    font-family: $font-mono;
+    font-size: 11px;
+    line-height: 1.5;
+    color: $color-steel-blue;
+    word-break: break-all;
+    user-select: all;
   }
 
   &__action {
@@ -885,7 +1090,9 @@ const refillText = (call: IQueuedCall): string => {
 
   @media (prefers-reduced-motion: reduce) {
     &__chevron,
-    &__action {
+    &__action,
+    &__call,
+    &__copy {
       transition: none;
     }
   }

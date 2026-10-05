@@ -339,7 +339,7 @@ const warnOfInnerRevert = async (chainId: ChainId, call: IRoleCall) => {
  * fact about the sender, not the transaction: big blocks (30M instead of 3M)
  * are an opt-in per address, and without it the transaction is never mined.
  */
-const warnIfOversized = (chainId: ChainId, plan: IGasPlan | undefined) => {
+export const warnIfOversized = (chainId: ChainId, plan: IGasPlan | undefined) => {
   if (!plan?.exceedsBlockLimit) return;
   const needed = plan.gas.toLocaleString("en-US");
   useToastStore().warningToast(

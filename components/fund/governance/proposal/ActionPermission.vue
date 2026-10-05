@@ -139,7 +139,7 @@
           :class="{ 'perm__condition--muted': line.muted }"
           :style="{ paddingLeft: `${line.depth * 1.125}rem` }"
         >
-          <span class="perm__condition_label">{{ line.label }}</span>
+          <span v-if="line.label" class="perm__condition_label">{{ line.label }}</span>
           <span class="perm__condition_text">
             {{ textBeforeAddress(line.text) }}
             <FundGovernanceProposalAddressChip

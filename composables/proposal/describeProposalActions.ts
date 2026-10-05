@@ -815,10 +815,59 @@ const describeNode = (
   });
 };
 
+const isCalldataMatch = (node: IConditionNode) =>
+  node.operator === RolesV2Operator.Matches &&
+  (node.paramType === RolesV2ParameterType.Calldata ||
+    node.paramType === RolesV2ParameterType.AbiEncoded);
+
+/**
+ * A node that is about the call's arguments as a whole: a calldata match, or
+ * an "all of" / "any of" group made only of such nodes.
+ */
+const isCalldataLevel = (node: IConditionNode): boolean =>
+  isCalldataMatch(node) ||
+  ((node.operator === RolesV2Operator.And || node.operator === RolesV2Operator.Or) &&
+    node.children.length > 0 &&
+    node.children.every(isCalldataLevel));
+
+/**
+ * Lines for a calldata-level node, with every argument under its own name:
+ * an "all of" group just adds up its matches' restrictions, and an "any of"
+ * group lists the combinations of which one must hold, each one numbered.
+ */
+const describeCalldata = (
+  node: IConditionNode,
+  depth: number,
+  inputs: ethers.ParamType[] | undefined,
+  lines: IConditionLine[],
+  hideUnrestricted = false,
+) => {
+  if (isCalldataMatch(node)) {
+    node.children.forEach((child, i) => {
+      const input = inputs?.[i];
+      const before = lines.length;
+      describeNode(child, depth, input?.name || `parameter ${i + 1}`, input, lines);
+      if (hideUnrestricted && lines.length === before + 1 && lines[before].muted) lines.pop();
+    });
+    return;
+  }
+  if (node.operator === RolesV2Operator.And) {
+    node.children.forEach((child) => describeCalldata(child, depth, inputs, lines, hideUnrestricted));
+    return;
+  }
+  lines.push({ depth, label: "", text: `One of these ${node.children.length} combinations:` });
+  node.children.forEach((child, i) => {
+    lines.push({ depth: depth + 1, label: "", text: `Combination ${i + 1}:` });
+    // A combination is what it pins; the arguments it leaves open are
+    // already listed above, once.
+    describeCalldata(child, depth + 2, inputs, lines, true);
+  });
+};
+
 /**
  * Flatten a Roles v2 condition tree into indented lines. The root describes
  * the calldata itself, so its children are the function's parameters and get
- * named after them when the ABI is known.
+ * named after them when the ABI is known. A line with no label is a heading.
  */
 export const describeConditionTree = (
   root: IConditionNode | undefined,
@@ -826,14 +875,8 @@ export const describeConditionTree = (
 ): IConditionLine[] => {
   const lines: IConditionLine[] = [];
   if (!root) return lines;
-  const rootIsCalldata =
-    root.paramType === RolesV2ParameterType.Calldata ||
-    root.paramType === RolesV2ParameterType.AbiEncoded;
-  if (rootIsCalldata && root.operator === RolesV2Operator.Matches) {
-    root.children.forEach((child, i) => {
-      const input = inputs?.[i];
-      describeNode(child, 0, input?.name || `parameter ${i + 1}`, input, lines);
-    });
+  if (isCalldataLevel(root)) {
+    describeCalldata(root, 0, inputs, lines);
     return lines;
   }
   describeNode(root, 0, "calldata", undefined, lines);

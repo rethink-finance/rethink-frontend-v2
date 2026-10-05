@@ -1,6 +1,7 @@
 import {
   DEFAULT_ROLE_KEY,
   DEFAULT_ROLE_KEY_V2,
+  isExecutorRoleKey,
   toRoleKeyBytes32,
 } from "~/composables/nav/generateNAVPermission";
 import { RolesVersion } from "~/types/enums/roles_version";
@@ -30,6 +31,11 @@ export const pickManagerRole = (
   if (held.includes(preferred.toLowerCase())) {
     return { role: preferred, assumed: false };
   }
+  // A V2 vault's executor may hold the key under its other spelling.
+  const executor = version === RolesVersion.V2
+    ? managerRoles.find((r) => isExecutorRoleKey(r))
+    : undefined;
+  if (executor) return { role: executor, assumed: false };
   if (managerRoles.length) return { role: managerRoles[0], assumed: false };
   return { role: preferred, assumed: true };
 };
