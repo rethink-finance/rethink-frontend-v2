@@ -34,7 +34,8 @@
 
     <!-- The design puts the execution status first on this screen, so the
          console follows it rather than sitting above the page's own header. -->
-    <ExecutionCrtConsole v-if="isCrtVault" />
+    <ExecutionCrtV2Console v-if="isCrtV2Vault" />
+    <ExecutionCrtConsole v-else-if="isCrtVault" />
     <ExecutionDocConsole v-else-if="isDocVault" />
     <ExecutionSciEthConsole v-else-if="isSciEthVault" />
 
@@ -264,6 +265,7 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useContractAddresses } from "~/composables/useContractAddresses";
+import { CRT_V2_ADDR } from "~/composables/execution/crtV2Vault";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
@@ -288,6 +290,13 @@ const isCrtVault = computed(
     (fundStore.fund?.address || "").toLowerCase() === CRT_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x3e7",
 );
+// The second CarrotFunding Vault runs on Roles v2 with an admin role beside
+// the executor; its console splits the two and proposes to the admin Safe.
+const isCrtV2Vault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === CRT_V2_ADDR.fund.toLowerCase() &&
+    fundStore.selectedFundChain === "0x3e7",
+);
 // DoC Treasury Protection runs a Roles v1 whitelist of its own — 1inch swaps
 // between six assets and Aave DAI — so it gets its own console rather than
 // being driven through the raw-transaction box below.
@@ -306,7 +315,7 @@ const isSciEthVault = computed(
     (fundStore.fund?.address || "").toLowerCase() === SCIETH_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x1",
 );
-const hasGuidedConsole = computed(() => isCrtVault.value || isDocVault.value || isSciEthVault.value);
+const hasGuidedConsole = computed(() => isCrtV2Vault.value || isCrtVault.value || isDocVault.value || isSciEthVault.value);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
