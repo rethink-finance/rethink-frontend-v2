@@ -2,7 +2,11 @@ import { ethers } from "ethers";
 import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 import { crtPackMultiSend } from "~/composables/execution/crtConsole";
 import {
+  ACROSS_TRANCHES_USDC,
   ARBITRUM_CHAIN_ID,
+  acrossMaxRelayerShare,
+  acrossMinOutput,
+  splitIntoAcrossTranches,
   CRT_V2_ADDR,
   CRT_V2_AGENT_MAX_DAYS,
   CRT_V2_AGENT_MIN_DAYS,
@@ -16,6 +20,7 @@ import {
 } from "~/composables/execution/crtV2Vault";
 import {
   CRT_V2_IFACES,
+  buildCrtV2AdminAcrossFix,
   buildCrtV2AdminRawPermissions,
   buildCrtV2ExecutorRawPermissions,
   crtV2RawPermissionsJson,
@@ -390,6 +395,77 @@ export async function crtV2AcrossQuote(inputAmount: bigint): Promise<CrtV2Across
   };
 }
 
+/**
+ * How many tranche deposits one admin Safe transaction carries. Each costs
+ * about 0.5M gas (the SpokePool ~0.14M, the tranche whitelist ~0.36–0.41M,
+ * measured 2026-10-05), and a standard HyperEVM block holds 3M: four
+ * deposits, their approve and a remainder transfer stay near 2.4M.
+ */
+export const ACROSS_DEPOSITS_PER_SAFE_TX = 4;
+
+export interface CrtV2AcrossDeposit {
+  inputAmount: bigint;
+  outputAmount: bigint;
+  /** What Across quoted for this size right now. */
+  fee: bigint;
+  /** The most the whitelist lets this size leave to its relayer. */
+  maxShare: bigint;
+  /** Across currently charges more than the whitelist allows: the deposit would not be filled and returns to the Safe after its deadline. */
+  feeTooHigh: boolean;
+}
+export interface CrtV2AcrossPlan {
+  deposits: CrtV2AcrossDeposit[];
+  /** Deposits per admin Safe transaction, in order. */
+  groups: CrtV2AcrossDeposit[][];
+  /** Below the smallest tranche: paid to the payout wallet on HyperEVM instead. */
+  remainder: bigint;
+  bridged: bigint;
+  minReceived: bigint;
+  maxDeposit: bigint;
+  estimatedFillTimeSec: number;
+}
+/**
+ * An Arbitrum payout as the whitelist allows it: the amount split into the
+ * tranche sizes, each quoted, each given the output Across needs (twice the
+ * quoted fee, at least 0.25 USDC) but never below the whitelisted floor, and
+ * the deposits grouped into admin Safe transactions.
+ */
+export async function crtV2PlanAcrossPayout(amount: bigint): Promise<CrtV2AcrossPlan> {
+  const { tranches, remainder } = splitIntoAcrossTranches(amount);
+  const sizes = [...new Set(tranches.map(String))].map(BigInt);
+  const quotes = new Map<string, CrtV2AcrossQuote>();
+  await Promise.all(sizes.map(async (size) => { quotes.set(String(size), await crtV2AcrossQuote(size)); }));
+  const deposits = tranches.map((inputAmount): CrtV2AcrossDeposit => {
+    const q = quotes.get(String(inputAmount))!;
+    const maxShare = acrossMaxRelayerShare(inputAmount);
+    const reserve = q.reserve < maxShare ? q.reserve : maxShare;
+    return { inputAmount, outputAmount: inputAmount - reserve, fee: q.fee, maxShare, feeTooHigh: q.fee > maxShare };
+  });
+  const groups: CrtV2AcrossDeposit[][] = [];
+  for (let i = 0; i < deposits.length; i += ACROSS_DEPOSITS_PER_SAFE_TX) groups.push(deposits.slice(i, i + ACROSS_DEPOSITS_PER_SAFE_TX));
+  const anyQuote = quotes.values().next().value as CrtV2AcrossQuote | undefined;
+  return {
+    deposits,
+    groups,
+    remainder,
+    bridged: amount - remainder,
+    minReceived: deposits.reduce((sum, d) => sum + d.outputAmount, 0n),
+    maxDeposit: anyQuote?.maxDeposit ?? 0n,
+    estimatedFillTimeSec: Math.max(0, ...[...quotes.values()].map((q) => q.estimatedFillTimeSec)),
+  };
+}
+/** The split alone, for the hint under the amount field (no quotes). */
+export const crtV2DescribeAcrossSplit = (amount: bigint): string => {
+  const { tranches, remainder } = splitIntoAcrossTranches(amount);
+  if (!tranches.length) return `Across takes ${ACROSS_TRANCHES_USDC[ACROSS_TRANCHES_USDC.length - 1].toLocaleString("en-US")} USDC or more; pay smaller amounts on HyperEVM.`;
+  const counts = new Map<string, number>();
+  for (const t of tranches) counts.set(fmt6(t, 0), (counts.get(fmt6(t, 0)) ?? 0) + 1);
+  const parts = [...counts].map(([size, n]) => (n > 1 ? `${n} × ${size}` : size)).join(" + ");
+  const txs = Math.ceil(tranches.length / ACROSS_DEPOSITS_PER_SAFE_TX);
+  return `Across: ${parts} USDC (${tranches.length} deposit${tranches.length === 1 ? "" : "s"}, ${txs} Safe transaction${txs === 1 ? "" : "s"})` +
+    (remainder > 0n ? ` · ${fmt6(remainder)} USDC paid on HyperEVM` : "");
+};
+
 /** The admin Safe as the chain has it: who may sign, how many must, and its nonce. */
 export async function crtV2GetAdminSafe() {
   const [ownersHex, thresholdHex, nonceHex] = await Promise.all([
@@ -461,6 +537,8 @@ export interface CrtV2Readiness {
   /** ready: whitelisted and runnable · soft: whitelisted, the target itself refused · missing: not whitelisted · activation: whitelisted, waits for the activation proposal · unknown: no answer. */
   state: "ready" | "soft" | "missing" | "activation" | "unknown";
   detail: string;
+  /** A missing row that one specific raw call fixes (see crtV2RawPermissions). */
+  fix?: string;
 }
 /**
  * One dry run per thing the console does, from the address that will do it.
@@ -469,7 +547,7 @@ export interface CrtV2Readiness {
  * on the day it is deployed, with no money in it yet.
  */
 export function crtV2Readiness(): Promise<CrtV2Readiness[]> {
-  const probes: { role: CrtV2Role; label: string; inner: CrtV2Inner; from: string; gate?: boolean }[] = [
+  const probes: { role: CrtV2Role; label: string; inner: CrtV2Inner; from: string; gate?: boolean; mustDeny?: string }[] = [
     { role: "executor", label: "Spot ↔ perp (any amount)", inner: crtV2Inner.usdClassTransfer("1", true), from: A.executor },
     { role: "executor", label: "Core → EVM (any amount)", inner: crtV2Inner.sendAssetToEvm("1"), from: A.executor },
     { role: "executor", label: "EVM → Core · approve", inner: crtV2Inner.approve(A.cdw, "CoreDepositWallet", "1"), from: A.executor },
@@ -478,13 +556,21 @@ export function crtV2Readiness(): Promise<CrtV2Readiness[]> {
     { role: "executor", label: "HyperLend supply / withdraw", inner: crtV2Inner.poolSupply("1"), from: A.executor },
     { role: "admin", label: "Payout on HyperEVM", inner: crtV2Inner.payout("1"), from: A.adminSafe },
     { role: "admin", label: "Payout to Arbitrum · approve", inner: crtV2Inner.approve(A.spokePool, "Across SpokePool", "1"), from: A.adminSafe },
-    { role: "admin", label: "Payout to Arbitrum · Across deposit", inner: crtV2Inner.acrossDeposit("1", 500000n), from: A.adminSafe },
+    { role: "admin", label: "Payout to Arbitrum · Across deposit", inner: crtV2Inner.acrossDeposit("100", acrossMinOutput(usdc6("100"))), from: A.adminSafe },
+    // Asked the other way round: a deposit that leaves almost all its value
+    // to the relayer must be REFUSED. The scope stored on 2026-10-05 lets it
+    // through; the Across fix closes it.
+    { role: "admin", label: "Across: relayer share capped", inner: crtV2Inner.acrossDeposit("50000", 0n), from: A.adminSafe, mustDeny: "acrossFix" },
     { role: "admin", label: "API trader registration / removal", inner: crtV2Inner.registerAgent(A.payout, CRT_V2.AGENT.maxDays), from: A.adminSafe },
     { role: "admin", label: "Executor members · transfer admin", inner: crtV2Inner.assignRole(A.executor, "executor", true), from: A.adminSafe, gate: true },
   ];
   return Promise.all(probes.map(async (p): Promise<CrtV2Readiness> => {
     try {
       const sim = await crtV2Simulate(crtV2Wrap(p.inner, p.role), p.from);
+      if (p.mustDeny) {
+        if (sim.denied) return { role: p.role, label: p.label, state: "ready", detail: "enforced · a deposit that leaves its value to the relayer is refused" };
+        if (sim.ok || sim.soft) return { role: p.role, label: p.label, state: "missing", detail: "NOT enforced · the stored Across scope lets a deposit's value go to the relayer instead of the payout wallet. Apply the Across fix.", fix: p.mustDeny };
+      }
       if (sim.ok) return { role: p.role, label: p.label, state: "ready", detail: "whitelisted" };
       if (sim.soft) return { role: p.role, label: p.label, state: p.gate ? "activation" : "soft", detail: p.gate ? "whitelisted · the modifier still answers to the factory or governor, so this runs after the activation proposal" : "whitelisted · the target refused the 1 USDC dry run (balance or allowance)" };
       if (sim.noMembership) return { role: p.role, label: p.label, state: "missing", detail: `${shortAddr(p.from)} does not hold the ${p.role} role` };
@@ -499,6 +585,7 @@ export function crtV2Readiness(): Promise<CrtV2Readiness[]> {
 /** The raw permissions each role is still owed, for the console to hand out. */
 export const crtV2RawPermissions = () => ({
   admin: { entries: buildCrtV2AdminRawPermissions(), json: crtV2RawPermissionsJson(buildCrtV2AdminRawPermissions()) },
+  acrossFix: { entries: buildCrtV2AdminAcrossFix(), json: crtV2RawPermissionsJson(buildCrtV2AdminAcrossFix()) },
   executor: { entries: buildCrtV2ExecutorRawPermissions(), json: crtV2RawPermissionsJson(buildCrtV2ExecutorRawPermissions()) },
 });
 

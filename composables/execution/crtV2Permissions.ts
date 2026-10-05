@@ -7,11 +7,13 @@ import {
   type IRolesV2ConditionFlat,
 } from "~/composables/permissions/rolesV2Permissions";
 import {
+  ACROSS_TRANCHES_USDC,
   ARBITRUM_CHAIN_ID,
   CRT_V2_ADDR,
   CRT_V2_ROLE_KEYS,
   HYPERCORE_ACTION,
   SEND_ASSET_PINNED_BYTES,
+  acrossMinOutput,
   encodeSendUsdcToEvm,
   hypercoreHeader,
   type CrtV2Role,
@@ -36,7 +38,10 @@ import {
  *  - payouts: USDC.transfer to the payout wallet, any amount;
  *  - payouts to Arbitrum: USDC.approve to the Across SpokePool and
  *    depositV3Now with depositor, recipient, both tokens, destination chain
- *    and message pinned, amounts and fill window open;
+ *    and message pinned, no exclusive relayer, the input one of the fixed
+ *    tranche sizes and the output at least that size less the capped
+ *    relayer share (see ACROSS_TRANCHES_USDC) — so nothing but the payout
+ *    wallet, and a bounded relayer fee, can be paid out of a deposit;
  *  - HyperCore API wallets: CoreWriter.sendRawAction limited to addApiWallet,
  *    with the agent address and the name (which carries the expiry) open —
  *    a trader can be rotated or re-registered for 14 to 180 days without a
@@ -132,6 +137,10 @@ const equalTo = (type: string, value: unknown): IConditionNode =>
     RolesV2Operator.EqualTo,
     coder.encode([type], [value]),
   );
+
+/** A uint above `floor` (strictly). */
+const greaterThan = (type: string, floor: bigint): IConditionNode =>
+  leaf(RolesV2ParameterType.Static, RolesV2Operator.GreaterThan, coder.encode([type], [floor]));
 
 const logical = (
   operator: RolesV2Operator.And | RolesV2Operator.Or,
@@ -237,7 +246,7 @@ const scopeTarget = (role: CrtV2Role, target: string, label: string): ICrtV2Perm
   data: rolesIface.encodeFunctionData("scopeTarget", [CRT_V2_ROLE_KEYS[role], target]),
 });
 
-const scopeFunction = (
+export const crtV2ScopeFunction = (
   role: CrtV2Role,
   target: string,
   functionSelector: string,
@@ -281,32 +290,67 @@ export const executorCoreWriterCondition = (): IConditionNode =>
 export const adminCoreWriterCondition = (): IConditionNode =>
   calldataMatches([hypercoreActionIs(HYPERCORE_ACTION.addApiWallet)]);
 
-/** The Across deposit as the admin may make it: only the amounts, relayer and fill window are open. */
-export const adminAcrossDepositCondition = (): IConditionNode =>
+/**
+ * Everything about an Across deposit that decides where the money goes,
+ * pinned once: depositor = the vault Safe (refunds come back to it),
+ * recipient = the payout wallet, USDC → USDC, Arbitrum, no exclusive
+ * relayer and no exclusivity window, no message. The two amounts are left to
+ * the tranche branches and the fill window is open (the SpokePool caps it).
+ */
+export const adminAcrossPinnedFields = (): IConditionNode =>
   calldataMatches([
-    equalTo("address", A.safe), // depositor: refunds come back to the Safe
+    equalTo("address", A.safe), // depositor
     equalTo("address", A.payout), // recipient
     equalTo("address", A.usdc), // inputToken
     equalTo("address", A.arbUsdc), // outputToken
-    open(), // inputAmount
-    open(), // outputAmount
+    open(), // inputAmount: a tranche branch decides
+    open(), // outputAmount: a tranche branch decides
     equalTo("uint256", ARBITRUM_CHAIN_ID), // destinationChainId
-    open(), // exclusiveRelayer
+    equalTo("address", ethers.ZeroAddress), // exclusiveRelayer: none
     open(), // fillDeadlineOffset
-    open(), // exclusivityPeriod
+    equalTo("uint32", 0), // exclusivityPeriod: none
     equalTo("bytes", "0x"), // message: a plain transfer, no call on arrival
+  ]);
+
+/** One tranche: the input exactly `inputAmount`, the output no lower than acrossMinOutput of it. */
+export const adminAcrossTrancheCondition = (inputAmount: bigint): IConditionNode =>
+  calldataMatches([
+    open(), open(), open(), open(),
+    equalTo("uint256", inputAmount),
+    greaterThan("uint256", acrossMinOutput(inputAmount) - 1n),
+    open(), open(), open(), open(),
+    open(RolesV2ParameterType.Dynamic),
+  ]);
+
+/**
+ * The Across deposit as the admin may make it: the pinned fields AND one of
+ * the tranche sizes with its own output floor. Roles v2 cannot relate two
+ * parameters, so the pairing is spelt out per size; an amount outside the
+ * list, an output under its floor or a named relayer matches nothing. The
+ * pinned fields sit in one branch rather than in every tranche, which keeps
+ * the stored condition small enough to save in a regular HyperEVM block.
+ */
+export const adminAcrossDepositCondition = (
+  tranchesUsdc: readonly number[] = ACROSS_TRANCHES_USDC,
+): IConditionNode =>
+  logical(RolesV2Operator.And, [
+    adminAcrossPinnedFields(),
+    logical(
+      RolesV2Operator.Or,
+      tranchesUsdc.map((usdc) => adminAcrossTrancheCondition(BigInt(usdc) * 1000000n)),
+    ),
   ]);
 
 export const buildCrtV2AdminRawPermissions = (): ICrtV2PermissionEntry[] => [
   scopeTarget("admin", A.usdc, "USDC: scoped target"),
-  scopeFunction(
+  crtV2ScopeFunction(
     "admin",
     A.usdc,
     CRT_V2_SELECTORS.transfer,
     calldataMatches([equalTo("address", A.payout), open()]),
     "USDC.transfer: to the payout wallet only, any amount",
   ),
-  scopeFunction(
+  crtV2ScopeFunction(
     "admin",
     A.usdc,
     CRT_V2_SELECTORS.approve,
@@ -314,15 +358,15 @@ export const buildCrtV2AdminRawPermissions = (): ICrtV2PermissionEntry[] => [
     "USDC.approve: the Across SpokePool only, any amount",
   ),
   scopeTarget("admin", A.spokePool, "Across SpokePool: scoped target"),
-  scopeFunction(
+  crtV2ScopeFunction(
     "admin",
     A.spokePool,
     CRT_V2_SELECTORS.depositV3Now,
     adminAcrossDepositCondition(),
-    "Across depositV3Now: Safe → payout wallet on Arbitrum, USDC → USDC, amounts and fill window open",
+    "Across depositV3Now: Safe → payout wallet on Arbitrum, USDC → USDC, tranche sizes 100–50,000 with the relayer's share capped at 0.25 USDC + 0.05 %, no exclusive relayer",
   ),
   scopeTarget("admin", A.coreWriter, "CoreWriter: scoped target"),
-  scopeFunction(
+  crtV2ScopeFunction(
     "admin",
     A.coreWriter,
     CRT_V2_SELECTORS.sendRawAction,
@@ -331,9 +375,19 @@ export const buildCrtV2AdminRawPermissions = (): ICrtV2PermissionEntry[] => [
   ),
 ];
 
+/**
+ * The one call that replaces the Across scope stored on 2026-10-05
+ * (0x6e253968…f96b), whose free outputAmount and exclusive relayer let a
+ * deposit's value go to a relayer instead of the payout wallet. A
+ * scopeFunction overwrites the stored conditions for the same role, target
+ * and selector, so this entry alone is the fix.
+ */
+export const buildCrtV2AdminAcrossFix = (): ICrtV2PermissionEntry[] =>
+  buildCrtV2AdminRawPermissions().filter((entry) => entry.label.startsWith("Across depositV3Now"));
+
 export const buildCrtV2ExecutorRawPermissions = (): ICrtV2PermissionEntry[] => [
   scopeTarget("executor", A.usdc, "USDC: scoped target"),
-  scopeFunction(
+  crtV2ScopeFunction(
     "executor",
     A.usdc,
     CRT_V2_SELECTORS.approve,
@@ -348,7 +402,7 @@ export const buildCrtV2ExecutorRawPermissions = (): ICrtV2PermissionEntry[] => [
     "USDC.approve: CoreDepositWallet, Felix or HyperLend only, any amount",
   ),
   scopeTarget("executor", A.cdw, "CoreDepositWallet: scoped target"),
-  scopeFunction(
+  crtV2ScopeFunction(
     "executor",
     A.cdw,
     CRT_V2_SELECTORS.depositFor,
@@ -356,7 +410,7 @@ export const buildCrtV2ExecutorRawPermissions = (): ICrtV2PermissionEntry[] => [
     "CoreDepositWallet.depositFor: EVM → the Safe's own HyperCore account, any amount",
   ),
   scopeTarget("executor", A.coreWriter, "CoreWriter: scoped target"),
-  scopeFunction(
+  crtV2ScopeFunction(
     "executor",
     A.coreWriter,
     CRT_V2_SELECTORS.sendRawAction,
@@ -364,21 +418,21 @@ export const buildCrtV2ExecutorRawPermissions = (): ICrtV2PermissionEntry[] => [
     "CoreWriter.sendRawAction: usdClassTransfer (spot ↔ perp, any amount) or sendAsset USDC Core spot → the Safe's EVM balance (any amount)",
   ),
   scopeTarget("executor", A.felix, "Felix feUSDC: scoped target"),
-  scopeFunction(
+  crtV2ScopeFunction(
     "executor",
     A.felix,
     CRT_V2_SELECTORS.felixDeposit,
     calldataMatches([open(), equalTo("address", A.safe)]),
     "Felix.deposit: any amount, shares to the Safe",
   ),
-  scopeFunction(
+  crtV2ScopeFunction(
     "executor",
     A.felix,
     CRT_V2_SELECTORS.felixWithdraw,
     calldataMatches([open(), equalTo("address", A.safe), equalTo("address", A.safe)]),
     "Felix.withdraw: any amount, from and to the Safe",
   ),
-  scopeFunction(
+  crtV2ScopeFunction(
     "executor",
     A.felix,
     CRT_V2_SELECTORS.felixRedeem,
@@ -386,14 +440,14 @@ export const buildCrtV2ExecutorRawPermissions = (): ICrtV2PermissionEntry[] => [
     "Felix.redeem: any share amount, from and to the Safe",
   ),
   scopeTarget("executor", A.pool, "HyperLend pool: scoped target"),
-  scopeFunction(
+  crtV2ScopeFunction(
     "executor",
     A.pool,
     CRT_V2_SELECTORS.poolSupply,
     calldataMatches([equalTo("address", A.usdc), open(), equalTo("address", A.safe), open()]),
     "HyperLend.supply: USDC, any amount, on behalf of the Safe",
   ),
-  scopeFunction(
+  crtV2ScopeFunction(
     "executor",
     A.pool,
     CRT_V2_SELECTORS.poolWithdraw,

@@ -145,3 +145,44 @@ export const CRT_V2_AGENT_NAME = "carrot";
 /** HyperCore's bounds on a named agent's validity, in days. */
 export const CRT_V2_AGENT_MIN_DAYS = 14;
 export const CRT_V2_AGENT_MAX_DAYS = 180;
+
+/**
+ * Across payouts go out in these deposit sizes only (USDC), largest first
+ * when an amount is split. Across keeps `inputAmount − outputAmount` for the
+ * relayer that fills, and Roles v2 cannot compare two parameters, so a free
+ * amount pair would let whoever holds the admin role set outputAmount to
+ * zero and have a relayer of its choosing keep the deposit. Fixing the
+ * input to a known size is what lets each one carry a fixed floor on its
+ * output.
+ *
+ * Nine sizes because every size costs about 190k gas to store: nine keep
+ * the scope near 2.1M gas, so a Permissions-step save that carries it (plus
+ * the step's own switches, ~0.5M) still fits a standard 3M HyperEVM block
+ * without big blocks. What is left below 100 USDC is paid on HyperEVM.
+ */
+export const ACROSS_TRANCHES_USDC = [50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100] as const;
+
+/**
+ * The most one deposit of `inputAmount` (USDC in 1e6) may leave to its
+ * relayer: 0.25 USDC + 0.05 %. Across charged about 0.01 USDC + 0.01 % on
+ * this route on 2026-10-05, so this is five times that with a floor; a
+ * deposit whose fee outgrows it is simply not filled and comes back to the
+ * vault Safe after its fill deadline.
+ */
+export const acrossMaxRelayerShare = (inputAmount: bigint): bigint => 250000n + (inputAmount * 5n) / 10000n;
+/** The smallest outputAmount the whitelist accepts for a deposit of `inputAmount`. */
+export const acrossMinOutput = (inputAmount: bigint): bigint => inputAmount - acrossMaxRelayerShare(inputAmount);
+
+/** `amount` (USDC in 1e6) as tranche deposits, largest first, and what is left below the smallest. */
+export const splitIntoAcrossTranches = (amount: bigint): { tranches: bigint[]; remainder: bigint } => {
+  const tranches: bigint[] = [];
+  let left = amount;
+  for (const usdc of ACROSS_TRANCHES_USDC) {
+    const size = BigInt(usdc) * 1000000n;
+    while (left >= size) {
+      tranches.push(size);
+      left -= size;
+    }
+  }
+  return { tranches, remainder: left };
+};

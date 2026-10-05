@@ -12,14 +12,17 @@
  * Run with:  npm run test:crt-v2-acceptance
  * (reads the code blobs from HyperEVM; override with CRT_V2_ACCEPTANCE_RPC)
  */
+import { readFileSync } from "fs";
 import { VM } from "@ethereumjs/vm";
 import { Common, Hardfork } from "@ethereumjs/common";
 import { Address, bytesToHex, hexToBytes } from "@ethereumjs/util";
 import { ethers } from "ethers";
 import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 import {
+  ACROSS_TRANCHES_USDC,
   ARBITRUM_CHAIN_ID,
   CRT_V2_ADDR,
+  acrossMinOutput,
   CRT_V2_ROLE_KEYS,
   SPOT_DEX,
   encodeAddApiWallet,
@@ -30,6 +33,7 @@ import {
 } from "~/composables/execution/crtV2Vault";
 import {
   CRT_V2_IFACES,
+  buildCrtV2AdminAcrossFix,
   buildCrtV2AdminRawPermissions,
   buildCrtV2ExecutorRawPermissions,
 } from "~/composables/execution/crtV2Permissions";
@@ -137,8 +141,27 @@ const SCENARIOS: Scenario[] = [
   ["admin: approve the payout wallet", "admin", ADMIN_KEY, A.usdc, IF.erc20.encodeFunctionData("approve", [A.payout, usdc("1")]), false],
   ["admin: approve Felix (venues are the executor's)", "admin", ADMIN_KEY, A.usdc, IF.erc20.encodeFunctionData("approve", [A.felix, usdc("1")]), false],
   ["admin: Across deposit as pinned", "admin", ADMIN_KEY, A.spokePool, across(), true],
-  ["admin: Across deposit, other amounts and a 6 h window", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("1"), outputAmount: 0n, fillDeadlineOffset: 21600 }), true],
-  ["admin: Across deposit with an exclusive relayer", "admin", ADMIN_KEY, A.spokePool, across({ exclusiveRelayer: STRANGER, exclusivityPeriod: 60 }), true],
+  ["admin: Across 100 USDC at its floor, 6 h window", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("100"), outputAmount: acrossMinOutput(usdc("100")), fillDeadlineOffset: 21600 }), true],
+  ["admin: Across 10 USDC (below the smallest tranche)", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("10"), outputAmount: usdc("9.9") }), false],
+  ["admin: Across 100,000 USDC in one deposit (above the largest tranche)", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("100000"), outputAmount: usdc("100000") }), false],
+  ["admin: Across deposit with an exclusive relayer", "admin", ADMIN_KEY, A.spokePool, across({ exclusiveRelayer: STRANGER, exclusivityPeriod: 60 }), false],
+  ["admin: Across deposit with an exclusivity window but no relayer", "admin", ADMIN_KEY, A.spokePool, across({ exclusivityPeriod: 60 }), false],
+  ["admin: Across 1 USDC (not a tranche)", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("1"), outputAmount: usdc("0.9") }), false],
+  ["admin: Across 2,001 USDC (not a tranche)", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("2001"), outputAmount: usdc("2000.5") }), false],
+  ["admin: Across 4,200 USDC in one deposit (not a tranche)", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("4200"), outputAmount: usdc("4199") }), false],
+  ["admin: Across 1,000,000 USDC in one deposit (not a tranche)", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("1000000"), outputAmount: usdc("999900") }), false],
+  ["admin: SPREAD 100,000 in, 1 USDC out", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("100000"), outputAmount: usdc("1") }), false],
+  ["admin: SPREAD 100,000 in, 0 out, exclusive relayer for a day", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("100000"), outputAmount: 0n, exclusiveRelayer: STRANGER, exclusivityPeriod: 86400 }), false],
+  ["admin: tranche to a stranger at its floor", "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: usdc("50000"), outputAmount: acrossMinOutput(usdc("50000")), recipient: STRANGER }), false],
+  ...ACROSS_TRANCHES_USDC.flatMap((size): Scenario[] => {
+    const input = usdc(String(size));
+    return [
+      [`admin: Across ${size.toLocaleString("en-US")} at its floor`, "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: input, outputAmount: acrossMinOutput(input) }), true],
+      [`admin: Across ${size.toLocaleString("en-US")} at full value`, "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: input, outputAmount: input }), true],
+      [`admin: Across ${size.toLocaleString("en-US")} one micro-USDC under its floor`, "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: input, outputAmount: acrossMinOutput(input) - 1n }), false],
+      [`admin: Across ${size.toLocaleString("en-US")} + 1 micro-USDC`, "admin", ADMIN_KEY, A.spokePool, across({ inputAmount: input + 1n, outputAmount: input }), false],
+    ];
+  }),
   ["admin: Across deposit to a stranger", "admin", ADMIN_KEY, A.spokePool, across({ recipient: STRANGER }), false],
   ["admin: Across deposit refunding a stranger", "admin", ADMIN_KEY, A.spokePool, across({ depositor: STRANGER }), false],
   ["admin: Across deposit of another input token", "admin", ADMIN_KEY, A.spokePool, across({ inputToken: A.arbUsdc }), false],
@@ -231,7 +254,19 @@ const run = async (mastercopy: string, blobs: Map<string, string>): Promise<numb
   // The raw batches, applied as the owner — exactly what submitPermissions
   // does with them. Integrity.enforce runs here, so a malformed condition
   // tree fails the run before any scenario.
-  const batch = [...buildCrtV2AdminRawPermissions(), ...buildCrtV2ExecutorRawPermissions()];
+  // CRT_V2_PRIOR_BATCH: a JSON array of calldata already stored on the
+  // live modifier (e.g. the submitPermissions batch of 0x6e253968…). It is
+  // applied first and only the Across fix and the executor batch on top, so
+  // the run proves the fix overwrites what is there rather than assuming a
+  // fresh modifier.
+  const prior: string[] = process.env.CRT_V2_PRIOR_BATCH ? JSON.parse(readFileSync(process.env.CRT_V2_PRIOR_BATCH, "utf8")) : [];
+  for (const [i, data] of prior.entries()) {
+    const res = await call(OWNER, mastercopy, data);
+    if (!res.ok) throw new Error(`prior entry ${i} rejected: ${decodeErr(res.ret)}`);
+  }
+  const batch = process.env.CRT_V2_SKIP_FIX ? [] : prior.length
+    ? [...buildCrtV2AdminAcrossFix(), ...buildCrtV2ExecutorRawPermissions()]
+    : [...buildCrtV2AdminRawPermissions(), ...buildCrtV2ExecutorRawPermissions()];
   for (const [i, entry] of batch.entries()) {
     const res = await call(OWNER, mastercopy, entry.data);
     if (!res.ok) throw new Error(`entry ${i} (${entry.label}) rejected: ${decodeErr(res.ret)}`);
@@ -254,7 +289,20 @@ const run = async (mastercopy: string, blobs: Map<string, string>): Promise<numb
       console.log(`  ${pass ? "PASS" : "FAIL"} | ${label} | expected ${expectAllowed ? "allow" : "deny"}, got ${res.ok ? "allowed" : `denied ${decodeErr(res.ret)}`}`);
     }
   }
-  console.log(`${failures ? "FAIL" : "PASS"} | ${batch.length} entries applied, ${SCENARIOS.length - failures}/${SCENARIOS.length} scenarios`);
+  // What the whitelist itself costs per Across deposit, first and last
+  // tranche (an Or tries its branches in order). The Safe here is a stub,
+  // so the SpokePool's own work comes on top of these figures.
+  for (const size of [ACROSS_TRANCHES_USDC[0], ACROSS_TRANCHES_USDC[ACROSS_TRANCHES_USDC.length - 1]]) {
+    const input = usdc(String(size));
+    const res = await vm.evm.runCall({
+      caller: Address.fromString(ADMIN),
+      to: Address.fromString(mastercopy),
+      data: hexToBytes(rolesIface.encodeFunctionData("execTransactionWithRole", [A.spokePool, 0n, across({ inputAmount: input, outputAmount: acrossMinOutput(input) }), 0, ADMIN_KEY, true]) as `0x${string}`),
+      gasLimit: 60_000_000n,
+    });
+    console.log(`  gas · whitelist check for an Across ${size.toLocaleString("en-US")} deposit: ${res.execResult.executionGasUsed.toLocaleString("en-US")}`);
+  }
+  console.log(`${failures ? "FAIL" : "PASS"} | ${prior.length ? `${prior.length} live entries, then ` : ""}${batch.length} entries applied, ${SCENARIOS.length - failures}/${SCENARIOS.length} scenarios`);
   return failures;
 };
 

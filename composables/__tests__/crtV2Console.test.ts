@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { ethers } from "ethers";
 import {
-  CRT_V2, EXEC_WITH_ROLE_SELECTOR, crtV2AcrossQuote, crtV2AgentName, crtV2Inner, crtV2ParseAgentName, crtV2SafeBatch,
+  ACROSS_DEPOSITS_PER_SAFE_TX, CRT_V2, EXEC_WITH_ROLE_SELECTOR, crtV2AcrossQuote, crtV2DescribeAcrossSplit, crtV2PlanAcrossPayout, crtV2AgentName, crtV2Inner, crtV2ParseAgentName, crtV2SafeBatch,
   crtV2ValidUntil, crtV2Wrap, usdc6,
 } from "~/composables/execution/crtV2Console";
-import { CRT_V2_ADDR, CRT_V2_ROLE_KEYS } from "~/composables/execution/crtV2Vault";
+import { CRT_V2_ADDR, CRT_V2_ROLE_KEYS, acrossMinOutput } from "~/composables/execution/crtV2Vault";
 import { unpackMultiSend } from "~/composables/proposal/describeProposalActions";
 
 const rolesIface = new ethers.Interface(["function execTransactionWithRole(address to,uint256 value,bytes data,uint8 operation,bytes32 roleKey,bool shouldRevert)", "function assignRoles(address module,bytes32[] roleKeys,bool[] memberOf)"]);
@@ -107,5 +107,36 @@ describe("CRT v2 console builders", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("plans an Arbitrum payout as tranche deposits, never under the whitelisted floor, four per Safe transaction", async () => {
+    const fees: Record<string, string> = { "50000000000": "5007964", "2000000000": "207964", "200000000": "27964" };
+    vi.stubGlobal("fetch", vi.fn((url: string) => {
+      const amount = new URL(url).searchParams.get("amount")!;
+      // 50,000 quoted far above its cap, to see the floor hold.
+      const total = amount === "50000000000" ? "90000000" : fees[amount];
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ totalRelayFee: { total }, limits: { maxDeposit: "287904852425" }, estimatedFillTimeSec: 5 }) } as any);
+    }));
+    try {
+      const plan = await crtV2PlanAcrossPayout(usdc6("104237.55"));
+      expect(plan.deposits.map((d) => Number(d.inputAmount / 1000000n))).toEqual([50000, 50000, 2000, 2000, 200]);
+      expect(plan.remainder).toBe(usdc6("37.55"));
+      expect(plan.groups.map((g) => g.length)).toEqual([ACROSS_DEPOSITS_PER_SAFE_TX, 1]);
+      for (const d of plan.deposits) expect(d.outputAmount >= acrossMinOutput(d.inputAmount)).toBe(true);
+      const fifty = plan.deposits[0];
+      expect(fifty.feeTooHigh).toBe(true);
+      expect(fifty.outputAmount).toBe(acrossMinOutput(fifty.inputAmount));
+      const two = plan.deposits[2];
+      expect(two.feeTooHigh).toBe(false);
+      expect(two.outputAmount).toBe(usdc6("2000") - 415928n);
+      expect(plan.bridged + plan.remainder).toBe(usdc6("104237.55"));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("describes the split without quoting", () => {
+    expect(crtV2DescribeAcrossSplit(usdc6("4237.55"))).toBe("Across: 2 × 2,000 + 200 USDC (3 deposits, 1 Safe transaction) · 37.55 USDC paid on HyperEVM");
+    expect(crtV2DescribeAcrossSplit(usdc6("50"))).toContain("100 USDC or more");
   });
 });

@@ -95,7 +95,20 @@
           <span class="crt_mono">{{ shortAddr(CRT_V2.ADDR.executor) }}</span> stores them from the create flow's Permissions step
           (Protocol integrations → Add permission → Raw code, paste the array, Save); afterwards they need a governance proposal.
         </div>
+        <div v-if="acrossFixMissing" class="crt_card__sub crt_bad_text">
+          The stored Across scope leaves outputAmount and the relayer open, so a deposit's value can go to the relayer
+          instead of the payout wallet. Store the one-call Across fix (it replaces that scope; ~2.1M gas, fits a standard block).
+        </div>
         <div class="crt_missing__actions">
+          <v-btn
+            v-if="acrossFixMissing"
+            variant="outlined"
+            size="small"
+            color="error"
+            @click="copyRawPermissions('acrossFix')"
+          >
+            Copy Across fix · {{ rawPermissions.acrossFix.entries.length }} call
+          </v-btn>
           <v-btn
             v-for="role in missingRoles"
             :key="role"
@@ -158,26 +171,26 @@
         The admin's transaction, as Safe{Wallet}'s transaction builder takes
         it: whoever cannot sign here can still file exactly this proposal.
       -->
-      <details v-if="activity.safeCall" class="crt_raw">
+      <details v-for="(call, ci) in activity.safeCalls || []" :key="ci" class="crt_raw">
         <summary class="crt_raw__summary">
-          Transaction for the admin Safe · to / value / data / operation
+          {{ activity.safeCalls.length > 1 ? `Admin Safe transaction ${ci + 1} of ${activity.safeCalls.length}` : "Transaction for the admin Safe" }} · to / value / data / operation
         </summary>
         <div class="crt_raw__grid">
           <span class="crt_label">to</span>
-          <span class="crt_mono crt_raw__value">{{ activity.safeCall.to }}</span>
+          <span class="crt_mono crt_raw__value">{{ call.to }}</span>
           <span class="crt_label">value</span>
           <span class="crt_mono crt_raw__value">0</span>
           <span class="crt_label">operation</span>
-          <span class="crt_mono crt_raw__value">{{ activity.safeCall.operation === 1 ? "1 · delegatecall (MultiSendCallOnly batch)" : "0 · call" }}</span>
+          <span class="crt_mono crt_raw__value">{{ call.operation === 1 ? "1 · delegatecall (MultiSendCallOnly batch)" : "0 · call" }}</span>
           <span class="crt_label">data</span>
-          <span class="crt_mono crt_raw__value crt_raw__data">{{ activity.safeCall.data }}</span>
+          <span class="crt_mono crt_raw__value crt_raw__data">{{ call.data }}</span>
         </div>
         <div class="crt_raw__actions">
           <v-btn
             variant="text"
             size="small"
             class="crt_text_action"
-            @click="copyText(activity.safeCall.data, 'Calldata copied')"
+            @click="copyText(call.data, 'Calldata copied')"
           >
             Copy data
           </v-btn>
@@ -185,7 +198,7 @@
             variant="text"
             size="small"
             class="crt_text_action"
-            @click="copyText(JSON.stringify(activity.safeCall, null, 2), 'Transaction copied as JSON')"
+            @click="copyText(JSON.stringify(call, null, 2), 'Transaction copied as JSON')"
           >
             Copy as JSON
           </v-btn>
@@ -472,7 +485,7 @@
           </div>
           <div class="crt_card__sub">
             {{ payoutChain === "arbitrum"
-              ? "Across bridge to Arbitrum · approve + depositV3Now, one Safe transaction · recipient and chain pinned"
+              ? (validAmt(payoutAmt) ? acrossSplitText : "Across bridge to Arbitrum in fixed sizes of 100–50,000 USDC · recipient, chain and the relayer's share pinned · what is under 100 USDC goes on HyperEVM")
               : "USDC.transfer on HyperEVM · one Safe transaction" }}
           </div>
         </div>
@@ -651,7 +664,7 @@ import { useAccountStore } from "~/store/account/account.store";
 import { sendAsSafe } from "~/composables/permissions/useCuratorExecution";
 import UiSegmented from "~/components/global/ui/Segmented.vue";
 import {
-  CRT_V2, crtV2Inner, crtV2Wrap, crtV2SafeBatch, crtV2Simulate, crtV2GetBalances, crtV2GetPayoutBalances, crtV2AcrossQuote,
+  CRT_V2, crtV2Inner, crtV2Wrap, crtV2SafeBatch, crtV2Simulate, crtV2GetBalances, crtV2GetPayoutBalances, crtV2PlanAcrossPayout, crtV2DescribeAcrossSplit,
   crtV2GetCore, crtV2GetAgents, crtV2AgentStatus, crtV2GetAdminSafe, crtV2GetVaultState, crtV2HoldsRole, crtV2Readiness,
   crtV2RawPermissions, crtV2ValidUntil, crtV2FormatDate, crtV2DaysLeft, fmt6, shortAddr, usdc6,
   type CrtV2AgentSlot, type CrtV2Readiness as ReadinessRow, type CrtV2SafeCall, type CrtV2VaultState, type CrtV2Wrapped,
@@ -755,12 +768,15 @@ const readinessGroups = computed(() => (["executor", "admin"] as CrtV2Role[]).ma
 const readyTone = (state: ReadinessRow["state"]) => ({ ready: "on", soft: "on", activation: "warn", missing: "off", unknown: "idle" }[state]);
 const readyText = (state: ReadinessRow["state"]) => ({ ready: "ready", soft: "whitelisted", activation: "after activation", missing: "missing", unknown: "unknown" }[state]);
 /** Roles with a whitelisted action missing, offered their raw permissions. */
-const missingRoles = computed(() => (["executor", "admin"] as CrtV2Role[]).filter((role) => (readiness.value ?? []).some((r) => r.role === role && r.state === "missing")));
+const missingRoles = computed(() => (["executor", "admin"] as CrtV2Role[]).filter((role) => (readiness.value ?? []).some((r) => r.role === role && r.state === "missing" && !r.fix)));
+/** The stored Across scope still lets a deposit's value go to the relayer. */
+const acrossFixMissing = computed(() => (readiness.value ?? []).some((r) => r.fix === "acrossFix" && r.state === "missing"));
+const acrossSplitText = computed(() => { try { return crtV2DescribeAcrossSplit(usdc6(payoutAmt.value)); } catch { return ""; } });
 
 const copyText = async (text: string, done: string) => {
   try { await navigator.clipboard.writeText(text); toastStore.successToast(done); } catch { toastStore.errorToast("Could not copy. Select the text instead."); }
 };
-const copyRawPermissions = (role: CrtV2Role) => copyText(rawPermissions[role].json, `${rawPermissions[role].entries.length} ${role} calls copied. Paste them into the Permissions step's Raw code input.`);
+const copyRawPermissions = (which: CrtV2Role | "acrossFix") => copyText(rawPermissions[which].json, `${rawPermissions[which].entries.length} ${which === "acrossFix" ? "Across fix" : which} call${rawPermissions[which].entries.length === 1 ? "" : "s"} copied. Paste into the Permissions step's Raw code input and Save.`);
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
@@ -858,7 +874,7 @@ const simulateStep = async (step: any, role: CrtV2Role) => {
  * and says why. Money leaving the Safe and anything that swaps a trading
  * key takes a second press to confirm.
  */
-const run = async (action: { title: string; role: CrtV2Role; steps: any[]; warns?: string[]; confirmPhrase?: string; quote?: any; route?: string; safeCall?: CrtV2SafeCall }) => {
+const run = async (action: { title: string; role: CrtV2Role; steps: any[]; warns?: string[]; confirmPhrase?: string; quote?: any; route?: string; safeCalls?: CrtV2SafeCall[] }) => {
   if (busy.value) return;
   if (action.role === "executor" && !canExecute.value) { toastStore.errorToast(executeReason.value); return; }
   if (action.role === "admin" && adminStanding.value === "none") { toastStore.errorToast(proposeDisabledReason.value); return; }
@@ -871,7 +887,9 @@ const run = async (action: { title: string; role: CrtV2Role; steps: any[]; warns
   }
   armed.value = null;
   action.steps = action.steps.map((s: any) => reactive({ ...s, sim: null, txStatus: null, txHash: null }));
-  if (action.role === "admin") action.safeCall = crtV2SafeBatch(action.steps.map((s: any) => s.wrapped as CrtV2Wrapped));
+  // Steps carry the admin Safe transaction they belong to (`group`, 0 when
+  // there is one): each group is filed as its own Safe transaction.
+  if (action.role === "admin") action.safeCalls = stepGroups(action.steps).map((group) => crtV2SafeBatch(group.map((s: any) => s.wrapped as CrtV2Wrapped)));
   activity.value = action;
   busy.value = true;
   (action.warns || []).forEach((w: string) => toastStore.warningToast(w, 8000));
@@ -943,6 +961,12 @@ const runHlWithdraw = (max: boolean) => {
 
 // ─── Admin actions ───────────────────────────────────────────────────────────
 
+const stepGroups = (steps: any[]): any[][] => {
+  const groups: any[][] = [];
+  for (const step of steps) (groups[step.group ?? 0] ||= []).push(step);
+  return groups.filter(Boolean);
+};
+
 const runPayout = async () => {
   const amt = payoutAmt.value;
   const shown = Number(amt).toLocaleString("en-US", { maximumFractionDigits: 6 });
@@ -954,24 +978,37 @@ const runPayout = async () => {
     });
     return;
   }
-  // Arbitrum: approve the SpokePool and deposit, filed as one Safe
-  // transaction. The quote fixes the minimum the wallet receives;
-  // depositV3Now stamps its own time when the Safe executes.
+  // Arbitrum: the amount in the whitelisted tranche sizes, each deposit
+  // with the output Across needs but never under its floor; per admin Safe
+  // transaction an approve for that transaction's deposits, then the
+  // deposits. Whatever is under the smallest size goes to the payout wallet
+  // on HyperEVM in the last transaction, so the whole amount lands with it.
   quoting.value = true;
   try {
-    const input = usdc6(amt);
-    const quote = await crtV2AcrossQuote(input);
+    const plan = await crtV2PlanAcrossPayout(usdc6(amt));
+    if (!plan.deposits.length) {
+      toastStore.errorToast(crtV2DescribeAcrossSplit(usdc6(amt)), 10000);
+      return;
+    }
     const warns: string[] = [];
-    if (quote.minDeposit && input < quote.minDeposit) warns.push(`Below Across's minimum of ${fmt6(quote.minDeposit)} USDC for this route; the deposit would not be filled.`);
-    if (quote.maxDeposit && input > quote.maxDeposit) warns.push(`Above Across's current maximum of ${fmt6(quote.maxDeposit)} USDC for this route.`);
-    if (quote.outputAmount === 0n) warns.push("The amount does not cover the relayer reserve.");
+    const tooHigh = plan.deposits.filter((d) => d.feeTooHigh);
+    if (tooHigh.length) warns.push(`Across currently charges more than the whitelist lets a relayer keep on ${tooHigh.length} deposit${tooHigh.length === 1 ? "" : "s"}; those will not be filled and return to the vault Safe after their 5 h fill window.`);
+    if (plan.maxDeposit && plan.deposits.some((d) => d.inputAmount > plan.maxDeposit)) warns.push(`Above Across's current maximum of ${fmt6(plan.maxDeposit)} USDC per deposit on this route.`);
+    const steps: any[] = [];
+    plan.groups.forEach((group, g) => {
+      const total = group.reduce((sum, d) => sum + d.inputAmount, 0n);
+      const tag = plan.groups.length > 1 ? `Tx ${g + 1} · ` : "";
+      steps.push({ group: g, label: `${tag}Approve Across SpokePool for ${fmt6(total, 0)} USDC`, wrapped: crtV2Wrap(crtV2Inner.approve(CRT_V2.ADDR.spokePool, "Across SpokePool", ethers.formatUnits(total, 6)), "admin") });
+      group.forEach((d) => steps.push({ group: g, label: `${tag}Across ${fmt6(d.inputAmount, 0)} → at least ${fmt6(d.outputAmount)} on Arbitrum`, wrapped: crtV2Wrap(crtV2Inner.acrossDeposit(ethers.formatUnits(d.inputAmount, 6), d.outputAmount), "admin"), expectSoftFail: true }));
+    });
+    if (plan.remainder > 0n) {
+      steps.push({ group: plan.groups.length - 1, label: `${plan.groups.length > 1 ? `Tx ${plan.groups.length} · ` : ""}Remainder ${fmt6(plan.remainder)} USDC to the payout wallet on HyperEVM`, wrapped: crtV2Wrap(crtV2Inner.payout(ethers.formatUnits(plan.remainder, 6)), "admin") });
+    }
     run({
-      title: `Payout ${amt} USDC to Arbitrum`, role: "admin", route: "arbitrum", warns, quote,
-      confirmPhrase: `${shown} USDC leaves the vault Safe into the Across bridge; the payout wallet receives at least ${fmt6(quote.outputAmount)} USDC on Arbitrum. Nothing on-chain bounds this amount.`,
-      steps: [
-        { label: "1 · Approve Across SpokePool", wrapped: crtV2Wrap(crtV2Inner.approve(CRT_V2.ADDR.spokePool, "Across SpokePool", amt), "admin") },
-        { label: "2 · Across depositV3Now", wrapped: crtV2Wrap(crtV2Inner.acrossDeposit(amt, quote.outputAmount), "admin"), expectSoftFail: true },
-      ],
+      title: `Payout ${amt} USDC to Arbitrum`, role: "admin", route: "arbitrum", warns,
+      quote: { fee: plan.deposits.reduce((s2, d) => s2 + d.fee, 0n), reserve: plan.bridged - plan.minReceived, outputAmount: plan.minReceived },
+      confirmPhrase: `${shown} USDC leaves the vault Safe: ${fmt6(plan.bridged)} into Across in ${plan.deposits.length} deposit${plan.deposits.length === 1 ? "" : "s"} (the payout wallet receives at least ${fmt6(plan.minReceived)} on Arbitrum)${plan.remainder > 0n ? ` and ${fmt6(plan.remainder)} on HyperEVM` : ""}, as ${plan.groups.length} admin Safe transaction${plan.groups.length === 1 ? "" : "s"}.`,
+      steps,
     });
   } catch (error: any) {
     toastStore.errorToast("Across could not quote this payout: " + (error?.message || error), 10000);
@@ -1040,15 +1077,16 @@ const stopWatchingProposals = () => { proposalTimers.forEach((t) => clearTimeout
 onBeforeUnmount(stopWatchingProposals);
 watch(activity, (next) => { if (!next) stopWatchingProposals(); });
 
-/** Keep a filed proposal's signature count current until it has run. */
-const watchProposal = (step: any) => {
+/** Keep a filed proposal's signature count current on every step it carries, until it has run. */
+const watchProposal = (steps: any[]) => {
+  const lead = steps[0];
   const tick = async () => {
     try {
-      const status = await fetchSafeTxStatus(ChainId.HYPEREVM, step.proposal.safeTxHash);
-      step.proposal = { ...step.proposal, nonce: status.nonce, confirmations: status.confirmations, required: status.confirmationsRequired, executed: status.isExecuted };
+      const status = await fetchSafeTxStatus(ChainId.HYPEREVM, lead.proposal.safeTxHash);
+      const proposal = { ...lead.proposal, nonce: status.nonce, confirmations: status.confirmations, required: status.confirmationsRequired, executed: status.isExecuted };
+      steps.forEach((s) => { s.proposal = proposal; });
       if (status.isExecuted) {
-        step.txStatus = status.isSuccessful === false ? "fail" : "ok";
-        step.txHash = status.transactionHash;
+        steps.forEach((s) => { s.txStatus = status.isSuccessful === false ? "fail" : "ok"; s.txHash = status.transactionHash; });
         refresh();
         return;
       }
@@ -1098,7 +1136,7 @@ const propose = async (action: any): Promise<boolean> => {
         }
         step.proposal = { safeTxHash: hash, nonce: status.nonce, confirmations: status.confirmations, required: status.confirmationsRequired, executed: status.isExecuted };
         step.txStatus = "proposed";
-        watchProposal(step);
+        watchProposal([step]);
       }
       toastStore.successToast("Filed with the admin Safe. The other owners can now sign and execute in Safe{Wallet}.");
       refresh();
@@ -1109,15 +1147,24 @@ const propose = async (action: any): Promise<boolean> => {
     }
     const safe = await crtV2GetAdminSafe();
     adminSafe.value = safe;
-    const nonce = await fetchNextSafeNonce(ChainId.HYPEREVM, CRT_V2.ADDR.adminSafe, safe.nonce);
-    const call: CrtV2SafeCall = action.safeCall;
-    const tx = buildSafeTx({ to: call.to, data: call.data, value: call.value, operation: call.operation }, nonce);
-    const signature = await signSafeTx(provider, signer, ChainId.HYPEREVM, CRT_V2.ADDR.adminSafe, tx);
-    const safeTxHash = await proposeSafeTx(ChainId.HYPEREVM, CRT_V2.ADDR.adminSafe, tx, signer, signature, proposalOrigin);
-    const proposal = { safeTxHash, nonce, confirmations: 1, required: safe.threshold, executed: false };
-    steps.forEach((s) => { s.proposal = proposal; s.txStatus = "proposed"; });
-    toastStore.successToast(`Proposed to the admin Safe as ${steps.length === 1 ? "one transaction" : `one batched transaction (${steps.length} calls)`}. The other owners can now sign and execute it in Safe{Wallet}.`);
-    watchProposal(steps[0]);
+    const firstNonce = await fetchNextSafeNonce(ChainId.HYPEREVM, CRT_V2.ADDR.adminSafe, safe.nonce);
+    const groups = stepGroups(steps);
+    const calls: CrtV2SafeCall[] = action.safeCalls;
+    // One signature per Safe transaction, at consecutive nonces, so the
+    // owners execute them in order in Safe{Wallet}.
+    for (const [g, group] of groups.entries()) {
+      const call = calls[g];
+      const nonce = firstNonce + g;
+      const tx = buildSafeTx({ to: call.to, data: call.data, value: call.value, operation: call.operation }, nonce);
+      const signature = await signSafeTx(provider, signer, ChainId.HYPEREVM, CRT_V2.ADDR.adminSafe, tx);
+      const safeTxHash = await proposeSafeTx(ChainId.HYPEREVM, CRT_V2.ADDR.adminSafe, tx, signer, signature, proposalOrigin);
+      const proposal = { safeTxHash, nonce, confirmations: 1, required: safe.threshold, executed: false };
+      group.forEach((s: any) => { s.proposal = proposal; s.txStatus = "proposed"; });
+      watchProposal(group);
+    }
+    toastStore.successToast(groups.length > 1
+      ? `Proposed to the admin Safe as ${groups.length} transactions (nonces ${firstNonce}–${firstNonce + groups.length - 1}). The other owners can now sign and execute them in order in Safe{Wallet}.`
+      : `Proposed to the admin Safe as ${steps.length === 1 ? "one transaction" : `one batched transaction (${steps.length} calls)`}. The other owners can now sign and execute it in Safe{Wallet}.`);
     return true;
   } catch (error: any) {
     steps.filter((s) => s.txStatus === "proposing").forEach((s) => failStep(s, error));
@@ -1670,6 +1717,10 @@ const exec = async (step: any): Promise<boolean> => {
     color: $color-cyan;
     text-decoration: underline;
   }
+}
+
+.crt_bad_text {
+  color: $color-neg;
 }
 
 .crt_bad {

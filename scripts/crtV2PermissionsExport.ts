@@ -12,6 +12,7 @@ import { ethers } from "ethers";
 import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 import { CRT_V2_ADDR, CRT_V2_ROLE_KEYS } from "~/composables/execution/crtV2Vault";
 import {
+  buildCrtV2AdminAcrossFix,
   buildCrtV2AdminRawPermissions,
   buildCrtV2ExecutorRawPermissions,
   crtV2RawPermissionsJson,
@@ -47,6 +48,8 @@ const executor = buildCrtV2ExecutorRawPermissions();
 
 writeFileSync(join(out, "admin-raw-permissions.json"), crtV2RawPermissionsJson(admin) + "\n");
 writeFileSync(join(out, "executor-raw-permissions.json"), crtV2RawPermissionsJson(executor) + "\n");
+const acrossFix = buildCrtV2AdminAcrossFix();
+writeFileSync(join(out, "admin-across-fix-raw-permissions.json"), crtV2RawPermissionsJson(acrossFix) + "\n");
 writeFileSync(
   join(out, "PERMISSIONS.md"),
   [
@@ -58,6 +61,7 @@ writeFileSync(
     "",
     sheet("Admin — additions (adminRole)", admin),
     sheet("Executor — additions (defaultManagerRole)", executor),
+    sheet("Admin — Across fix (replaces the depositV3Now scope stored on 2026-10-05)", acrossFix),
   ].join("\n"),
 );
 console.log(`wrote ${admin.length} admin and ${executor.length} executor entries to ${out}`);

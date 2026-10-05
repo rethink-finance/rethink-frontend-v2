@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import { ethers } from "ethers";
 import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 import {
+  ACROSS_TRANCHES_USDC,
   CRT_V2_ADDR,
   CRT_V2_ROLE_KEYS,
+  acrossMaxRelayerShare,
+  acrossMinOutput,
+  splitIntoAcrossTranches,
   HYPERCORE_ACTION,
   SEND_ASSET_PINNED_BYTES,
   encodeAddApiWallet,
@@ -16,6 +20,7 @@ import {
   SEND_ASSET_TO_EVM_REFERENCE,
   bitmaskCompValue,
   bitmaskPrefixWindows,
+  buildCrtV2AdminAcrossFix,
   buildCrtV2AdminRawPermissions,
   buildCrtV2ExecutorRawPermissions,
   crtV2RawPermissionsJson,
@@ -164,22 +169,73 @@ describe("CRT v2 raw permission batches", () => {
     expect([...targets].sort()).toEqual([CRT_V2_ADDR.cdw, CRT_V2_ADDR.coreWriter, CRT_V2_ADDR.felix, CRT_V2_ADDR.pool, CRT_V2_ADDR.usdc.toLowerCase()].sort());
   });
 
-  it("pin every Across field but the amounts, relayer and fill window", () => {
+  it("pin the Across destination once and pair each tranche size with its output floor", () => {
     const entry = admin.find((e) => e.label.startsWith("Across depositV3Now"))!;
-    const conditions = rolesIface.parseTransaction({ data: entry.data })!.args[3] as any[];
-    expect(conditions).toHaveLength(12);
-    const ops = conditions.slice(1).map((c) => Number(c[2]));
-    // depositor, recipient, inputToken, outputToken pinned; amounts open; chain pinned; relayer, deadline, exclusivity open; message pinned
-    expect(ops).toEqual([16, 16, 16, 16, 0, 0, 16, 0, 0, 0, 16]);
+    const flat = rolesIface.parseTransaction({ data: entry.data })!.args[3] as any[];
     const coder = ethers.AbiCoder.defaultAbiCoder();
-    expect(conditions[2][3]).toBe(coder.encode(["address"], [CRT_V2_ADDR.payout]));
-    expect(conditions[7][3]).toBe(coder.encode(["uint256"], [42161]));
-    expect(conditions[11][3]).toBe(coder.encode(["bytes"], ["0x"]));
+    // And( pinned fields Matches, Or( one Matches per tranche ) )
+    expect(Number(flat[0][2])).toBe(RolesV2Operator.And);
+    expect(Number(flat[1][1])).toBe(RolesV2ParameterType.Calldata);
+    expect(Number(flat[2][2])).toBe(RolesV2Operator.Or);
+    const pinned = flat.filter((c) => Number(c[0]) === 1);
+    expect(pinned).toHaveLength(11);
+    // depositor, recipient, inputToken, outputToken pinned; amounts left to the tranches; chain, relayer, exclusivity and message pinned
+    expect(pinned.map((c) => Number(c[2]))).toEqual([16, 16, 16, 16, 0, 0, 16, 16, 0, 16, 16]);
+    expect(pinned[1][3]).toBe(coder.encode(["address"], [CRT_V2_ADDR.payout]));
+    expect(pinned[0][3]).toBe(coder.encode(["address"], [CRT_V2_ADDR.safe]));
+    expect(pinned[6][3]).toBe(coder.encode(["uint256"], [42161]));
+    expect(pinned[7][3]).toBe(coder.encode(["address"], [ethers.ZeroAddress]));
+    expect(pinned[9][3]).toBe(coder.encode(["uint32"], [0]));
+    expect(pinned[10][3]).toBe(coder.encode(["bytes"], ["0x"]));
+    const branches = flat.map((c, i) => [c, i] as const).filter(([c]) => Number(c[0]) === 2).map(([, i]) => i);
+    expect(branches).toHaveLength(ACROSS_TRANCHES_USDC.length);
+    branches.forEach((b, k) => {
+      const kids = flat.filter((c) => Number(c[0]) === b);
+      expect(kids).toHaveLength(11);
+      const size = BigInt(ACROSS_TRANCHES_USDC[k]) * 1000000n;
+      expect(Number(kids[4][2])).toBe(RolesV2Operator.EqualTo);
+      expect(kids[4][3]).toBe(coder.encode(["uint256"], [size]));
+      expect(Number(kids[5][2])).toBe(RolesV2Operator.GreaterThan);
+      expect(kids[5][3]).toBe(coder.encode(["uint256"], [acrossMinOutput(size) - 1n]));
+      expect(kids.filter((_, i) => i !== 4 && i !== 5).every((c) => Number(c[2]) === RolesV2Operator.Pass)).toBe(true);
+    });
+    expect(flat.length).toBeLessThanOrEqual(130);
+  });
+
+  it("exports the Across fix as the one depositV3Now scope", () => {
+    const fix = buildCrtV2AdminAcrossFix();
+    expect(fix).toHaveLength(1);
+    const parsed = rolesIface.parseTransaction({ data: fix[0].data })!;
+    expect(parsed.name).toBe("scopeFunction");
+    expect(String(parsed.args[1]).toLowerCase()).toBe(CRT_V2_ADDR.spokePool.toLowerCase());
+    expect(parsed.args[2]).toBe(CRT_V2_SELECTORS.depositV3Now);
+    expect(fix[0].data).toBe(admin.find((e) => e.label.startsWith("Across depositV3Now"))!.data);
   });
 
   it("export a JSON array of hex strings", () => {
     const json = JSON.parse(crtV2RawPermissionsJson(admin));
     expect(Array.isArray(json)).toBe(true);
     expect(json.every((x: string) => /^0x[0-9a-f]+$/i.test(x))).toBe(true);
+  });
+});
+
+describe("Across tranches", () => {
+  const u = (v: number | string) => ethers.parseUnits(String(v), 6);
+
+  it("caps the relayer's share at 0.25 USDC + 0.05 %", () => {
+    expect(acrossMaxRelayerShare(u(100))).toBe(u("0.3"));
+    expect(acrossMaxRelayerShare(u(2000))).toBe(u("1.25"));
+    expect(acrossMaxRelayerShare(u(50000))).toBe(u("25.25"));
+    expect(acrossMinOutput(u(50000))).toBe(u("49974.75"));
+  });
+
+  it("splits an amount greedily, largest first, and leaves what is under 100 USDC", () => {
+    expect(splitIntoAcrossTranches(u(4000))).toEqual({ tranches: [u(2000), u(2000)], remainder: 0n });
+    expect(splitIntoAcrossTranches(u("4237.55"))).toEqual({ tranches: [u(2000), u(2000), u(200)], remainder: u("37.55") });
+    expect(splitIntoAcrossTranches(u(99))).toEqual({ tranches: [], remainder: u(99) });
+    const big = splitIntoAcrossTranches(u(123456));
+    expect(big.tranches.map((t) => Number(t / 1000000n))).toEqual([50000, 50000, 20000, 2000, 1000, 200, 200]);
+    expect(big.remainder).toBe(u(56));
+    expect(big.tranches.reduce((a, b) => a + b, 0n) + big.remainder).toBe(u(123456));
   });
 });
