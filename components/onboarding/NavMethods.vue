@@ -6,18 +6,13 @@
       </h2>
     </div>
 
-    <div class="nav_methods__toggle_row">
+    <!-- Only while there is something to decide: once the executor holds
+         the permission (the Permissions step grants it), the row is gone. -->
+    <div v-if="isNavPermissionChecked && !isNavPermissionHeld" class="nav_methods__toggle_row">
       <span class="nav_methods__toggle_text">
         Allow manager to keep updating NAV based on approved methods
       </span>
-      <!-- Already granted (the Permissions step's "Update NAV" switch does
-           the same): nothing left to decide here, so no switch. -->
-      <span v-if="isNavPermissionHeld" class="nav_methods__toggle_state">
-        <Icon icon="material-symbols:check" width="0.875rem" height="0.875rem" />
-        Already allowed
-      </span>
       <OnboardingToggle
-        v-else
         v-model="allowManagerToUpdateNav"
         label="Allow the manager to keep updating NAV"
       />
@@ -303,7 +298,14 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type INAVMethod from "~/types/nav_method";
 import { managerCanExecuteNavUpdate } from "~/composables/nav/managerNavPermission";
-import { detectRolesVersion } from "~/composables/permissions/useRoleExecution";
+import {
+  EXECUTOR_ROLE_KEY_ALIASES_V2,
+  EXECUTOR_ROLE_KEY_V2,
+} from "~/composables/nav/generateNAVPermission";
+import {
+  detectRolesVersion,
+  fetchRoleMembers,
+} from "~/composables/permissions/useRoleExecution";
 import { useAccountStore } from "~/store/account/account.store";
 import { RolesVersion } from "~/types/enums/roles_version";
 import type { ITransactionStep } from "~/components/onboarding/TransactionSteps.vue";
@@ -424,7 +426,9 @@ const storeError = ref("");
  * connected wallet); "not proven" answers false and the grant is sent, which
  * costs a transaction but never leaves the manager unable to update NAV.
  */
-const resolveNavPermission = async (): Promise<{ held: boolean; calldatas: string[] }> => {
+const resolveNavPermission = async (
+  withCalldatas = true,
+): Promise<{ held: boolean; calldatas: string[] }> => {
   const fundAddress = fundSettings?.value?.fundAddress;
   const rolesModifier = fundInitCache?.value?.rolesModifier;
   if (!fundAddress || !rolesModifier) return { held: false, calldatas: [] };
@@ -437,31 +441,62 @@ const resolveNavPermission = async (): Promise<{ held: boolean; calldatas: strin
     rolesModifier,
     fundFactoryContractV2Used.value ? RolesVersion.V2 : RolesVersion.V1,
   );
-  const held = await managerCanExecuteNavUpdate(
-    fundChainId.value,
-    rolesModifier,
-    fundAddress,
-    getNAVExecutorBeaconProxyAddress(fundChainId.value),
-    rolesVersion,
+  // A V2 executor holds its key under one of two spellings
+  // ("defaulManagerRole" on older vaults, "defaultManagerRole" on newer
+  // ones), so each is asked: probing only one reports a held permission as
+  // missing, and the grant would land on a key nobody holds.
+  const roleKeys = rolesVersion === RolesVersion.V2
+    ? EXECUTOR_ROLE_KEY_ALIASES_V2
+    : [undefined];
+  const navExecutorAddress = getNAVExecutorBeaconProxyAddress(fundChainId.value);
+  const probes = await Promise.all(
+    roleKeys.map((roleKey) =>
+      managerCanExecuteNavUpdate(
+        fundChainId.value,
+        rolesModifier,
+        fundAddress,
+        navExecutorAddress,
+        rolesVersion,
+        roleKey,
+      ),
+    ),
   );
+  const held = probes.some(Boolean);
+  if (held || !withCalldatas) return { held, calldatas: [] };
   return {
     held,
     // Encoded for the modifier generation this vault has: a Roles V2
     // modifier does not have the V1 calls.
-    calldatas: held
-      ? []
-      : getAllowManagerToUpdateNavPermissionsData(
-        fundAddress,
-        fundChainId.value,
-        rolesModifier,
-        rolesVersion,
-      ).calldatas,
+    calldatas: getAllowManagerToUpdateNavPermissionsData(
+      fundAddress,
+      fundChainId.value,
+      rolesModifier,
+      rolesVersion,
+      rolesVersion === RolesVersion.V2
+        ? await vaultExecutorRoleKey(rolesModifier)
+        : undefined,
+    ).calldatas,
   };
+};
+
+/** The executor key this vault's modifier has members under. */
+const vaultExecutorRoleKey = async (rolesModifier: string): Promise<string> => {
+  for (const roleKey of EXECUTOR_ROLE_KEY_ALIASES_V2) {
+    try {
+      const members = await fetchRoleMembers(fundChainId.value, rolesModifier, roleKey);
+      if (members.length) return roleKey;
+    } catch (error) {
+      console.warn(`Could not read the members of ${roleKey}`, error);
+    }
+  }
+  return EXECUTOR_ROLE_KEY_V2;
 };
 
 // Asked when the step opens (and when the wallet changes), so the switch is
 // only offered while there is something for it to decide.
 const isNavPermissionHeld = ref(false);
+// False until the first answer, so the row does not flash in and out.
+const isNavPermissionChecked = ref(false);
 // The grant's calls, as resolved when the rail opened.
 let navPermissionCalldatas: string[] = [];
 watch(
@@ -472,10 +507,12 @@ watch(
   ],
   async () => {
     try {
-      isNavPermissionHeld.value = (await resolveNavPermission()).held;
+      isNavPermissionHeld.value = (await resolveNavPermission(false)).held;
     } catch (error) {
       console.warn("Could not check the manager's NAV permission", error);
       isNavPermissionHeld.value = false;
+    } finally {
+      isNavPermissionChecked.value = true;
     }
   },
   { immediate: true },
@@ -797,20 +834,6 @@ defineExpose({
     background: $color-card-background;
   }
 
-  /* In the switch's place once there is nothing left for it to decide. */
-  &__toggle_state {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    flex: none;
-    font-family: $font-mono;
-    font-size: 10.5px;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-cyan;
-    white-space: nowrap;
-  }
 
   &__toggle_text {
     font-size: 13.5px;

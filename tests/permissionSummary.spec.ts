@@ -84,8 +84,139 @@ describe("permission summary", () => {
     expect(summary?.lines).toEqual([
       ["Sent from ", { address: SAFE }],
       ["Received by ", { address: PAYOUT }, " on Arbitrum One"],
+      ["Sends ", { address: USDC }],
       ["Arrives as ", { address: ARB_USDC }],
       ["No instructions attached to the transfer"],
+    ]);
+  });
+
+  it("says a Safe-pinned Across deposit and every other limit it carries", () => {
+    const anyValue = { paramType: 1, operator: 0, compValue: "0x", children: [] };
+    const safe = { paramType: 1, operator: 15, compValue: "0x", children: [] };
+    const equals = (type: string, value: unknown) => ({
+      paramType: 1,
+      operator: 16,
+      compValue: word(type, value),
+      children: [],
+    });
+    const summary = summarizePermission(
+      {
+        ...scoped(SPOKE_POOL, undefined),
+        conditions: {
+          paramType: 5,
+          operator: 5,
+          compValue: "0x",
+          children: [
+            safe,
+            safe,
+            equals("address", USDC),
+            anyValue,
+            anyValue,
+            anyValue,
+            equals("uint256", 42161),
+            equals("address", ethers.ZeroAddress),
+            anyValue,
+            anyValue,
+            anyValue,
+          ],
+        },
+      } as unknown as IPermissionDescription,
+      ctx({
+        functionName: "depositV3Now",
+        inputs: inputsOf(
+          "depositV3Now(address depositor, address recipient, address inputToken, address outputToken, uint256 inputAmount, uint256 outputAmount, uint256 destinationChainId, address exclusiveRelayer, uint32 fillDeadlineOffset, uint32 exclusivityDeadline, bytes message)",
+        ),
+      }),
+    );
+    expect(summary?.lines).toEqual([
+      ["Sent from the vault's Safe"],
+      ["Received by the vault's Safe on Arbitrum One"],
+      ["Sends ", { address: USDC }],
+      ["No exclusive relayer: any relayer may fill it"],
+    ]);
+  });
+
+  it("reads a rule wrapped in an all-of group, and refuses one it cannot read", () => {
+    const node = (operator: number, children: any[] = [], compValue = "0x", paramType = 1) => ({
+      paramType,
+      operator,
+      compValue,
+      children,
+    });
+    const args = (recipient: any) => [
+      node(0), recipient, node(0), node(0), node(0), node(0), node(0), node(0), node(0), node(0), node(0, [], "0x", 2),
+    ];
+    const across = (conditions: any) =>
+      summarizePermission(
+        { ...scoped(SPOKE_POOL, undefined), conditions } as unknown as IPermissionDescription,
+        ctx({
+          functionName: "depositV3Now",
+          inputs: inputsOf(
+            "depositV3Now(address depositor, address recipient, address inputToken, address outputToken, uint256 inputAmount, uint256 outputAmount, uint256 destinationChainId, address exclusiveRelayer, uint32 fillDeadlineOffset, uint32 exclusivityDeadline, bytes message)",
+          ),
+        }),
+      );
+    const matches = (recipient: any) => node(5, args(recipient), "0x", 5);
+
+    expect(across(node(1, [matches(node(15))], "0x", 0))?.lines).toEqual([
+      ["Received by the vault's Safe"],
+    ]);
+    expect(across(node(1, [matches(node(15)), node(3)], "0x", 0))?.lines).toEqual([
+      ["Limits: see the exact rule"],
+    ]);
+    // Nothing restricted: no limits to list, rather than "any address".
+    expect(across(matches(node(0)))?.lines).toEqual([]);
+  });
+
+  it("reads the CRT payout bridge: pinned route, fixed amounts with a fee floor", () => {
+    const node = (operator: number, children: any[] = [], compValue = "0x", paramType = 1) => ({
+      paramType,
+      operator,
+      compValue,
+      children,
+    });
+    const any = () => node(0);
+    const eq = (type: string, value: unknown) => node(16, [], word(type, value));
+    const gt = (value: bigint) => node(17, [], word("uint256", value));
+    const amounts = (sent: bigint, atLeast: bigint) =>
+      node(5, [any(), any(), any(), any(), eq("uint256", sent), gt(atLeast - 1n), any(), any(), any(), any(), any()], "0x", 5);
+    const conditions = node(1, [
+      node(5, [
+        eq("address", SAFE),
+        eq("address", PAYOUT),
+        eq("address", USDC),
+        eq("address", ARB_USDC),
+        any(),
+        any(),
+        eq("uint256", 42161),
+        eq("address", ethers.ZeroAddress),
+        any(),
+        eq("uint32", 0),
+        node(16, [], ethers.ZeroHash, 2),
+      ], "0x", 5),
+      node(2, [amounts(50_000_000_000n, 49_974_750_000n), amounts(100_000_000n, 99_700_000n)], "0x", 0),
+    ], "0x", 0);
+    const summary = summarizePermission(
+      { ...scoped(SPOKE_POOL, undefined), conditions } as unknown as IPermissionDescription,
+      ctx({
+        functionName: "depositV3Now",
+        inputs: inputsOf(
+          "depositV3Now(address depositor, address recipient, address inputToken, address outputToken, uint256 inputAmount, uint256 outputAmount, uint256 destinationChainId, address exclusiveRelayer, uint32 fillDeadlineOffset, uint32 exclusivityDeadline, bytes message)",
+        ),
+      }),
+    );
+    expect(summary?.headline).toBe("Role 2 can bridge USDC with Across to Arbitrum One");
+    expect(summary?.lines).toEqual([
+      ["Sent from ", { address: SAFE }],
+      ["Received by ", { address: PAYOUT }, " on Arbitrum One"],
+      ["Sends ", { address: USDC }],
+      ["Arrives as ", { address: ARB_USDC }],
+      ["No instructions attached to the transfer"],
+      ["No exclusive relayer: any relayer may fill it"],
+      ["No exclusivity period"],
+      ["Amount: one of 2 fixed amounts"],
+      ["50,000 sent, at least 49,974.75 received"],
+      ["100 sent, at least 99.7 received"],
     ]);
   });
 

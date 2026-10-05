@@ -233,6 +233,14 @@ describe("pickManagerRole", () => {
       assumed: false,
     });
   });
+  it("takes the executor key under its other spelling over any other role", () => {
+    const admin = ethers.encodeBytes32String("adminRole");
+    const executor = ethers.encodeBytes32String("defaultManagerRole");
+    expect(pickManagerRole(RolesVersion.V2, [admin, executor])).toEqual({
+      role: executor,
+      assumed: false,
+    });
+  });
   it("takes the role actually held when the default is not among them", () => {
     expect(pickManagerRole(RolesVersion.V1, ["7"])).toEqual({ role: "7", assumed: false });
   });

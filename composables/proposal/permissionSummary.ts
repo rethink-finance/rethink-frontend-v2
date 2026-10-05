@@ -43,6 +43,8 @@ export interface SummaryContext {
   functionName?: string;
   /** For a scopeTarget: the functions later calls allow there (1-based calls). */
   scopedFunctions?: { index: number; name: string }[];
+  /** A token's decimals, where known, so amounts read as amounts. */
+  decimals?: (address: string) => number | undefined;
 }
 
 /* ---- Well-known contracts ------------------------------------------------ */
@@ -72,6 +74,14 @@ export const WELL_KNOWN_LABELS: Record<string, string> = {
   "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "USDC on Ethereum",
 };
 
+/** Decimals of tokens amounts keep being pinned in. Keyed by lowercase address. */
+const WELL_KNOWN_DECIMALS: Record<string, number> = {
+  "0xb88339cb7199b77e23db6e890353e22632ba630f": 6, // USDC on HyperEVM
+  "0xaf88d065e77c8cc2239327c5edb3a432268e5831": 6, // USDC on Arbitrum
+  "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": 6, // USDC on Base
+  "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": 6, // USDC on Ethereum
+};
+
 const chainName = (decimalChainId: string): string => {
   try {
     const hex = "0x" + BigInt(decimalChainId).toString(16);
@@ -83,7 +93,7 @@ const chainName = (decimalChainId: string): string => {
 
 /* ---- Restricted arguments, whatever the Roles version -------------------- */
 
-type PinKind = "equals" | "oneOf" | "below" | "above" | "other";
+type PinKind = "equals" | "oneOf" | "below" | "above" | "safe" | "other";
 
 interface Pin {
   kind: PinKind;
@@ -91,14 +101,68 @@ interface Pin {
   values: string[];
 }
 
+/** The restrictions on each argument, by argument index. */
+type Pins = Map<number, Pin>;
+
+interface ArgumentRules {
+  /** What holds on every call. */
+  pins: Pins;
+  /**
+   * Argument combinations of which one must hold, as in "this amount in and
+   * at least that much out, or that amount and …". Absent when there are none.
+   */
+  combinations?: Pins[];
+  /** Whether the rule could be read argument by argument at all. */
+  readable: boolean;
+}
+
+/** One calldata match's restrictions, by argument index. */
+const pinsOf = (match: IConditionNode): Pins => {
+  const pins: Pins = new Map();
+  match.children.forEach((child: IConditionNode, index: number) => {
+    const pin = v2Pin(child);
+    if (pin) pins.set(index, pin);
+  });
+  return pins;
+};
+
 /**
- * The top-level restrictions on each argument, by argument index. v1 states
- * them per index; v2 as a Matches node whose children are the arguments.
- * Anything nested deeper than one comparison per argument is reported as
- * "other" and left to the exact rule.
+ * A v2 rule read argument by argument. Its root is a calldata match, or an
+ * "all of" group of them (whose restrictions all hold), which may also hold
+ * one "any of" group of matches: the allowed combinations. Any other shape
+ * is not readable here and is left to the exact rule.
  */
-const collectPins = (description: IPermissionDescription): Map<number, Pin> => {
-  const pins = new Map<number, Pin>();
+const readArguments = (root: IConditionNode): ArgumentRules => {
+  const rules: ArgumentRules = { pins: new Map(), readable: true };
+  const visit = (node: IConditionNode) => {
+    if (node.operator === RolesV2Operator.Matches) {
+      for (const [index, pin] of pinsOf(node)) rules.pins.set(index, pin);
+    } else if (node.operator === RolesV2Operator.And) {
+      node.children.forEach(visit);
+    } else if (
+      node !== root &&
+      node.operator === RolesV2Operator.Or &&
+      !rules.combinations &&
+      node.children.every((child) => child.operator === RolesV2Operator.Matches)
+    ) {
+      rules.combinations = node.children.map(pinsOf);
+    } else {
+      rules.readable = false;
+    }
+  };
+  visit(root);
+  return rules;
+};
+
+/**
+ * Each argument's restrictions. v1 states them per index; v2 as calldata
+ * matches whose children are the arguments (see readArguments). Anything
+ * nested deeper than one comparison per argument is reported as "other" and
+ * left to the exact rule.
+ */
+const collectPins = (description: IPermissionDescription): ArgumentRules => {
+  if (description.conditions) return readArguments(description.conditions);
+  const pins: Pins = new Map();
   for (const param of description.v1Params ?? []) {
     const kind: PinKind = param.comparison.includes("one of")
       ? "oneOf"
@@ -111,15 +175,7 @@ const collectPins = (description: IPermissionDescription): Map<number, Pin> => {
             : "other";
     pins.set(param.index, { kind, values: param.values });
   }
-
-  const root = description.conditions;
-  if (root && root.operator === RolesV2Operator.Matches) {
-    root.children.forEach((child: IConditionNode, index: number) => {
-      const pin = v2Pin(child);
-      if (pin) pins.set(index, pin);
-    });
-  }
-  return pins;
+  return { pins, readable: true };
 };
 
 const v2Pin = (node: IConditionNode): Pin | undefined => {
@@ -128,6 +184,8 @@ const v2Pin = (node: IConditionNode): Pin | undefined => {
       return undefined;
     case RolesV2Operator.EqualTo:
       return { kind: "equals", values: [node.compValue] };
+    case RolesV2Operator.EqualToAvatar:
+      return { kind: "safe", values: [] };
     case RolesV2Operator.LessThan:
       return { kind: "below", values: [node.compValue] };
     case RolesV2Operator.GreaterThan:
@@ -310,6 +368,8 @@ const argumentLine = (name: string, pin: { kind: PinKind; values: string[] }): S
   switch (pin.kind) {
     case "equals":
       return [`${capitalise(name)}: only `, ...joined];
+    case "safe":
+      return [`${capitalise(name)}: only the vault's Safe`];
     case "oneOf":
       return [`${capitalise(name)}: one of `, ...joined];
     case "below":
@@ -322,6 +382,51 @@ const argumentLine = (name: string, pin: { kind: PinKind; values: string[] }): S
 };
 
 const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/**
+ * An address argument as "<prefix> <who>": a fixed address, the vault's Safe,
+ * a list, or, for anything else, a pointer to the exact rule. Undefined when
+ * the argument is not restricted.
+ */
+const partyLine = (
+  prefix: string,
+  pin: { kind: PinKind; values: string[] } | undefined,
+  suffix = "",
+): SummaryLine | undefined => {
+  if (!pin) return undefined;
+  const values = pin.values.map(valuePart);
+  const tail = suffix ? [suffix] : [];
+  switch (pin.kind) {
+    case "equals":
+      return [`${prefix} `, values[0], ...tail];
+    case "safe":
+      return [`${prefix} the vault's Safe${suffix}`];
+    case "oneOf":
+      return [
+        `${prefix} one of `,
+        ...values.flatMap((value, i) => (i ? [i === values.length - 1 ? " or " : ", ", value] : [value])),
+        ...tail,
+      ];
+    default:
+      return [`${prefix}: restricted (see the exact rule)`];
+  }
+};
+
+/** Every restricted argument outside `covered`, said generically, in order. */
+const remainingLines = (
+  pins: Map<number, Pin>,
+  args: { name: string; type?: ethers.ParamType }[],
+  covered: number[],
+): SummaryLine[] =>
+  [...pins.entries()]
+    .filter(([index]) => !covered.includes(index))
+    .sort(([a], [b]) => a - b)
+    .map(([index, pin]) =>
+      argumentLine(humanise(args[index]?.name ?? `argument ${index + 1}`), {
+        kind: pin.kind,
+        values: pin.values.map((v) => decodeValue(v, args[index]?.type)),
+      }),
+    );
 
 /** "The manager can…" → "the manager can…", but "Role 2" keeps its capital. */
 const lowerFirst = (text: string) => (text.startsWith("The ") ? "the " + text.slice(4) : text);
@@ -351,6 +456,65 @@ const humanise = (name: string): string => {
   return parts.map((part) => part.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase()).join(" ");
 };
 
+/** A raw comparison value that is zero: 0, the zero address, empty bytes. */
+const isZero = (value: string): boolean => {
+  if (!value || value === "0x") return true;
+  try {
+    return BigInt(value) === 0n;
+  } catch {
+    return false;
+  }
+};
+
+const decimalsOf = (address: string | undefined, ctx: SummaryContext): number | undefined =>
+  address && isAddress(address)
+    ? ctx.decimals?.(address) ?? WELL_KNOWN_DECIMALS[address.toLowerCase()]
+    : undefined;
+
+/** A raw token amount as the token counts it, or in token units when its decimals are unknown. */
+const formatAmount = (amount: bigint, decimals?: number): string =>
+  decimals === undefined
+    ? `${amount.toLocaleString("en-US")} (token units)`
+    : Number(ethers.formatUnits(amount, decimals)).toLocaleString("en-US", {
+      maximumFractionDigits: decimals,
+    });
+
+/**
+ * "50,000 sent", "at least 49,974.75 received": an amount restriction in
+ * words. "Greater than x" reads as "at least x + 1 unit", which is what it
+ * means for an integer and what people expect to see.
+ */
+const amountText = (pin: Pin | undefined, decimals: number | undefined, verb: string): string => {
+  if (!pin) return "";
+  let raw: bigint;
+  try {
+    raw = BigInt(pin.values[0]);
+  } catch {
+    return `${verb}: restricted (see the exact rule)`;
+  }
+  switch (pin.kind) {
+    case "equals":
+      return `${formatAmount(raw, decimals)} ${verb}`;
+    case "above":
+      return `at least ${formatAmount(raw + 1n, decimals)} ${verb}`;
+    case "below":
+      return `at most ${formatAmount(raw - 1n, decimals)} ${verb}`;
+    default:
+      return `${verb}: restricted (see the exact rule)`;
+  }
+};
+
+/** Allowed argument combinations, one per line, for functions with no words of their own. */
+const combinationLines = (
+  combinations: Pins[],
+  args: { name: string; type?: ethers.ParamType }[],
+): SummaryLine[] => [
+  [`One of these ${combinations.length} combinations:`],
+  ...combinations.map((combination) =>
+    remainingLines(combination, args, []).flatMap((line, i) => (i ? ["; ", ...line] : line)),
+  ),
+];
+
 const functionSummary = (
   description: IPermissionDescription,
   ctx: SummaryContext,
@@ -359,12 +523,24 @@ const functionSummary = (
   const target = description.target;
   const targetName = nameOf(target, ctx);
   const fn = ctx.functionName;
-  const pins = collectPins(description);
+  const rules = collectPins(description);
+  const { pins, combinations } = rules;
   const args = argumentNames(ctx.inputs);
   const pinned = (index: number) => pinValues(pins, index, args[index]?.type);
+  const isAcross = fn === "depositV3Now" || fn === "depositV3";
+
+  // A rule not shaped argument by argument cannot be summarised: saying
+  // less than it does ("received by any address") would be wrong, so point
+  // at the exact rule instead.
+  if (!rules.readable) {
+    return {
+      headline: `${who} can call ${fn ?? unnamedFunction(description)} on ${targetName}, with limits`,
+      lines: [["Limits: see the exact rule"]],
+    };
+  }
 
   // ERC-20 transfer(to, amount)
-  if (fn === "transfer" && args.length === 2) {
+  if (!combinations && fn === "transfer" && args.length === 2) {
     const to = pinned(0);
     const cap = pinned(1);
     const lines: SummaryLine[] = [];
@@ -380,7 +556,7 @@ const functionSummary = (
   }
 
   // ERC-20 approve(spender, amount)
-  if (fn === "approve" && args.length === 2) {
+  if (!combinations && fn === "approve" && args.length === 2) {
     const spender = pinned(0);
     const cap = pinned(1);
     const lines: SummaryLine[] = [];
@@ -398,7 +574,7 @@ const functionSummary = (
   // Across depositV3Now(depositor, recipient, inputToken, outputToken,
   //   inputAmount, outputAmount, destinationChainId, exclusiveRelayer,
   //   fillDeadlineOffset, exclusivityDeadline, message)
-  if (fn === "depositV3Now" || fn === "depositV3") {
+  if (isAcross) {
     const chain = pinned(6);
     const destination = chain?.kind === "equals" ? chainName(chain.values[0]) : undefined;
     const input = pinned(2);
@@ -407,25 +583,67 @@ const functionSummary = (
     const recipient = pinned(1);
     const output = pinned(3);
     const message = pinned(10);
-    if (from?.kind === "equals") lines.push(["Sent from ", valuePart(from.values[0])]);
-    if (recipient?.kind === "equals") {
-      lines.push(["Received by ", valuePart(recipient.values[0]), destination ? ` on ${destination}` : ""]);
-    } else {
-      lines.push(["Received by any address"]);
+    // Each argument is said exactly once: the ones a bridge is about in its
+    // own words, and every other restricted one generically after them, so a
+    // limit is never dropped from the list.
+    const covered = [0, 1, 6];
+    const fromLine = partyLine("Sent from", from);
+    if (fromLine) lines.push(fromLine);
+    lines.push(
+      partyLine("Received by", recipient, destination ? ` on ${destination}` : "") ??
+        [`Received by any address${destination ? ` on ${destination}` : ""}`],
+    );
+    if (chain && chain.kind === "oneOf") {
+      lines.push([`Destination: ${chain.values.map(chainName).join(" or ")}`]);
+    } else if (chain && chain.kind !== "equals") {
+      covered.pop();
     }
-    if (output?.kind === "equals") lines.push(["Arrives as ", valuePart(output.values[0])]);
-    if (message?.kind === "equals" && message.values[0] === "(empty)") {
+    if (input?.kind === "equals" || input?.kind === "oneOf") {
+      lines.push(partyLine("Sends", input)!);
+      covered.push(2);
+    }
+    if (output?.kind === "equals" || output?.kind === "oneOf") {
+      lines.push(partyLine("Arrives as", output)!);
+      covered.push(3);
+    }
+    if (message?.kind === "equals" && isZero(pins.get(10)!.values[0])) {
       lines.push(["No instructions attached to the transfer"]);
+      covered.push(10);
     }
+    if (pins.get(7)?.kind === "equals" && isZero(pins.get(7)!.values[0])) {
+      lines.push(["No exclusive relayer: any relayer may fill it"]);
+      covered.push(7);
+    }
+    if (pins.get(9)?.kind === "equals" && isZero(pins.get(9)!.values[0])) {
+      lines.push(["No exclusivity period"]);
+      covered.push(9);
+    }
+    lines.push(...remainingLines(pins, args, covered));
+
+    // The allowed amounts: what is sent, and at least what has to arrive.
+    if (combinations?.every((combination) => [...combination.keys()].every((i) => i === 4 || i === 5))) {
+      const sentDecimals = decimalsOf(input?.kind === "equals" ? input.values[0] : undefined, ctx);
+      const receivedDecimals = decimalsOf(output?.kind === "equals" ? output.values[0] : undefined, ctx);
+      lines.push([`Amount: one of ${combinations.length} fixed amounts`]);
+      for (const combination of combinations) {
+        const sent = amountText(combination.get(4), sentDecimals, "sent");
+        const received = amountText(combination.get(5), receivedDecimals, "received");
+        lines.push([[sent, received].filter(Boolean).join(", ")]);
+      }
+    } else if (combinations) {
+      lines.push(...combinationLines(combinations, args));
+    }
+
     const inputName = input?.kind === "equals" ? valueName(input.values[0], ctx) : "tokens";
     return {
       headline: `${who} can bridge ${inputName} with Across${destination ? ` to ${destination}` : ""}`,
-      lines,
+      // Nothing restricted at all: there are no limits to list.
+      lines: pins.size || combinations ? lines : [],
     };
   }
 
   // HyperCore CoreWriter sendRawAction(bytes)
-  if (fn === "sendRawAction" || target?.toLowerCase() === CORE_WRITER) {
+  if (!combinations && (fn === "sendRawAction" || target?.toLowerCase() === CORE_WRITER)) {
     const actions = pinned(0);
     if (actions && (actions.kind === "equals" || actions.kind === "oneOf")) {
       const raw = pins.get(0)?.values ?? [];
@@ -446,6 +664,7 @@ const functionSummary = (
     const name = humanise(args[index]?.name ?? `argument ${index + 1}`);
     lines.push(argumentLine(name, { kind: pin.kind, values: pin.values.map((v) => decodeValue(v, args[index]?.type)) }));
   }
+  if (combinations) lines.push(...combinationLines(combinations, args));
   return {
     headline: `${who} can call ${fnName} on ${targetName}${lines.length ? ", with limits" : ""}`,
     lines,

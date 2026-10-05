@@ -132,6 +132,7 @@
           :vault-address="fundInitCache?.fundContractAddr"
           :base-token="fundSettings?.baseToken"
           :context-role="selectedRole.label"
+          :role-key="selectedRole.roleKey"
         />
       </template>
     </template>
@@ -180,7 +181,9 @@ import {
   reduceRoleScopeLogs,
   storedRolePermissionCalls,
 } from "~/composables/permissions/roleScopeLogs";
-import { fetchRoleMembers } from "~/composables/permissions/useRoleExecution";
+import { warnIfOversized } from "~/composables/permissions/useCuratorExecution";
+import { fetchRoleMembers, planCallGas } from "~/composables/permissions/useRoleExecution";
+import { useAccountStore } from "~/store/account/account.store";
 import { useVaultCustomRoles } from "~/composables/permissions/useVaultCustomRoles";
 import {
   type IVaultRoleDefinition,
@@ -814,8 +817,28 @@ const storePermissions = async () => {
     web3Store.chainContracts[fundChainId.value]?.fundFactoryContractV2;
 
   console.log("SUBMIT PERMISSIONS DATA", proposalData.encodedRoleModEntries);
+
+  // The gas limit is worked out here rather than left to the wallet: a big
+  // batch outgrows a standard HyperEVM block (3M), and wallets then fall back
+  // to 95% of it, which ran a 2.89M save out of gas. Unestimable (it would
+  // revert, or no RPC answers): the wallet chooses, as before.
+  const sender = useAccountStore().activeAccountAddress;
+  const gasPlan = sender
+    ? await planCallGas(fundChainId.value, sender, {
+      to: fundFactoryContract.options.address,
+      data: fundFactoryContract.methods
+        .submitPermissions(proposalData.encodedRoleModEntries)
+        .encodeABI(),
+    })
+    : undefined;
+  warnIfOversized(fundChainId.value, gasPlan);
+
   await fundFactoryContract
-    .send("submitPermissions", {}, proposalData.encodedRoleModEntries)
+    .send(
+      "submitPermissions",
+      gasPlan ? { gas: gasPlan.gas } : {},
+      proposalData.encodedRoleModEntries,
+    )
     .on("transactionHash", (hash: any) => {
       console.log("tx hash: " + hash);
       toastStore.addToast(

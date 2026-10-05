@@ -1,4 +1,8 @@
 import { ethers } from "ethers";
+import {
+  EXECUTOR_ROLE_KEY_ALIASES_V2,
+  toRoleKeyBytes32,
+} from "~/composables/nav/generateNAVPermission";
 import { defaultRoleId, pickManagerRole } from "~/composables/permissions/managerRole";
 import {
   defaultRoleFor,
@@ -152,8 +156,16 @@ const readProfile = async (
   // default role the other way round: does anybody hold it?
   if (!managerRoles.length) {
     try {
-      const holders = await fetchRoleMembers(chainId, address, defaultRoleFor(version), version);
-      if (holders.length) addRole(defaultRoleId(version));
+      // On V2 the executor key has two spellings; a vault holds one of them.
+      const keys = version === RolesVersion.V2
+        ? EXECUTOR_ROLE_KEY_ALIASES_V2
+        : [defaultRoleFor(version)];
+      for (const key of keys) {
+        const holders = await fetchRoleMembers(chainId, address, key, version);
+        if (!holders.length) continue;
+        addRole(version === RolesVersion.V2 ? toRoleKeyBytes32(key) : defaultRoleId(version));
+        break;
+      }
     } catch (error) {
       console.warn("Could not replay the default role's members", error);
       membershipUnknown = true;
