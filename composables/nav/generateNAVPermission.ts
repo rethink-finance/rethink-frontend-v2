@@ -26,6 +26,45 @@ export const ADMIN_ROLE_KEY_V2 = "adminRole";
 export const toRoleKeyBytes32 = (roleKey: string): string =>
   ethers.isHexString(roleKey, 32) ? roleKey : ethers.encodeBytes32String(roleKey);
 
+/**
+ * Every spelling the executor's key has been created under. Vaults have
+ * come out of the factory with the misspelt "defaulManagerRole" and with
+ * "defaultManagerRole"; a vault holds one of them, and it is that vault's
+ * executor either way — never a custom role of its own.
+ */
+export const EXECUTOR_ROLE_KEY_ALIASES_V2 = [
+  EXECUTOR_ROLE_KEY_V2,
+  "defaultManagerRole",
+];
+const EXECUTOR_ROLE_KEY_ALIAS_BYTES = EXECUTOR_ROLE_KEY_ALIASES_V2.map((key) =>
+  ethers.encodeBytes32String(key).toLowerCase(),
+);
+
+/** Whether a key, as a label or bytes32, is one of the executor's spellings. */
+export const isExecutorRoleKey = (roleKey?: string): boolean => {
+  if (!roleKey) return false;
+  try {
+    return EXECUTOR_ROLE_KEY_ALIAS_BYTES.includes(toRoleKeyBytes32(roleKey).toLowerCase());
+  } catch {
+    // too long for a bytes32 string: not a role key at all
+    return false;
+  }
+};
+
+/**
+ * The executor key a vault actually uses, as a label, picked from the keys
+ * its modifier knows (bytes32, as listLiveRoleKeys reports them). Falls back
+ * to EXECUTOR_ROLE_KEY_V2 while nothing has been read.
+ */
+export const resolveExecutorRoleKey = (liveRoleKeys: string[]): string => {
+  const live = liveRoleKeys.map((key) => key.toLowerCase());
+  return (
+    EXECUTOR_ROLE_KEY_ALIASES_V2.find((_, i) =>
+      live.includes(EXECUTOR_ROLE_KEY_ALIAS_BYTES[i]),
+    ) ?? EXECUTOR_ROLE_KEY_V2
+  );
+};
+
 // Build a minimal ABI map for Roles V2 write functions we need
 export const rolesV2WriteFunctionAbiMap: Record<string, any> = {
   scopeFunction: (RolesFullV2 as any).abi.find(

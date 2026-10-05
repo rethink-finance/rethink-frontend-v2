@@ -1,8 +1,10 @@
 import { ethers } from "ethers";
 import {
   ADMIN_ROLE_KEY_V2,
+  EXECUTOR_ROLE_KEY_ALIASES_V2,
   EXECUTOR_ROLE_KEY_V2,
   generateNAVPermissionRolesV2,
+  isExecutorRoleKey,
   toRoleKeyBytes32,
 } from "~/composables/nav/generateNAVPermission";
 import {
@@ -254,6 +256,15 @@ export const VAULT_ROLES: Record<VaultRoleId, IVaultRoleDefinition> = {
 
 export const VAULT_ROLE_ORDER: VaultRoleId[] = ["admin", "executor"];
 
+/**
+ * The executor's card for a vault whose executor key is `roleKey`: one of
+ * EXECUTOR_ROLE_KEY_ALIASES_V2, whichever the vault was created with.
+ */
+export const executorRoleDefinition = (roleKey: string): IVaultRoleDefinition =>
+  roleKey === VAULT_ROLES.executor.roleKey
+    ? VAULT_ROLES.executor
+    : { ...VAULT_ROLES.executor, roleKey };
+
 /** What the generators need to know about the vault being created. */
 export interface IPrepopulatedPermissionsContext {
   fundAddress: string;
@@ -263,6 +274,11 @@ export interface IPrepopulatedPermissionsContext {
   navExecutor?: string;
   /** Required while "Collect fee" is on. */
   poolPerformanceFee?: string;
+  /**
+   * The executor key the vault was created with (see
+   * resolveExecutorRoleKey); EXECUTOR_ROLE_KEY_V2 when omitted.
+   */
+  executorRoleKey?: string;
   /**
    * The raw Settings struct the factory will store (the init cache's
    * fundSettings), never derived frontend state: the admin's settings
@@ -321,7 +337,7 @@ export const prepopulatedScopeLabels = (
     "fundAddress" | "baseToken" | "rolesModifier"
   >,
 ): { scope: IPermissionScope; label: string }[] => {
-  if (roleKey === EXECUTOR_ROLE_KEY_V2) {
+  if (isExecutorRoleKey(roleKey)) {
     const scopes = executorPrepopulatedScopes(context);
     return (Object.keys(scopes) as (keyof IExecutorPermissions)[]).map((key) => ({
       scope: scopes[key],
@@ -356,7 +372,7 @@ export const customRoleNameError = (name: string, taken: string[]): string => {
   const lower = trimmed.toLowerCase();
   const reserved = [
     ADMIN_ROLE_KEY_V2,
-    EXECUTOR_ROLE_KEY_V2,
+    ...EXECUTOR_ROLE_KEY_ALIASES_V2,
     "admin",
     "executor",
   ].map((key) => key.toLowerCase());
@@ -378,8 +394,10 @@ export interface ICustomRole {
   stored: boolean;
 }
 
-const BUILT_IN_ROLE_KEYS = [ADMIN_ROLE_KEY_V2, EXECUTOR_ROLE_KEY_V2].map((key) =>
-  toRoleKeyBytes32(key).toLowerCase(),
+// Every spelling of the executor's key is built in: whichever one a vault
+// holds is shown as its executor, not as a role of its own.
+const BUILT_IN_ROLE_KEYS = [ADMIN_ROLE_KEY_V2, ...EXECUTOR_ROLE_KEY_ALIASES_V2].map(
+  (key) => toRoleKeyBytes32(key).toLowerCase(),
 );
 
 /**
@@ -492,6 +510,7 @@ export const buildPrepopulatedPermissionsBatch = (
       changeFeeDestinations: false,
     };
   const { fundAddress, baseToken, rolesModifier } = context;
+  const executorRoleKey = context.executorRoleKey ?? EXECUTOR_ROLE_KEY_V2;
 
   // --- Executor (role 2) ---
   const executorScopes = executorPrepopulatedScopes(context);
@@ -506,7 +525,7 @@ export const buildPrepopulatedPermissionsBatch = (
       // authoritative save has to take that back.
       { target: fundAddress, selector: UPDATE_SETTINGS_SELECTOR },
     ],
-    EXECUTOR_ROLE_KEY_V2,
+    executorRoleKey,
   );
 
   const executorGrants: string[] = [];
@@ -520,7 +539,7 @@ export const buildPrepopulatedPermissionsBatch = (
       ...generateNAVPermissionRolesV2(
         fundAddress,
         context.navExecutor,
-        EXECUTOR_ROLE_KEY_V2,
+        executorRoleKey,
       ),
     );
   }
@@ -529,7 +548,7 @@ export const buildPrepopulatedPermissionsBatch = (
       ...generateSendFundsPermissionRolesV2(
         baseToken,
         fundAddress,
-        EXECUTOR_ROLE_KEY_V2,
+        executorRoleKey,
       ),
     );
   }
@@ -543,7 +562,7 @@ export const buildPrepopulatedPermissionsBatch = (
       ...generateCollectFeesPermissionRolesV2(
         fundAddress,
         context.poolPerformanceFee,
-        EXECUTOR_ROLE_KEY_V2,
+        executorRoleKey,
       ),
     );
   }
@@ -553,8 +572,8 @@ export const buildPrepopulatedPermissionsBatch = (
     executorGrants.push(
       ...generateAssignRolesPermissionRolesV2(
         rolesModifier,
-        EXECUTOR_ROLE_KEY_V2,
-        { roleKeys: [EXECUTOR_ROLE_KEY_V2], memberOf: false },
+        executorRoleKey,
+        { roleKeys: [executorRoleKey], memberOf: false },
       ),
     );
   }
@@ -567,7 +586,7 @@ export const buildPrepopulatedPermissionsBatch = (
   };
   const grantsSettings = open.metadata || open.whitelist || open.feeDestinations;
   const manageableRoles = [
-    ...(admin.manageExecutorMembers ? [EXECUTOR_ROLE_KEY_V2] : []),
+    ...(admin.manageExecutorMembers ? [executorRoleKey] : []),
     ...(admin.transferAdminRole ? [ADMIN_ROLE_KEY_V2] : []),
   ];
 

@@ -91,6 +91,7 @@
           ref="roleMembersRef"
           v-model="pendingMemberChanges"
           :role-label="hasAdminRole ? `role ${VAULT_ROLES.executor.number} · executor` : undefined"
+          :role-key="executorRoleKey"
           :chain-id="fund.chainId"
           :roles-mod-address="roleModAddress"
         />
@@ -189,9 +190,11 @@ import {
 import {
   ADMIN_ROLE_KEY_V2,
   EXECUTOR_ROLE_KEY_V2,
+  resolveExecutorRoleKey,
   toRoleKeyBytes32,
   type IAssignMemberChange,
 } from "~/composables/nav/generateNAVPermission";
+import { listLiveRoleKeys } from "~/composables/permissions/roleScopeLogs";
 import { VAULT_ROLES } from "~/composables/permissions/vaultRoles";
 import { UPDATE_SETTINGS_SELECTOR } from "~/composables/permissions/rolesV2Permissions";
 import {
@@ -389,8 +392,12 @@ const isExecutingMemberChanges = ref(false);
  * exists when the modifier stores a scope for it, or when someone holds it.
  */
 const hasAdminRole = ref(false);
+// Which spelling of the executor's key this vault was created with
+// ("defaulManagerRole" or "defaultManagerRole"), read off the same log.
+const executorRoleKey = ref(EXECUTOR_ROLE_KEY_V2);
 const refreshHasAdminRole = async () => {
   hasAdminRole.value = false;
+  executorRoleKey.value = EXECUTOR_ROLE_KEY_V2;
   settingsPermissionGranted.value = null;
   if (!fund?.fundFactoryContractV2Used || !roleModAddress.value) return;
   const modifier = roleModAddress.value;
@@ -400,8 +407,9 @@ const refreshHasAdminRole = async () => {
     // settings (the admin, or the executor on a vault created before the
     // split).
     const logs = await fetchRoleScopeLogs(fund.chainId, modifier);
+    executorRoleKey.value = resolveExecutorRoleKey(listLiveRoleKeys(logs));
     const admin = reduceRoleScopeLogs(logs, toRoleKeyBytes32(ADMIN_ROLE_KEY_V2));
-    const executor = reduceRoleScopeLogs(logs, toRoleKeyBytes32(EXECUTOR_ROLE_KEY_V2));
+    const executor = reduceRoleScopeLogs(logs, toRoleKeyBytes32(executorRoleKey.value));
     settingsPermissionGranted.value = [...admin.scopes, ...executor.scopes].some(
       (scope) =>
         scope.target.toLowerCase() === fund.address.toLowerCase() &&
@@ -442,7 +450,7 @@ const queuedMemberChanges = computed(() => {
     })),
     ...pendingMemberChanges.value.map((change) => ({
       change,
-      roleKey: EXECUTOR_ROLE_KEY_V2,
+      roleKey: executorRoleKey.value,
       list: pendingMemberChanges,
     })),
   ].sort(
