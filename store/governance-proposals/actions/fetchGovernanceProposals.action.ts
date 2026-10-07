@@ -2,6 +2,7 @@ import { useGovernanceProposalsStore } from "../governance_proposals.store";
 import { fetchBackendProposals } from "~/services/backend/governance";
 import { fetchOnChainProposals } from "~/services/onchain/proposals";
 import { fetchSubgraphGovernorProposals } from "~/services/subgraph";
+import { isRethinkSubgraphFresh } from "~/services/subgraph/freshness";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ChainId } from "~/types/enums/chain_id";
 import { ClockMode } from "~/types/enums/clock_mode";
@@ -90,9 +91,13 @@ export const fetchGovernanceProposalsAction = async (): Promise<any> => {
     governanceProposalStore.storeProposals(fund.chainId, fund.address, mappedProposals);
     return mappedProposals;
   }
-  // Tier 2: the subgraph, where one is deployed. HyperEVM has none, so there
-  // it is skipped rather than tried and reported as a failure.
-  if (hasRethinkSubgraph(fund.chainId)) {
+  // Tier 2: the subgraph, where one is deployed and keeping up with the chain.
+  // A deployment that froze or is still syncing answers without an error, so
+  // its height is checked first; behind, it would hide every newer proposal.
+  if (
+    hasRethinkSubgraph(fund.chainId) &&
+    (await isRethinkSubgraphFresh(fund.chainId as ChainId))
+  ) {
     setProposalsSource(fund.chainId, fund.address, DelegatesSource.Subgraph);
     try {
       return await fetchProposalsFromSubgraph(
