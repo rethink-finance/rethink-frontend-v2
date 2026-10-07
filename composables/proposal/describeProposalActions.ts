@@ -11,6 +11,7 @@ import {
 } from "~/composables/permissions/rolesV2Permissions";
 import type IFund from "~/types/fund";
 import { flattenAbiFunctionInputs } from "~/composables/zodiac-roles/flattenAbiFunctionInputs";
+import { describeBitmask } from "~/composables/permissions/coreWriterPatterns";
 
 /**
  * Turns the calls a governance proposal makes into data a page can explain in
@@ -782,6 +783,12 @@ const describeNode = (
       break;
   }
 
+  // A bitmask says which bytes at which offset, not a 70-digit number.
+  if (node.operator === RolesV2Operator.Bitmask) {
+    lines.push({ depth, label: label + typeHint, text: describeBitmask(node.compValue) });
+    return;
+  }
+
   const comparison = OPERATOR_TEXT[node.operator];
   if (comparison) {
     lines.push({
@@ -798,9 +805,11 @@ const describeNode = (
     // match descends into the tuple's fields or the array's elements.
     const isLogical = [RolesV2Operator.And, RolesV2Operator.Or, RolesV2Operator.Nor].includes(node.operator);
     lines.push({ depth, label: label + typeHint, text: group + ":" });
+    // "Any of" lists alternatives; "all of" lists checks that must all hold.
+    const memberWord = node.operator === RolesV2Operator.Or ? "option" : "check";
     node.children.forEach((child, i) => {
       if (isLogical) {
-        describeNode(child, depth + 1, `option ${i + 1}`, type, lines);
+        describeNode(child, depth + 1, `${memberWord} ${i + 1}`, type, lines);
       } else {
         describeNode(child, depth + 1, childLabel(type, i, `field ${i + 1}`), childType(type, i), lines);
       }

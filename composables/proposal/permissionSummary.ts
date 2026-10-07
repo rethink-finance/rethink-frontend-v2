@@ -7,6 +7,8 @@ import {
 } from "~/composables/proposal/describeProposalActions";
 import { flattenAbiFunctionInputs } from "~/composables/zodiac-roles/flattenAbiFunctionInputs";
 import { RolesV2Operator } from "~/composables/permissions/rolesV2Permissions";
+import { CORE_USDC_SYSTEM, CORE_WRITER, WELL_KNOWN_LABELS } from "~/composables/contracts/contractNames";
+import { describeCoreWriterRule } from "~/composables/permissions/coreWriterPatterns";
 
 /**
  * A Roles permission said the way a vault member would say it: who can do
@@ -49,30 +51,8 @@ export interface SummaryContext {
 
 /* ---- Well-known contracts ------------------------------------------------ */
 
-const CORE_WRITER = "0x3333333333333333333333333333333333333333";
-/** HyperCore's system address for USDC: sending it here moves USDC back to HyperEVM. */
-const CORE_USDC_SYSTEM = "0x2000000000000000000000000000000000000000";
-
-/**
- * Addresses with no explorer name that proposals keep touching. Keyed by
- * lowercase address; the same contract sits at the same address on every
- * chain it is on, except where noted.
- */
-export const WELL_KNOWN_LABELS: Record<string, string> = {
-  [CORE_WRITER]: "HyperCore (CoreWriter)",
-  [CORE_USDC_SYSTEM]: "HyperCore USDC bridge",
-  // Across SpokePool on HyperEVM.
-  "0x35e63ea3eb0fb7a3bc543c71fb66412e1f6b0e04": "Across bridge",
-  // USDC as Circle issues it on Arbitrum One.
-  "0xaf88d065e77c8cc2239327c5edb3a432268e5831": "USDC on Arbitrum",
-  // USDC on Base.
-  "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": "USDC on Base",
-  // 1inch Aggregation Router v6 and v5, same address on every chain.
-  "0x111111125421ca6dc452d289314280a0f8842a65": "1inch router",
-  "0x1111111254eeb25477b68fb85ed929f73a960582": "1inch router (v5)",
-  // USDC on Ethereum.
-  "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "USDC on Ethereum",
-};
+// The names live with the rest of the naming rules, so the store can use them too.
+export { WELL_KNOWN_LABELS };
 
 /** Decimals of tokens amounts keep being pinned in. Keyed by lowercase address. */
 const WELL_KNOWN_DECIMALS: Record<string, number> = {
@@ -653,6 +633,21 @@ const functionSummary = (
         headline: `${who} can send HyperCore instructions, limited to ${raw.length === 1 ? "one fixed instruction" : `${raw.length} fixed ones`}`,
         lines: coreActionLines(blobs),
       };
+    }
+    if (pins.has(0)) {
+      // A Roles v2 rule of byte checks on the instruction rather than a list
+      // of fixed instructions: read back which instructions it lets through.
+      // Never "any instruction": the rule does limit them.
+      const kinds = describeCoreWriterRule(description.conditions);
+      return kinds
+        ? {
+          headline: `${who} can send HyperCore instructions, limited to ${kinds.length === 1 ? "one kind" : `${kinds.length} kinds`}`,
+          lines: kinds,
+        }
+        : {
+          headline: `${who} can send HyperCore instructions, with limits`,
+          lines: [["Limits: see the exact rule"]],
+        };
     }
     return { headline: `${who} can send any HyperCore instruction`, lines: [] };
   }
