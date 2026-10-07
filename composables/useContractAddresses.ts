@@ -28,7 +28,7 @@ export function useContractAddresses() {
     "GovernableFundFactoryV1.5BeaconProxy": {
       [ChainId.ETHEREUM]: "0x0F46b4A1B4C794fc078A87A8118dB47ab76B25A7",
       // [ChainId.GOERLI]: "",
-      [ChainId.POLYGON]: "",
+      [ChainId.POLYGON]: "0xD45e5D73bcD8625f8B5C4b1b6DD7Ca48Dd47F4F6",
       // [ChainId.FRAXTAL]: "",
       [ChainId.BASE]: "0xf42694C10a80b36D51Fe6b6F0590a0d8949C4C1e",
       [ChainId.ARBITRUM]: "0x37E5E0ec7Fde0d8794db1FF54A3C2e69E801A9dE",
@@ -107,9 +107,9 @@ export function useContractAddresses() {
     "ZodiacRolesV2ModifierUpgradeableBeacon": {
       [ChainId.ETHEREUM]: "0x52ccf6dc5668d5e80bc450cecac5f3c05b9e19e8",
       // [ChainId.GOERLI]: "",
-      [ChainId.POLYGON]: "",
+      [ChainId.POLYGON]: "0xd7fDAf520a2968F243f4ac56c54d5dBb2Fa95326",
       // [ChainId.FRAXTAL]: "",
-      [ChainId.BASE]: "",
+      [ChainId.BASE]: "0x2003990E02d5963CF7Cc023e90B14be062c9b808",
       [ChainId.ARBITRUM]: "0x5b25Ad35BA684A85EBF02A032678884F94eEfd89",
       [ChainId.HYPEREVM]: "0x12f237116acb50444c88e8af5da9845783e1c584",
       [ChainId.LOCAL_NODE]: config.public.ZODIAC_ROLES_V1_PROXY as string ?? "",
