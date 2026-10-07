@@ -3,9 +3,11 @@ import { useGovernanceProposalsStore } from "../governance_proposals.store";
 import { fetchBackendDelegates } from "~/services/backend/governance";
 import { fetchOnChainDelegates } from "~/services/onchain/delegates";
 import { fetchSubgraphDelegates } from "~/services/subgraph";
+import { isRethinkSubgraphFresh } from "~/services/subgraph/freshness";
 import { useFundStore } from "~/store/fund/fund.store";
 import { ChainId } from "~/types/enums/chain_id";
 import { DelegatesSource } from "~/types/enums/delegates_source";
+import { hasRethinkSubgraph } from "~/types/enums/subgraph";
 import { _mapSubgraphFetchDelegatesToDelegates } from "~/types/helpers/mappers";
 
 /**
@@ -57,22 +59,28 @@ export const fetchDelegatesAction = async (): Promise<any> => {
     return backendSnapshot;
   }
 
-  setDelegatesSource(fund.chainId, fund.address, DelegatesSource.Subgraph);
-
   let fetchedDelegates;
-  try {
-    fetchedDelegates = await fetchSubgraphDelegates(fund.chainId, {
-      votingContract: votingContractAddress,
-    });
-  } catch (subgraphError) {
-    // The subgraph is not merely slow here — deployments do go stale and stop
-    // advancing without reporting an indexing error, which makes every vault
-    // created after the freeze look like it has no delegates at all. Fall back
-    // to reading the delegation graph off the governance token directly.
-    console.warn(
-      "Delegates subgraph unavailable, falling back to on-chain logs:",
-      subgraphError,
-    );
+  // A deployment that stopped advancing still answers, with the delegation
+  // graph as it was when it froze, so its height is checked before it is used.
+  const subgraphUsable =
+    hasRethinkSubgraph(fund.chainId) &&
+    (await isRethinkSubgraphFresh(fund.chainId as ChainId));
+  if (subgraphUsable) {
+    setDelegatesSource(fund.chainId, fund.address, DelegatesSource.Subgraph);
+    try {
+      fetchedDelegates = await fetchSubgraphDelegates(fund.chainId, {
+        votingContract: votingContractAddress,
+      });
+    } catch (subgraphError) {
+      // A vault created after the index's last block is missing outright.
+      console.warn(
+        "Delegates subgraph unavailable, falling back to on-chain logs:",
+        subgraphError,
+      );
+    }
+  }
+  if (!fetchedDelegates) {
+    // Read the delegation graph off the governance token directly.
     try {
       fetchedDelegates = await fetchOnChainDelegates(
         fund.chainId,

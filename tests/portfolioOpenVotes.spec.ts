@@ -120,7 +120,27 @@ describe("open votes", () => {
   it("stays quiet on a chain with neither source", async () => {
     backend.fetchBackendProposals.mockResolvedValue(null);
 
-    expect(await fetchOpenVotes(fund("0x3e7"), WALLET)).toEqual([]);
+    expect(await fetchOpenVotes(fund("0x539"), WALLET)).toEqual([]);
     expect(subgraph.fetchSubgraphGovernorProposals).not.toHaveBeenCalled();
+  });
+
+  it("asks the HyperEVM subgraph when the backend has nothing", async () => {
+    backend.fetchBackendProposals.mockResolvedValue(null);
+    subgraph.fetchSubgraphGovernorProposals.mockResolvedValue([
+      {
+        proposalId: "3",
+        description: "plain text",
+        voteEnd: String(future),
+        proposalCreated: [{ transaction: { blockNumber: "47000000" } }],
+        receipts: [],
+      },
+    ]);
+
+    const votes = await fetchOpenVotes(fund("0x3e7"), WALLET);
+
+    expect(subgraph.fetchSubgraphGovernorProposals).toHaveBeenCalledWith("0x3e7", {
+      governorAddress: "0x89883158f9d95991232a7520b1763e4b4d08b4eb",
+    });
+    expect(votes.map((vote) => vote.proposalId)).toEqual(["3"]);
   });
 });
