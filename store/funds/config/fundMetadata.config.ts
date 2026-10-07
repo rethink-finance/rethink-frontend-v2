@@ -108,11 +108,17 @@ export const fundMetaDataHardcoded = {
         "Yield on leveraged bravUSDC on Morpho, to access DeFi opportunities through arbitrage, basis trades, and liquidity provision.",
     },
   ],
-    // HyperEVM
+  // HyperEVM
   [ChainId.HYPEREVM]: [
     {
       // CarrotFunding Vault (vCFT)
       address: "0x7890e0fF3d76f71a3d33b17fb5B3F3866512485b",
+      subtitle:
+        "Capital layer - funding traders, hedging risk, and automating payouts.",
+    },
+    {
+      // CarrotFunding Vault (vCFT), Roles v2 redeploy of 2026-10-05
+      address: "0xeD8f7E3ED5c37D508e8E4725d6970356B8FecE2A",
       subtitle:
         "Capital layer - funding traders, hedging risk, and automating payouts.",
     },
