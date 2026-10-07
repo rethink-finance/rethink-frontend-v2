@@ -442,19 +442,24 @@ const registryLabels = computed((): Record<string, string> => {
   }
 });
 
-const labelFor = (address?: string): string | undefined => {
+/** The name the vault, the registry, the hand-written list or the explorer gives an address. */
+const nameFor = (address?: string): string | undefined => {
   if (!address) return undefined;
   const key = address.toLowerCase();
   const is = (other?: string) => !!other && other.toLowerCase() === key;
   if (is(props.vaultAddress)) return "This vault";
   if (is(props.safeAddress)) return "Vault Safe";
   if (is(props.rolesModAddress)) return "Roles modifier";
-  return (
-    registryLabels.value[key] ??
-    WELL_KNOWN_LABELS[key] ??
-    explorerLabels[key] ??
-    (is(props.baseToken) ? "Base token" : undefined)
-  );
+  return registryLabels.value[key] ?? WELL_KNOWN_LABELS[key] ?? explorerLabels[key];
+};
+
+/** That name, plus what the address is to this vault where that matters. */
+const labelFor = (address?: string): string | undefined => {
+  const name = nameFor(address);
+  if (address && props.baseToken && address.toLowerCase() === props.baseToken.toLowerCase()) {
+    return name ? `${name} (base token)` : "Base token";
+  }
+  return name;
 };
 
 /** Ask the explorer for a name where nothing local has one. */
@@ -462,7 +467,7 @@ const resolveLabel = (address?: string) => {
   const chainId = props.chainId;
   if (!chainId || !address || !/^0x[0-9a-fA-F]{40}$/.test(address)) return;
   const key = address.toLowerCase();
-  if (requestedLabels.has(`${chainId}:${key}`) || labelFor(address)) return;
+  if (requestedLabels.has(`${chainId}:${key}`) || nameFor(address)) return;
   requestedLabels.add(`${chainId}:${key}`);
   fundStore
     .getAddressLabel(address, chainId)
