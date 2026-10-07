@@ -41,6 +41,9 @@ import {
 
 const A = CRT_V2_ADDR;
 
+const CRT_V2_TRADING_AGENT = { addr: "0x4aAbFCc667Caf17275624044CA0D96fAD11e2571", label: "Trading agent", desc: "The bot's signer on HyperCore. Also the payout wallet." };
+const CRT_V2_BACKUP_AGENT = { addr: "0x772187016dac685593D04DCA8A79794e6fA70824", label: "Backup agent", desc: "Kept unused. Registering it under the same name replaces the trading agent." };
+
 export const CRT_V2 = {
   CHAIN_HEX: CRT_V2_CHAIN_HEX,
   // The official endpoint last: it meters block lookups ("More than 3000
@@ -72,11 +75,14 @@ export const CRT_V2 = {
     minDays: CRT_V2_AGENT_MIN_DAYS,
     maxDays: CRT_V2_AGENT_MAX_DAYS,
     defaultDays: CRT_V2_AGENT_MAX_DAYS,
-    /** Keys the team already runs; any address may be registered. */
-    presets: [
-      { addr: "0x4aAbFCc667Caf17275624044CA0D96fAD11e2571", label: "Trading agent", desc: "The bot's signer on HyperCore. Also the payout wallet." },
-      { addr: "0x772187016dac685593D04DCA8A79794e6fA70824", label: "Backup agent", desc: "Kept unused. Registering it under the same name replaces the trading agent." },
-    ],
+    /** Keys the team already runs, so the console can name them wherever they turn up. */
+    known: [CRT_V2_TRADING_AGENT, CRT_V2_BACKUP_AGENT],
+    /**
+     * The one-press choices under the address field; any address may be
+     * registered. The trading agent is not offered: it is the payout wallet,
+     * and the bot registers it itself.
+     */
+    presets: [CRT_V2_BACKUP_AGENT],
   },
 };
 

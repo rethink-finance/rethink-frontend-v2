@@ -122,89 +122,133 @@
       </div>
     </div>
 
-    <!-- What the last press did, one line per step. -->
-    <div v-if="activity" class="brand_card crt_activity">
-      <div class="crt_activity__head">
-        <div class="crt_activity__title">
-          {{ activity.title }}
+    <!--
+      What the last press is doing, the way the deposit dialog shows its own
+      transactions: a rail of steps, the live one in front of you, and under
+      it where each one landed (explorer, Safe{Wallet}) or why it stopped.
+    -->
+    <UiConfirmDialog
+      :model-value="!!activity"
+      max-width="520px"
+      :persistent="busy"
+      @update:model-value="(open: boolean) => { if (!open) dismiss(); }"
+    >
+      <template #title>
+        <div class="crt_dialog__eyebrow">
+          {{ activity?.role === "admin" ? "Admin Safe" : "Executor" }}
+          <span class="crt_dialog__step">
+            Step {{ dialogStepNumber }} of {{ dialogSteps.length }}
+          </span>
         </div>
-        <button class="crt_activity__close" aria-label="Dismiss" @click="dismiss">
-          <Icon icon="material-symbols:close" width="1.125rem" height="1.125rem" />
-        </button>
-      </div>
-      <div v-if="activity.quote" class="crt_mono_dim">
-        Across fee {{ fmt6(activity.quote.fee, 4) }} USDC · {{ fmt6(activity.quote.reserve, 4) }} USDC reserved for the relayer ·
-        the payout wallet receives at least {{ fmt6(activity.quote.outputAmount, 2) }} USDC on Arbitrum
-      </div>
-      <div v-if="activity.role === 'admin'" class="crt_mono_dim">
-        {{ proposeHint }}
-      </div>
-      <div v-for="(step, i) in activity.steps" :key="i" class="crt_activity__step">
-        <span>{{ step.label }}</span>
-        <span class="crt_activity__state">
-          <a
-            v-if="step.txStatus === 'ok'"
-            :href="CRT_V2.EXPLORER + '/tx/' + step.txHash"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="crt_ok"
-          >✓ mined · view</a>
-          <span v-else-if="step.txStatus === 'fail'" class="crt_bad">✗ reverted on-chain</span>
-          <span v-else-if="step.txStatus === 'refused'" class="crt_bad">✗ {{ step.sim?.name }} · {{ step.sim?.hint }}</span>
-          <span v-else-if="step.txStatus === 'declined'" class="crt_mono_dim">declined in the wallet</span>
-          <span v-else-if="step.txStatus === 'error'" class="crt_bad">✗ {{ step.error }}</span>
-          <span v-else-if="step.txStatus === 'pending'" class="crt_mono_dim">{{ step.txHash ? "pending " + shortAddr(step.txHash) + "…" : "waiting for your wallet…" }}</span>
-          <span v-else-if="step.txStatus === 'proposing'" class="crt_mono_dim">waiting for your signature…</span>
-          <a
-            v-else-if="step.proposal"
-            :href="proposalUrl(step)"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="crt_ok"
-          >proposed · nonce {{ step.proposal.nonce }} · {{ step.proposal.confirmations }}/{{ step.proposal.required }} signed · open in Safe{Wallet}</a>
-          <span v-else-if="step.sim === 'pending'" class="crt_mono_dim">checking the whitelist…</span>
-          <span v-else-if="step.sim && step.sim.ok" class="crt_mono_dim">whitelist passed</span>
-          <span v-else class="crt_mono_dim">queued</span>
-        </span>
-      </div>
-      <!--
-        The admin's transaction, as Safe{Wallet}'s transaction builder takes
-        it: whoever cannot sign here can still file exactly this proposal.
-      -->
-      <details v-for="(call, ci) in activity.safeCalls || []" :key="ci" class="crt_raw">
-        <summary class="crt_raw__summary">
-          {{ activity.safeCalls.length > 1 ? `Admin Safe transaction ${ci + 1} of ${activity.safeCalls.length}` : "Transaction for the admin Safe" }} · to / value / data / operation
-        </summary>
-        <div class="crt_raw__grid">
-          <span class="crt_label">to</span>
-          <span class="crt_mono crt_raw__value">{{ call.to }}</span>
-          <span class="crt_label">value</span>
-          <span class="crt_mono crt_raw__value">0</span>
-          <span class="crt_label">operation</span>
-          <span class="crt_mono crt_raw__value">{{ call.operation === 1 ? "1 · delegatecall (MultiSendCallOnly batch)" : "0 · call" }}</span>
-          <span class="crt_label">data</span>
-          <span class="crt_mono crt_raw__value crt_raw__data">{{ call.data }}</span>
+        <h2 class="brand_modal__title crt_dialog__title">
+          {{ activity?.title }}
+        </h2>
+      </template>
+
+      <template v-if="activity">
+        <p v-if="activity.quote" class="crt_dialog__lead">
+          Across fee {{ fmt6(activity.quote.fee, 4) }} USDC · {{ fmt6(activity.quote.reserve, 4) }} USDC reserved for the relayer ·
+          the payout wallet receives at least {{ fmt6(activity.quote.outputAmount, 2) }} USDC on Arbitrum
+        </p>
+        <p v-if="activity.role === 'admin'" class="crt_dialog__lead">
+          {{ proposeHint }}
+        </p>
+
+        <OnboardingTransactionSteps :steps="dialogSteps" />
+
+        <div class="crt_dialog__foot">
+          <!-- Where each step landed: the transaction, or the proposal and its signatures. -->
+          <div v-if="dialogOutcomes.length" class="crt_dialog__outcomes">
+            <div v-for="o in dialogOutcomes" :key="o.key" class="crt_dialog__outcome">
+              <span class="crt_dialog__outcome_label">{{ o.label }}</span>
+              <a
+                v-if="o.href"
+                :href="o.href"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="crt_ok"
+              >{{ o.text }}</a>
+              <span v-else class="crt_mono_dim">{{ o.text }}</span>
+            </div>
+          </div>
+
+          <!--
+            The admin's transaction, as Safe{Wallet}'s transaction builder takes
+            it: whoever cannot sign here can still file exactly this proposal.
+          -->
+          <details v-for="(call, ci) in activity.safeCalls || []" :key="ci" class="crt_raw">
+            <summary class="crt_raw__summary">
+              {{ activity.safeCalls.length > 1 ? `Admin Safe transaction ${ci + 1} of ${activity.safeCalls.length}` : "Transaction for the admin Safe" }} · to / value / data / operation
+            </summary>
+            <div class="crt_raw__grid">
+              <span class="crt_label">to</span>
+              <span class="crt_mono crt_raw__value">{{ call.to }}</span>
+              <span class="crt_label">value</span>
+              <span class="crt_mono crt_raw__value">0</span>
+              <span class="crt_label">operation</span>
+              <span class="crt_mono crt_raw__value">{{ call.operation === 1 ? "1 · delegatecall (MultiSendCallOnly batch)" : "0 · call" }}</span>
+              <span class="crt_label">data</span>
+              <span class="crt_mono crt_raw__value crt_raw__data">{{ call.data }}</span>
+            </div>
+            <div class="crt_raw__actions">
+              <v-btn
+                variant="text"
+                size="small"
+                class="crt_text_action"
+                @click="copyText(call.data, 'Calldata copied')"
+              >
+                Copy data
+              </v-btn>
+              <v-btn
+                variant="text"
+                size="small"
+                class="crt_text_action"
+                @click="copyText(JSON.stringify(call, null, 2), 'Transaction copied as JSON')"
+              >
+                Copy as JSON
+              </v-btn>
+            </div>
+          </details>
+
+          <template v-if="dialogDone">
+            <div class="crt_dialog__done">
+              <Icon
+                icon="material-symbols:check"
+                class="crt_dialog__done_icon"
+                height="1rem"
+                width="1rem"
+              />
+              <span>{{ dialogDoneText }}</span>
+            </div>
+            <v-btn class="crt_dialog__button bg-primary text-secondary" @click="dismiss">
+              Close
+            </v-btn>
+          </template>
+          <template v-else-if="dialogFailure">
+            <p class="crt_dialog__error">
+              {{ dialogFailure }}
+            </p>
+            <v-btn
+              v-if="activity.role === 'executor'"
+              class="crt_dialog__button bg-primary text-secondary"
+              @click="retry"
+            >
+              Try again
+            </v-btn>
+            <v-btn
+              v-else
+              class="crt_dialog__button bg-primary text-secondary"
+              @click="dismiss"
+            >
+              Close
+            </v-btn>
+          </template>
+          <p v-else class="crt_dialog__note">
+            {{ dialogNote }}
+          </p>
         </div>
-        <div class="crt_raw__actions">
-          <v-btn
-            variant="text"
-            size="small"
-            class="crt_text_action"
-            @click="copyText(call.data, 'Calldata copied')"
-          >
-            Copy data
-          </v-btn>
-          <v-btn
-            variant="text"
-            size="small"
-            class="crt_text_action"
-            @click="copyText(JSON.stringify(call, null, 2), 'Transaction copied as JSON')"
-          >
-            Copy as JSON
-          </v-btn>
-        </div>
-      </details>
-    </div>
+      </template>
+    </UiConfirmDialog>
 
     <div class="crt_layout">
       <div class="crt_main">
@@ -214,79 +258,81 @@
           <span class="crt_tag">Role 2 · signs from its own key</span>
         </div>
 
-        <div class="brand_card crt_card">
-          <div class="crt_card__head">
-            <div class="crt_card__titles">
-              <div class="brand_card__eyebrow">
-                EVM &#8596; HyperCore bridge
-              </div>
-              <div class="crt_card__sub">
-                {{ bridgeDir === "toCore"
-                  ? "approve → depositFor · receiver pinned to the Safe · any amount"
-                  : "sendAsset from Core spot to the Safe's EVM balance · any amount" }}
+        <div class="crt_grid2">
+          <div class="brand_card crt_card">
+            <div class="crt_card__head">
+              <div class="crt_card__titles">
+                <div class="brand_card__eyebrow">
+                  EVM &#8596; HyperCore bridge
+                </div>
+                <div class="crt_card__sub">
+                  {{ bridgeDir === "toCore"
+                    ? "approve → depositFor · receiver pinned to the Safe · any amount"
+                    : "sendAsset from Core spot to the Safe's EVM balance · any amount" }}
+                </div>
               </div>
             </div>
+            <div class="crt_row">
+              <v-select
+                v-model="bridgeDir"
+                :items="[{ title: 'EVM → Core', value: 'toCore' }, { title: 'Core → EVM', value: 'toEvm' }]"
+                density="compact"
+                hide-details
+                class="crt_field--narrow"
+              />
+              <v-text-field
+                v-model="bridgeAmt"
+                placeholder="Amount"
+                suffix="USDC"
+                density="compact"
+                hide-details
+              />
+              <v-btn
+                variant="outlined"
+                :disabled="!validAmt(bridgeAmt) || busy || !canExecute"
+                :title="executeReason"
+                @click="runBridge"
+              >
+                {{ bridgeDir === "toCore" ? "Deposit to Core" : "Send to EVM" }}
+              </v-btn>
+            </div>
           </div>
-          <div class="crt_row">
-            <v-select
-              v-model="bridgeDir"
-              :items="[{ title: 'EVM → Core', value: 'toCore' }, { title: 'Core → EVM', value: 'toEvm' }]"
-              density="compact"
-              hide-details
-              class="crt_field--narrow"
-            />
-            <v-text-field
-              v-model="bridgeAmt"
-              placeholder="Amount"
-              suffix="USDC"
-              density="compact"
-              hide-details
-            />
-            <v-btn
-              variant="outlined"
-              :disabled="!validAmt(bridgeAmt) || busy || !canExecute"
-              :title="executeReason"
-              @click="runBridge"
-            >
-              {{ bridgeDir === "toCore" ? "Deposit to Core" : "Send to EVM" }}
-            </v-btn>
-          </div>
-        </div>
 
-        <div class="brand_card crt_card">
-          <div class="crt_card__head">
-            <div class="crt_card__titles">
-              <div class="brand_card__eyebrow">
-                Spot &#8596; perp (usdClassTransfer)
-              </div>
-              <div class="crt_card__sub">
-                Inside the Safe's HyperCore account · any amount, either direction
+          <div class="brand_card crt_card">
+            <div class="crt_card__head">
+              <div class="crt_card__titles">
+                <div class="brand_card__eyebrow">
+                  Spot &#8596; perp
+                </div>
+                <div class="crt_card__sub">
+                  Inside the Safe's HyperCore account · any amount, either direction
+                </div>
               </div>
             </div>
-          </div>
-          <div class="crt_row">
-            <v-select
-              v-model="ctDir"
-              :items="[{ title: 'Spot → perp', value: 'toPerp' }, { title: 'Perp → spot', value: 'toSpot' }]"
-              density="compact"
-              hide-details
-              class="crt_field--narrow"
-            />
-            <v-text-field
-              v-model="ctAmt"
-              placeholder="Amount"
-              suffix="USDC"
-              density="compact"
-              hide-details
-            />
-            <v-btn
-              variant="outlined"
-              :disabled="!validAmt(ctAmt) || busy || !canExecute"
-              :title="executeReason"
-              @click="runClassTransfer"
-            >
-              Move
-            </v-btn>
+            <div class="crt_row">
+              <v-select
+                v-model="ctDir"
+                :items="[{ title: 'Spot → perp', value: 'toPerp' }, { title: 'Perp → spot', value: 'toSpot' }]"
+                density="compact"
+                hide-details
+                class="crt_field--narrow"
+              />
+              <v-text-field
+                v-model="ctAmt"
+                placeholder="Amount"
+                suffix="USDC"
+                density="compact"
+                hide-details
+              />
+              <v-btn
+                variant="outlined"
+                :disabled="!validAmt(ctAmt) || busy || !canExecute"
+                :title="executeReason"
+                @click="runClassTransfer"
+              >
+                Move
+              </v-btn>
+            </div>
           </div>
         </div>
 
@@ -490,164 +536,166 @@
           </div>
         </div>
 
-        <div class="brand_card crt_card">
-          <div class="crt_card__head">
-            <div class="crt_card__titles">
-              <div class="brand_card__eyebrow">
-                API traders (HyperCore agents)
+        <div class="crt_grid2">
+          <div class="brand_card crt_card">
+            <div class="crt_card__head">
+              <div class="crt_card__titles">
+                <div class="brand_card__eyebrow">
+                  API traders (HyperCore agents)
+                </div>
+                <div class="crt_card__sub">
+                  Any address, {{ CRT_V2.AGENT.minDays }}–{{ CRT_V2.AGENT.maxDays }} days, no proposal to governance needed.
+                  A registration under the name “{{ CRT_V2.AGENT.name }}” replaces whichever key holds it.
+                </div>
               </div>
-              <div class="crt_card__sub">
-                Any address, {{ CRT_V2.AGENT.minDays }}–{{ CRT_V2.AGENT.maxDays }} days, no proposal to governance needed.
-                A registration under the name “{{ CRT_V2.AGENT.name }}” replaces whichever key holds it.
+            </div>
+
+            <div class="crt_slots">
+              <div class="crt_label">
+                Live on HyperCore for the vault Safe
               </div>
+              <div v-if="!agents" class="crt_card__sub">
+                {{ agentsError ? "Could not read the Safe's agents from HyperCore" : "checking…" }}
+              </div>
+              <template v-else>
+                <div v-for="slot in liveSlots" :key="slot.key" class="crt_slot">
+                  <span class="crt_dot crt_dot--on" />
+                  <span class="crt_slot__kind">{{ slot.kind }}</span>
+                  <span class="crt_mono">{{ shortAddr(slot.address) }}</span>
+                  <span class="crt_mono_dim">{{ slot.who }}</span>
+                  <span class="crt_mono_dim crt_slot__until">{{ slot.until }}</span>
+                  <v-btn
+                    variant="text"
+                    size="small"
+                    class="crt_text_action"
+                    :disabled="busy || adminStanding === 'none'"
+                    :title="proposeDisabledReason"
+                    @click="runRemove(slot)"
+                  >
+                    Propose removal
+                  </v-btn>
+                </div>
+                <div v-if="!liveSlots.length" class="crt_card__sub">
+                  No agent registered
+                </div>
+              </template>
+            </div>
+
+            <div class="crt_presets">
+              <button
+                v-for="p in CRT_V2.AGENT.presets"
+                :key="p.addr"
+                type="button"
+                class="crt_preset"
+                :class="{ 'crt_preset--active': sameAddr(agentAddr, p.addr) }"
+                :title="p.desc"
+                @click="agentAddr = p.addr"
+              >
+                <span class="crt_dot" :class="`crt_dot--${agentState(p.addr).tone}`" />
+                {{ p.label }} <span class="crt_mono_dim">{{ shortAddr(p.addr) }} · {{ agentState(p.addr).text }}</span>
+              </button>
+            </div>
+            <div class="crt_row">
+              <v-text-field
+                v-model="agentAddr"
+                placeholder="Agent address 0x…"
+                density="compact"
+                hide-details
+                class="crt_field--wide"
+              />
+              <v-text-field
+                v-model="agentDays"
+                type="number"
+                :min="CRT_V2.AGENT.minDays"
+                :max="CRT_V2.AGENT.maxDays"
+                step="1"
+                suffix="days"
+                density="compact"
+                hide-details
+                class="crt_field--narrow"
+              />
+              <v-btn
+                variant="outlined"
+                :disabled="!validAgent || busy || adminStanding === 'none'"
+                :title="proposeDisabledReason || agentReason"
+                @click="runRegister"
+              >
+                Propose registration
+              </v-btn>
+            </div>
+            <div class="crt_card__sub">
+              {{ agentPreview }}
             </div>
           </div>
 
-          <div class="crt_slots">
-            <div class="crt_label">
-              Live on HyperCore for the vault Safe
-            </div>
-            <div v-if="!agents" class="crt_card__sub">
-              {{ agentsError ? "Could not read the Safe's agents from HyperCore" : "checking…" }}
-            </div>
-            <template v-else>
-              <div v-for="slot in liveSlots" :key="slot.key" class="crt_slot">
-                <span class="crt_dot crt_dot--on" />
-                <span class="crt_slot__kind">{{ slot.kind }}</span>
-                <span class="crt_mono">{{ shortAddr(slot.address) }}</span>
-                <span class="crt_mono_dim">{{ slot.who }}</span>
-                <span class="crt_mono_dim crt_slot__until">{{ slot.until }}</span>
-                <v-btn
-                  variant="text"
-                  size="small"
-                  class="crt_text_action"
-                  :disabled="busy || adminStanding === 'none'"
-                  :title="proposeDisabledReason"
-                  @click="runRemove(slot)"
-                >
-                  Propose removal
-                </v-btn>
-              </div>
-              <div v-if="!liveSlots.length" class="crt_card__sub">
-                No agent registered
-              </div>
-            </template>
-          </div>
-
-          <div class="crt_presets">
-            <button
-              v-for="p in CRT_V2.AGENT.presets"
-              :key="p.addr"
-              type="button"
-              class="crt_preset"
-              :class="{ 'crt_preset--active': sameAddr(agentAddr, p.addr) }"
-              :title="p.desc"
-              @click="agentAddr = p.addr"
-            >
-              <span class="crt_dot" :class="`crt_dot--${agentState(p.addr).tone}`" />
-              {{ p.label }} <span class="crt_mono_dim">{{ shortAddr(p.addr) }} · {{ agentState(p.addr).text }}</span>
-            </button>
-          </div>
-          <div class="crt_row">
-            <v-text-field
-              v-model="agentAddr"
-              placeholder="Agent address 0x…"
-              density="compact"
-              hide-details
-              class="crt_field--wide"
-            />
-            <v-text-field
-              v-model="agentDays"
-              type="number"
-              :min="CRT_V2.AGENT.minDays"
-              :max="CRT_V2.AGENT.maxDays"
-              step="1"
-              suffix="days"
-              density="compact"
-              hide-details
-              class="crt_field--narrow"
-            />
-            <v-btn
-              variant="outlined"
-              :disabled="!validAgent || busy || adminStanding === 'none'"
-              :title="proposeDisabledReason || agentReason"
-              @click="runRegister"
-            >
-              Propose registration
-            </v-btn>
-          </div>
-          <div class="crt_card__sub">
-            {{ agentPreview }}
-          </div>
-        </div>
-
-        <div class="brand_card crt_card">
-          <div class="crt_card__head">
-            <div class="crt_card__titles">
-              <div class="brand_card__eyebrow">
-                Executor members · admin role
-              </div>
-              <div class="crt_card__sub">
-                Membership changes run as the vault Safe on its own modifier, so they take effect once the activation
-                proposal has made the Safe the modifier's owner. {{ vault?.activated ? "That is done." : "Until then the dry run reports the gate, and the proposal can still be filed." }}
+          <div class="brand_card crt_card">
+            <div class="crt_card__head">
+              <div class="crt_card__titles">
+                <div class="brand_card__eyebrow">
+                  Executor members · admin role
+                </div>
+                <div class="crt_card__sub">
+                  Membership changes run as the vault Safe on its own modifier, so they take effect once the activation
+                  proposal has made the Safe the modifier's owner. {{ vault?.activated ? "That is done." : "Until then the dry run reports the gate, and the proposal can still be filed." }}
+                </div>
               </div>
             </div>
-          </div>
-          <div class="crt_row">
-            <v-text-field
-              v-model="memberAddr"
-              placeholder="Executor address 0x…"
-              density="compact"
-              hide-details
-              class="crt_field--wide"
-            />
-            <v-btn
-              variant="outlined"
-              :disabled="!isAddr(memberAddr) || busy || adminStanding === 'none'"
-              :title="proposeDisabledReason"
-              @click="runMember(true)"
-            >
-              Propose add
-            </v-btn>
-            <v-btn
-              variant="outlined"
-              :disabled="!isAddr(memberAddr) || busy || adminStanding === 'none'"
-              :title="proposeDisabledReason"
-              @click="runMember(false)"
-            >
-              Propose removal
-            </v-btn>
-          </div>
-          <div class="crt_card__sub">
-            Current executor: <span class="crt_mono">{{ shortAddr(CRT_V2.ADDR.executor) }}</span>
-            <span class="crt_mono_dim">· {{ executorMembership === null ? "membership unread" : executorMembership ? "holds the executor role" : "does NOT hold the executor role" }}</span>
-          </div>
-          <div class="crt_row crt_row--top">
-            <v-text-field
-              v-model="newAdminAddr"
-              placeholder="New admin address 0x… (a Safe, ideally)"
-              density="compact"
-              hide-details
-              class="crt_field--wide"
-            />
-            <v-btn
-              variant="outlined"
-              :disabled="!isAddr(newAdminAddr) || busy || adminStanding === 'none'"
-              :title="proposeDisabledReason"
-              @click="runTransferAdmin(1)"
-            >
-              1 · Propose new admin
-            </v-btn>
-            <v-btn
-              variant="text"
-              size="small"
-              class="crt_text_action crt_text_action--danger"
-              :disabled="busy || adminStanding === 'none'"
-              :title="proposeDisabledReason"
-              @click="runTransferAdmin(2)"
-            >
-              2 · Remove this Safe from admin
-            </v-btn>
+            <div class="crt_row">
+              <v-text-field
+                v-model="memberAddr"
+                placeholder="Executor address 0x…"
+                density="compact"
+                hide-details
+                class="crt_field--wide"
+              />
+              <v-btn
+                variant="outlined"
+                :disabled="!isAddr(memberAddr) || busy || adminStanding === 'none'"
+                :title="proposeDisabledReason"
+                @click="runMember(true)"
+              >
+                Propose add
+              </v-btn>
+              <v-btn
+                variant="outlined"
+                :disabled="!isAddr(memberAddr) || busy || adminStanding === 'none'"
+                :title="proposeDisabledReason"
+                @click="runMember(false)"
+              >
+                Propose removal
+              </v-btn>
+            </div>
+            <div class="crt_card__sub">
+              Current executor: <span class="crt_mono">{{ shortAddr(CRT_V2.ADDR.executor) }}</span>
+              <span class="crt_mono_dim">· {{ executorMembership === null ? "membership unread" : executorMembership ? "holds the executor role" : "does NOT hold the executor role" }}</span>
+            </div>
+            <div class="crt_row crt_row--top">
+              <v-text-field
+                v-model="newAdminAddr"
+                placeholder="New admin address 0x… (a Safe, ideally)"
+                density="compact"
+                hide-details
+                class="crt_field--wide"
+              />
+              <v-btn
+                variant="outlined"
+                :disabled="!isAddr(newAdminAddr) || busy || adminStanding === 'none'"
+                :title="proposeDisabledReason"
+                @click="runTransferAdmin(1)"
+              >
+                1 · Propose new admin
+              </v-btn>
+              <v-btn
+                variant="text"
+                size="small"
+                class="crt_text_action crt_text_action--danger"
+                :disabled="busy || adminStanding === 'none'"
+                :title="proposeDisabledReason"
+                @click="runTransferAdmin(2)"
+              >
+                2 · Remove this Safe from admin
+              </v-btn>
+            </div>
           </div>
         </div>
       </div>
@@ -658,6 +706,7 @@
 <script setup lang="ts">
 import { ethers } from "ethers";
 import { DEFAULT_RETURN_FORMAT } from "web3";
+import type { ITransactionStep, TransactionStepState } from "~/components/onboarding/TransactionSteps.vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useAccountStore } from "~/store/account/account.store";
@@ -702,7 +751,8 @@ const payoutAmt = ref("");
 const payoutChain = ref<"hyperevm" | "arbitrum">("hyperevm");
 const payoutChains = [{ key: "hyperevm", label: "HyperEVM" }, { key: "arbitrum", label: "Arbitrum" }];
 const quoting = ref(false);
-const agentAddr = ref(CRT_V2.AGENT.presets[0].addr);
+// Empty on purpose: nothing is one press from replacing the trading agent.
+const agentAddr = ref("");
 const agentDays = ref(String(CRT_V2.AGENT.defaultDays));
 const memberAddr = ref(""); const newAdminAddr = ref("");
 
@@ -819,7 +869,7 @@ const loadAgents = async () => {
   CRT_V2.AGENT.presets.forEach(async (p) => { agentsStatus[p.addr.toLowerCase()] = await crtV2AgentStatus(p.addr); });
   try { agents.value = await crtV2GetAgents(); } catch { agentsError.value = true; }
 };
-const agentWho = (address: string) => CRT_V2.AGENT.presets.find((p) => sameAddr(p.addr, address))?.label.toLowerCase() ?? "not a preset";
+const agentWho = (address: string) => CRT_V2.AGENT.known.find((p) => sameAddr(p.addr, address))?.label.toLowerCase() ?? "not a known key";
 const untilText = (ms: number | null) => (ms ? `until ${crtV2FormatDate(ms)} · ${crtV2DaysLeft(ms)} days` : "");
 const liveSlots = computed(() => {
   if (!agents.value) return [];
@@ -858,6 +908,97 @@ onMounted(() => {
 /** Clears the strip. A wallet that never answers would otherwise keep every button locked. */
 const dismiss = () => { activity.value = null; busy.value = false; };
 
+// ─── The dialog's view of the run ────────────────────────────────────────────
+// The rail (OnboardingTransactionSteps) knows five states; the console's
+// step statuses fold onto them, and whatever the rail cannot say (a link to
+// the transaction, the proposal's signatures, why a step stopped) goes in the
+// outcome rows under it.
+
+/** "1 · Approve …" loses its number: the rail's marker already carries it. */
+const railLabel = (step: any) => String(step.label).replace(/^\d+\s*·\s*/, "");
+
+const railState = (step: any): TransactionStepState => {
+  switch (step.txStatus) {
+    case "ok":
+    case "proposed":
+      return "done";
+    case "fail":
+    case "refused":
+    case "error":
+    case "declined":
+      return "failed";
+    case "pending":
+      return step.txHash ? "confirming" : "wallet";
+    case "proposing":
+      return "wallet";
+    default:
+      return "waiting";
+  }
+};
+
+const dialogSteps = computed<ITransactionStep[]>(() =>
+  (activity.value?.steps || []).map((step: any) => ({ label: railLabel(step), state: railState(step) })),
+);
+
+const dialogStepNumber = computed(() => {
+  const index = dialogSteps.value.findIndex((step) => step.state !== "done");
+  return index === -1 ? dialogSteps.value.length : index + 1;
+});
+
+const dialogDone = computed(() => dialogSteps.value.length > 0 && dialogSteps.value.every((step) => step.state === "done"));
+
+const dialogDoneText = computed(() => {
+  const steps: any[] = activity.value?.steps || [];
+  if (steps.some((s) => s.proposal && !s.proposal.executed)) return "Proposed to the admin Safe. The other owners can now sign and execute it in Safe{Wallet}.";
+  if (activity.value?.role === "admin") return "Executed by the admin Safe.";
+  return steps.length > 1 ? "All transactions mined." : "Transaction mined.";
+});
+
+/** Why the run stopped, from the step that stopped it. */
+const dialogFailure = computed(() => {
+  const steps: any[] = activity.value?.steps || [];
+  const step = steps.find((s: any) => railState(s) === "failed");
+  if (!step) return "";
+  const reason = (() => {
+    switch (step.txStatus) {
+      case "refused": return `${step.sim?.name}: ${step.sim?.hint || "the whitelist refused this call."}`;
+      case "fail": return "The transaction reverted on-chain.";
+      case "declined": return "Declined in the wallet. Nothing was sent for this step.";
+      default: return step.error || "There has been an error.";
+    }
+  })();
+  return steps.length > 1 ? `${railLabel(step)}: ${reason}` : reason;
+});
+
+const dialogNote = computed(() => {
+  const steps: any[] = activity.value?.steps || [];
+  if (steps.some((s) => s.sim === "pending")) return "Checking each call against the Roles whitelist…";
+  if (activity.value?.role === "admin") {
+    return adminStanding.value === "safe"
+      ? "Confirm in Safe{Wallet}: each call is filed as a proposal for the other owners."
+      : "Sign in your wallet. The signature is gasless and files the proposal with the admin Safe.";
+  }
+  return steps.length > 1 ? "Confirm each transaction in your wallet as it opens." : "Confirm the transaction in your wallet.";
+});
+
+const dialogOutcomes = computed(() => {
+  const rows: { key: number; label: string; text: string; href?: string }[] = [];
+  (activity.value?.steps || []).forEach((step: any, key: number) => {
+    const label = railLabel(step);
+    if (step.txStatus === "ok" && step.txHash) rows.push({ key, label, text: "view transaction ↗", href: CRT_V2.EXPLORER + "/tx/" + step.txHash });
+    else if (step.proposal) rows.push({ key, label, text: `nonce ${step.proposal.nonce} · ${step.proposal.confirmations}/${step.proposal.required} signed · open in Safe{Wallet} ↗`, href: proposalUrl(step) });
+    else if (step.txStatus === "pending" && step.txHash) rows.push({ key, label, text: `pending ${shortAddr(step.txHash)}…` });
+  });
+  return rows;
+});
+
+/** Runs what has not gone through yet; a mined step stays mined. */
+const retry = () => {
+  const action = activity.value;
+  if (!action || busy.value || action.role !== "executor") return;
+  run({ ...action, steps: action.steps.map((s: any) => (s.txStatus === "ok" ? s : { ...s })) });
+};
+
 const simulateStep = async (step: any, role: CrtV2Role) => {
   step.sim = "pending";
   // The whitelist is what is being checked, so the dry run comes from the
@@ -886,7 +1027,8 @@ const run = async (action: { title: string; role: CrtV2Role; steps: any[]; warns
     return;
   }
   armed.value = null;
-  action.steps = action.steps.map((s: any) => reactive({ ...s, sim: null, txStatus: null, txHash: null }));
+  // On a retry the steps that already mined stay as they are and are skipped below.
+  action.steps = action.steps.map((s: any) => (s.txStatus === "ok" ? s : reactive({ ...s, sim: null, txStatus: null, txHash: null, error: null, proposal: null })));
   // Steps carry the admin Safe transaction they belong to (`group`, 0 when
   // there is one): each group is filed as its own Safe transaction.
   if (action.role === "admin") action.safeCalls = stepGroups(action.steps).map((group) => crtV2SafeBatch(group.map((s: any) => s.wrapped as CrtV2Wrapped)));
@@ -895,6 +1037,7 @@ const run = async (action: { title: string; role: CrtV2Role; steps: any[]; warns
   (action.warns || []).forEach((w: string) => toastStore.warningToast(w, 8000));
   try {
     for (const step of action.steps) {
+      if (step.txStatus === "ok") continue;
       await simulateStep(step, action.role);
       const sim = step.sim;
       // Step 2 of an approve + spend pair fails the dry run until step 1 is
@@ -910,6 +1053,7 @@ const run = async (action: { title: string; role: CrtV2Role; steps: any[]; warns
       await propose(action);
     } else {
       for (const step of action.steps) {
+        if (step.txStatus === "ok") continue;
         if (!(await exec(step))) return;
       }
     }
@@ -1019,7 +1163,7 @@ const runPayout = async () => {
 const runRegister = () => {
   const agent = ethers.getAddress(agentAddr.value.trim());
   const days = agentDaysNum.value;
-  const preset = CRT_V2.AGENT.presets.find((p) => sameAddr(p.addr, agent));
+  const preset = CRT_V2.AGENT.known.find((p) => sameAddr(p.addr, agent));
   const replaces = agents.value?.named.find((n) => n.name === CRT_V2.AGENT.name);
   run({
     title: `Register ${preset ? preset.label.toLowerCase() : shortAddr(agent)} as API trader for ${days} days`, role: "admin", route: "agents",
@@ -1493,32 +1637,56 @@ const exec = async (step: any): Promise<boolean> => {
   align-items: start;
 }
 
-.crt_activity {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-
-  &__head {
+/* The run dialog: the eyebrow carries the position in the flow, the way the
+   deposit dialog's does; the rail under it is OnboardingTransactionSteps. */
+.crt_dialog {
+  &__eyebrow {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: 1rem;
-  }
-
-  &__title {
-    font-weight: 600;
-    color: $color-white;
-  }
-
-  &__close {
-    display: flex;
-    color: $color-text-irrelevant;
-    background: none;
-    border: 0;
-    cursor: pointer;
+    gap: 0.5rem;
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
   }
 
   &__step {
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: $color-text-irrelevant;
+  }
+
+  &__title {
+    margin-top: 0.375rem;
+  }
+
+  &__lead {
+    margin-bottom: 1.25rem;
+    font-size: $text-sm;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  &__foot {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-top: 1.75rem;
+  }
+
+  &__outcomes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  &__outcome {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
@@ -1527,16 +1695,52 @@ const exec = async (step: any): Promise<boolean> => {
     font-size: 13px;
   }
 
-  &__state {
-    font-family: $font-mono;
-    font-size: 12px;
-    text-align: right;
+  &__outcome_label {
+    color: $color-steel-blue;
+  }
+
+  &__note {
+    font-size: $text-sm;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  &__error {
+    font-size: $text-sm;
+    line-height: 1.5;
+    color: $color-neg;
+    word-break: break-word;
+  }
+
+  &__button {
+    width: 100%;
+    min-height: 2.75rem;
+    font-weight: 600;
+  }
+
+  /* The outcome, in the accent the finished steps above it are using. */
+  &__done {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid $color-accent-line;
+    border-radius: $default-border-radius;
+    background: $color-accent-soft;
+    font-size: $text-sm;
+    line-height: 1.5;
+    color: $color-light-subtitle;
+  }
+
+  &__done_icon {
+    flex: none;
+    margin-top: 0.125rem;
+    color: $color-cyan;
   }
 }
 
 /* The admin transaction, laid out for Safe{Wallet}'s transaction builder. */
 .crt_raw {
-  margin-top: 0.5rem;
   padding-top: 0.75rem;
   border-top: 1px solid $color-line;
 
@@ -1605,6 +1809,7 @@ const exec = async (step: any): Promise<boolean> => {
 
 .crt_field {
   &--narrow {
+    min-width: 150px;
     max-width: 180px;
   }
 
