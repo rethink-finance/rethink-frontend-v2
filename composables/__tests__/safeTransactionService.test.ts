@@ -19,8 +19,13 @@ import { ChainId } from "~/types/enums/chain_id";
 /**
  * The CRT payout Safe's proposal at nonce 1 — a 1 USDC payout wrapped for
  * role 2 — exactly as Safe's HyperEVM transaction service holds it (read
- * 2026-09-10). The manager EOA proposed it through Transaction Builder and
- * signed EIP-712; a second owner executed it on-chain.
+ * 2026-09-10, unchanged on 2026-10-07). The manager EOA proposed it through
+ * Transaction Builder and signed EIP-712; a second owner executed it on-chain.
+ *
+ * It paid the Carrot payout key, role 2's pinned recipient until the
+ * proposal executed on 2026-10-03 moved the pin to the new payout wallet.
+ * crtInner.payout follows the pin, so the vector builds its calldata from
+ * the old recipient instead.
  */
 const LIVE = {
   safe: "0xAda3dF31614438Ec8C96470148D52Ce30A037071",
@@ -29,13 +34,27 @@ const LIVE = {
   signature:
     "0x82030c03eb4b9ac368882e8a0b1c0cdcd001dddbf6f4a9b9e10581f7af403a81740376c41daa69f109b4a8247718bd623a679c23b5dfa017e30a5b9cc607a6101c",
   nonce: 1,
+  recipient: "0x77F252b5a4C1192efe09fCd7f9934A39c62ec85E",
 };
 
+const rolesIface = new ethers.Interface([
+  "function execTransactionWithRole(address to,uint256 value,bytes data,uint8 operation,uint16 role,bool shouldRevert)",
+]);
+const erc20Iface = new ethers.Interface(["function transfer(address to,uint256 amount)"]);
+
+/** USDC.transfer(recipient, 1 USDC) sent through the modifier as role 2: a plain call that reverts on failure. */
+const rolePayout = (recipient: string) =>
+  rolesIface.encodeFunctionData("execTransactionWithRole", [
+    CRT.ADDR.usdc,
+    0n,
+    erc20Iface.encodeFunctionData("transfer", [recipient, ethers.parseUnits("1", 6)]),
+    0,
+    2,
+    true,
+  ]);
+
 const livePayout = () =>
-  buildSafeTx(
-    { to: CRT.ADDR.roles, data: crtWrap(crtInner.payout("1"), 2).data },
-    LIVE.nonce,
-  );
+  buildSafeTx({ to: CRT.ADDR.roles, data: rolePayout(LIVE.recipient) }, LIVE.nonce);
 
 const jsonResponse = (body: any, status = 200) =>
   new Response(body === "" ? "" : JSON.stringify(body), {
@@ -111,6 +130,14 @@ describe("safeTxHash", () => {
         payload.message,
       ),
     ).toBe(LIVE.safeTxHash);
+  });
+});
+
+describe("crtInner.payout", () => {
+  it("now pays the new payout wallet, in the same role-2 call as the live proposal", () => {
+    const [recipient] = erc20Iface.decodeFunctionData("transfer", crtInner.payout("1").data);
+    expect(recipient).toBe("0x4aAbFCc667Caf17275624044CA0D96fAD11e2571");
+    expect(crtWrap(crtInner.payout("1"), 2).data).toBe(rolePayout(recipient));
   });
 });
 
