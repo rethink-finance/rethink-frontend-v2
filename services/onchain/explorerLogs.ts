@@ -67,9 +67,11 @@ export class ExplorerLogsUnavailableError extends Error {
   }
 }
 
+// Etherscan writes a zero log index as a bare "0x", which parseInt reads as
+// NaN — and a NaN index breaks every sort that puts a block's logs in order.
 const toNumber = (value: unknown): number => {
   const text = String(value ?? "");
-  if (!text) return 0;
+  if (!text || text === "0x") return 0;
   return text.startsWith("0x") ? parseInt(text, 16) : Number(text);
 };
 

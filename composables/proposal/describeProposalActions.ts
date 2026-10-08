@@ -807,11 +807,16 @@ const describeNode = (
     lines.push({ depth, label: label + typeHint, text: group + ":" });
     // "Any of" lists alternatives; "all of" lists checks that must all hold.
     const memberWord = node.operator === RolesV2Operator.Or ? "option" : "check";
+    // A zero-width child (an ETH or call budget) takes no field's slot.
+    let field = 0;
     node.children.forEach((child, i) => {
       if (isLogical) {
         describeNode(child, depth + 1, `${memberWord} ${i + 1}`, type, lines);
+      } else if (!takesSlot(child)) {
+        describeNode(child, depth + 1, "", undefined, lines);
       } else {
-        describeNode(child, depth + 1, childLabel(type, i, `field ${i + 1}`), childType(type, i), lines);
+        const f = field++;
+        describeNode(child, depth + 1, childLabel(type, f, `field ${f + 1}`), childType(type, f), lines);
       }
     });
     return;
@@ -822,6 +827,19 @@ const describeNode = (
     label: label + typeHint,
     text: `operator ${node.operator} with ${formatCompValue(node.compValue)}`,
   });
+};
+
+/**
+ * Whether a condition stands for one of its parent's fields (an argument, a
+ * tuple field, an array element) or for none: Roles v2 gives a node of
+ * parameter type None zero width when it decodes the calldata, so a budget
+ * on the whole call (ETH sent, calls made) sits beside the arguments without
+ * taking a slot. A logical group stands for whatever its children check.
+ */
+export const takesSlot = (node: IConditionNode): boolean => {
+  const isLogical = [RolesV2Operator.And, RolesV2Operator.Or, RolesV2Operator.Nor].includes(node.operator);
+  if (isLogical && node.children.length) return takesSlot(node.children[0]);
+  return node.paramType !== RolesV2ParameterType.None;
 };
 
 const isCalldataMatch = (node: IConditionNode) =>
@@ -852,7 +870,16 @@ const describeCalldata = (
   hideUnrestricted = false,
 ) => {
   if (isCalldataMatch(node)) {
-    node.children.forEach((child, i) => {
+    // A budget on the whole call (ETH sent, calls made) sits beside the
+    // arguments without taking an argument's slot, so it is not counted as
+    // one and gets no argument's name.
+    let argument = 0;
+    node.children.forEach((child) => {
+      if (!takesSlot(child)) {
+        describeNode(child, depth, "", undefined, lines);
+        return;
+      }
+      const i = argument++;
       const input = inputs?.[i];
       const before = lines.length;
       describeNode(child, depth, input?.name || `parameter ${i + 1}`, input, lines);

@@ -2,7 +2,7 @@
   <div class="queue">
     <div class="queue__head">
       <span class="queue__title">{{ title }}</span>
-      <span class="queue__summary">{{ summary }}</span>
+      <span class="queue__summary">{{ summaryText ?? summary }}</span>
       <span class="queue__head_action">
         <button
           type="button"
@@ -67,7 +67,7 @@
             {{ groupSummary(group) }}
           </button>
           <span v-if="collapsible && hasWarning(group)" class="queue__group_flag">
-            changes when stored
+            {{ flagText }}
           </span>
         </div>
         <button
@@ -324,6 +324,10 @@ const props = withDefaults(defineProps<{
    * more than it is edited: what the vault already stores.
    */
   collapsible?: boolean;
+  /** Replaces the head's call count, for a list whose surroundings count it better. */
+  summaryText?: string;
+  /** What a folded block says when one of its calls carries a "warn" note. */
+  flagText?: string;
   chainId?: ChainId;
   /** The vault's own contracts, so they are named instead of shown as hex. */
   vaultAddress?: string;
@@ -337,6 +341,8 @@ const props = withDefaults(defineProps<{
   locked: () => [],
   contextRole: EXECUTOR_ROLE_KEY_V2,
   collapsible: false,
+  summaryText: undefined,
+  flagText: "changes when stored",
   chainId: undefined,
   vaultAddress: undefined,
   safeAddress: undefined,
@@ -498,11 +504,22 @@ const toInputs = (inputs: readonly any[]): ethers.ParamType[] => {
   }
 };
 
+// Roles keys a call with empty calldata (a plain ETH transfer) under the
+// zero selector. No function lives there, and the public signature database
+// does have vanity names that hash to it, so it is never looked up.
+const EMPTY_CALLDATA_SELECTOR = "0x00000000";
+const isEmptyCalldata = (selector?: string) =>
+  (selector ?? "").toLowerCase() === EMPTY_CALLDATA_SELECTOR;
+
 const resolveFunction = async (target?: string, selector?: string) => {
   if (!target || !selector) return;
   const key = functionKey(target, selector);
   if (key in functions) return;
   functions[key] = null;
+  if (isEmptyCalldata(selector)) {
+    functions[key] = { name: "", inputs: [] };
+    return;
+  }
 
   // The ABIs the app ships (the vault, a Safe, ERC-20, the modifier itself).
   const known = resolveKnownFunction(selector);
@@ -555,6 +572,9 @@ const namedFunction = (call: IQueuedCall) =>
   functions[functionKey(call.description.target, call.description.selector)] ?? undefined;
 
 const functionLabel = (call: IQueuedCall): string => {
+  if (isEmptyCalldata(call.description.selector)) {
+    return "ETH transfer (empty calldata, or calldata starting 0x00000000)";
+  }
   const named = namedFunction(call);
   return named
     ? formatFunctionLabel(named.name, named.inputs)
@@ -607,7 +627,7 @@ const limitsOf = (call: IQueuedCall): ILimitLine[] => {
       roleName: (role) => queuedRoleName(role),
       label: labelFor,
       inputs: named?.inputs,
-      functionName: named?.name,
+      functionName: named?.name || undefined,
     });
   const isExact = (line: SummaryLine) =>
     !line.some((part) => typeof part === "string" && part.includes("see the exact rule"));
@@ -662,6 +682,10 @@ watch(
 const verdict = (call: IQueuedCall): string => {
   switch (call.description.action) {
     case "allow-function":
+      // An ETH transfer has no arguments to speak of; what is open is the amount.
+      if (isEmptyCalldata(call.description.selector)) {
+        return sendsEth(call) ? "any amount" : "zero-value only";
+      }
       return "any arguments";
     case "scope-function":
       return limitLines(call).length ? "only when" : "any arguments";
@@ -690,9 +714,16 @@ const caution = (call: IQueuedCall): string => {
       : "Can also delegatecall, which runs code as the vault's Safe.";
   }
   if (option.includes("send ETH") && !option.startsWith("plain")) {
-    return "May also attach ETH to the call.";
+    // Sending ETH is what an ETH-transfer grant is for, not an extra.
+    return isEmptyCalldata(call.description.selector) ? "" : "May also attach ETH to the call.";
   }
   return "";
+};
+
+/** Whether the call's execution option lets it carry ETH. */
+const sendsEth = (call: IQueuedCall): boolean => {
+  const option = call.description.executionOption ?? "";
+  return option.includes("send ETH") && !option.startsWith("plain");
 };
 
 /* ---- The raw call --------------------------------------------------------- */

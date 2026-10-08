@@ -18,6 +18,7 @@ import {
 import { fetchExplorerLogs } from "~/services/onchain/explorerLogs";
 import { fetchBlockscoutRoleLogs } from "~/services/onchain/roleScopes";
 import type { ILiveFundSettingsState } from "~/composables/permissions/roleCalldata";
+import type { IRolesAllowance } from "~/composables/permissions/roleScopeLogs";
 import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
@@ -630,6 +631,36 @@ export const fetchRolesModifierOwner = async (
     console.warn("Could not read the Roles modifier owner", error);
     return null;
   }
+};
+
+/**
+ * An allowance as a Roles V2 modifier stores it (`allowances(key)`), before
+ * the refill its next use would add (see accrueAllowance). Throws when no
+ * RPC answers or the modifier rejects the call.
+ */
+export const fetchRolesAllowance = async (
+  chainId: ChainId,
+  rolesModAddress: string,
+  allowanceKey: string,
+): Promise<IRolesAllowance> => {
+  const { reverted, returnData } = await ethCallFrom(
+    chainId,
+    ethers.ZeroAddress,
+    rolesModAddress,
+    rolesIface.encodeFunctionData("allowances", [allowanceKey]),
+  );
+  if (reverted) throw new Error(`allowances(${allowanceKey}) reverted`);
+  const [refill, maxRefill, period, balance, timestamp] = rolesIface.decodeFunctionResult(
+    "allowances",
+    returnData,
+  );
+  return {
+    refill: BigInt(refill),
+    maxRefill: BigInt(maxRefill),
+    period: BigInt(period),
+    balance: BigInt(balance),
+    timestamp: BigInt(timestamp),
+  };
 };
 
 /**
