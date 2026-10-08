@@ -300,3 +300,151 @@ export const listLiveRoleKeys = (logs: IRoleScopeLog[]): string[] => {
     return granted.targets.length > 0;
   });
 };
+
+/** The logs oldest first, the order the modifier applied them in. */
+const inLogOrder = (logs: IRoleScopeLog[]): IRoleScopeLog[] =>
+  [...logs].sort((a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex);
+
+/** One modifier event decoded, or null for an event this ABI does not know. */
+const parseRolesLog = (log: IRoleScopeLog): ethers.LogDescription | null => {
+  try {
+    return rolesInterface.parseLog({ topics: [...log.topics], data: log.data });
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Who holds each role right now, by lowercase bytes32 key: the modifier's
+ * AssignRoles history replayed, the last write per (role, member) winning.
+ * Addresses keep the casing the log gave them, in the order each was added.
+ */
+export const replayRoleMembers = (logs: IRoleScopeLog[]): Map<string, string[]> => {
+  const members = new Map<string, Map<string, string>>();
+  for (const log of inLogOrder(logs)) {
+    if ((log.topics?.[0] ?? "").toLowerCase() !== assignRolesTopic) continue;
+    const parsed = parseRolesLog(log);
+    if (!parsed) continue;
+    const module = String(parsed.args.module);
+    [...parsed.args.roleKeys].forEach((roleKey: string, i: number) => {
+      const key = String(roleKey).toLowerCase();
+      if (!members.has(key)) members.set(key, new Map());
+      if (parsed.args.memberOf[i]) members.get(key)!.set(module.toLowerCase(), module);
+      else members.get(key)!.delete(module.toLowerCase());
+    });
+  }
+  return new Map(
+    [...members].map(([key, holders]) => [key, [...holders.values()]]),
+  );
+};
+
+const enabledModuleTopic = rolesInterface.getEvent("EnabledModule")!.topicHash.toLowerCase();
+const disabledModuleTopic = rolesInterface.getEvent("DisabledModule")!.topicHash.toLowerCase();
+
+/**
+ * The modules enabled on the modifier right now, lowercase. A role's member
+ * is only let through while its module is enabled: disableModule leaves the
+ * membership stored but every call from it is refused, until a later
+ * enableModule brings it back without any AssignRoles event. assignRoles
+ * enables the module it assigns, so an assignment counts as enabling too.
+ */
+export const replayEnabledModules = (logs: IRoleScopeLog[]): Set<string> => {
+  const enabled = new Set<string>();
+  for (const log of inLogOrder(logs)) {
+    const topic = (log.topics?.[0] ?? "").toLowerCase();
+    if (topic !== enabledModuleTopic && topic !== disabledModuleTopic && topic !== assignRolesTopic) {
+      continue;
+    }
+    const parsed = parseRolesLog(log);
+    if (!parsed) continue;
+    const module = String(parsed.args.module).toLowerCase();
+    if (topic === disabledModuleTopic) enabled.delete(module);
+    else enabled.add(module);
+  }
+  return enabled;
+};
+
+export interface IStoredUnwrapAdapter {
+  /** The contract whose batches are unpacked (MultiSend, usually). */
+  to: string;
+  selector: string;
+  adapter: string;
+}
+
+const setUnwrapAdapterTopic = rolesInterface
+  .getEvent("SetUnwrapAdapter")!
+  .topicHash.toLowerCase();
+
+/**
+ * The batch unwrappers the modifier applies right now. A call to `to` with
+ * `selector` is not checked as one call: the adapter splits it and every
+ * inner call is checked on its own, for whichever role sends it. They belong
+ * to the modifier, not to a role; setting the zero adapter removes one.
+ */
+export const storedUnwrapAdapters = (logs: IRoleScopeLog[]): IStoredUnwrapAdapter[] => {
+  const adapters = new Map<string, IStoredUnwrapAdapter>();
+  for (const log of inLogOrder(logs)) {
+    if ((log.topics?.[0] ?? "").toLowerCase() !== setUnwrapAdapterTopic) continue;
+    const parsed = parseRolesLog(log);
+    if (!parsed) continue;
+    const to = String(parsed.args.to);
+    const selector = String(parsed.args.selector);
+    const adapter = String(parsed.args.adapter);
+    const key = `${to.toLowerCase()}:${selector.toLowerCase()}`;
+    // Re-set, so an adapter changed later lists where it was changed.
+    adapters.delete(key);
+    if (BigInt(adapter) !== 0n) adapters.set(key, { to, selector, adapter });
+  }
+  return [...adapters.values()];
+};
+
+const setAllowanceTopic = rolesInterface.getEvent("SetAllowance")!.topicHash.toLowerCase();
+
+/**
+ * Every allowance key the modifier's owner has set, lowercase bytes32, in
+ * the order each was first set. The modifier never deletes one; what is left
+ * of it is read live (see accrueAllowance).
+ */
+export const storedAllowanceKeys = (logs: IRoleScopeLog[]): string[] => {
+  const keys: string[] = [];
+  for (const log of inLogOrder(logs)) {
+    if ((log.topics?.[0] ?? "").toLowerCase() !== setAllowanceTopic) continue;
+    const parsed = parseRolesLog(log);
+    if (!parsed) continue;
+    const key = String(parsed.args.allowanceKey).toLowerCase();
+    if (!keys.includes(key)) keys.push(key);
+  }
+  return keys;
+};
+
+export interface IRolesAllowance {
+  refill: bigint;
+  maxRefill: bigint;
+  period: bigint;
+  balance: bigint;
+  timestamp: bigint;
+}
+
+const UINT64_MAX = (1n << 64n) - 1n;
+const UINT128_MAX = (1n << 128n) - 1n;
+
+/**
+ * An allowance's balance at `now` (unix seconds), refilled the way the
+ * modifier refills it on its next use (AllowanceTracker._accruedAllowance in
+ * Roles v2): whole periods elapsed since `timestamp` each add `refill`,
+ * capped at `maxRefill`, and a balance already at or above the cap stays
+ * where it is. A zero period never refills.
+ *
+ * null when the contract's checked arithmetic overflows on this allowance:
+ * then every call that draws on it reverts, whatever the balance says.
+ */
+export const accrueAllowance = (allowance: IRolesAllowance, now: bigint): bigint | null => {
+  const { refill, maxRefill, period, balance, timestamp } = allowance;
+  if (period === 0n) return balance;
+  if (timestamp + period > UINT64_MAX) return null;
+  if (now < timestamp + period) return balance;
+  if (balance >= maxRefill) return balance;
+  const added = refill * ((now - timestamp) / period);
+  if (added > UINT128_MAX || balance + added > UINT128_MAX) return null;
+  return balance + added < maxRefill ? balance + added : maxRefill;
+};

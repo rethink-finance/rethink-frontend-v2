@@ -17,7 +17,9 @@ export const lookupSelectorFragment = (
   selector: string,
 ): Promise<ethers.FunctionFragment | undefined> => {
   const key = (selector ?? "").slice(0, 10).toLowerCase();
-  if (!/^0x[0-9a-f]{8}$/.test(key)) return Promise.resolve(undefined);
+  // The zero selector is how Roles keys a call with empty calldata; the
+  // names the database holds for it are vanity functions, never the call.
+  if (!/^0x[0-9a-f]{8}$/.test(key) || key === "0x00000000") return Promise.resolve(undefined);
   const pending = cache.get(key);
   if (pending) return pending;
 

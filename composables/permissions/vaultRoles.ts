@@ -394,7 +394,9 @@ export const resolveCustomRoles = (
   draftNames: string[],
 ): ICustomRole[] => {
   const roles: Omit<ICustomRole, "number">[] = [];
-  const seen = new Set(BUILT_IN_ROLE_KEYS);
+  // The zero key is never a role: the modifier refuses to authorize it
+  // (NoMembership), so nothing assigned or granted under it can be used.
+  const seen = new Set([...BUILT_IN_ROLE_KEYS, ethers.ZeroHash]);
 
   for (const key of liveRoleKeys) {
     const keyBytes = key.toLowerCase();

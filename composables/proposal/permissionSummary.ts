@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import { networksMap } from "~/store/web3/networksMap";
 import {
   formatCompValue,
+  takesSlot,
   type IConditionNode,
   type IPermissionDescription,
 } from "~/composables/proposal/describeProposalActions";
@@ -107,6 +108,13 @@ const pinsOf = (match: IConditionNode): Pins => {
 };
 
 /**
+ * A condition that takes no argument's slot, such as a budget on the call
+ * itself (the ETH it sends, the number of calls). Read argument by argument
+ * it would be dropped or pinned on the wrong argument.
+ */
+const isCallLevel = (node: IConditionNode) => !takesSlot(node);
+
+/**
  * A v2 rule read argument by argument. Its root is a calldata match, or an
  * "all of" group of them (whose restrictions all hold), which may also hold
  * one "any of" group of matches: the allowed combinations. Any other shape
@@ -115,6 +123,10 @@ const pinsOf = (match: IConditionNode): Pins => {
 const readArguments = (root: IConditionNode): ArgumentRules => {
   const rules: ArgumentRules = { pins: new Map(), readable: true };
   const visit = (node: IConditionNode) => {
+    if (node.children.some(isCallLevel)) {
+      rules.readable = false;
+      return;
+    }
     if (node.operator === RolesV2Operator.Matches) {
       for (const [index, pin] of pinsOf(node)) rules.pins.set(index, pin);
     } else if (node.operator === RolesV2Operator.And) {
@@ -123,7 +135,9 @@ const readArguments = (root: IConditionNode): ArgumentRules => {
       node !== root &&
       node.operator === RolesV2Operator.Or &&
       !rules.combinations &&
-      node.children.every((child) => child.operator === RolesV2Operator.Matches)
+      node.children.every(
+        (child) => child.operator === RolesV2Operator.Matches && !child.children.some(isCallLevel),
+      )
     ) {
       rules.combinations = node.children.map(pinsOf);
     } else {

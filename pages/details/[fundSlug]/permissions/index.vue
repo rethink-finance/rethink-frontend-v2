@@ -69,6 +69,23 @@
         <FundGovernanceDelegationNotice />
       </div>
 
+      <!-- What every role may do right now, folded from the same modifier
+           log the activation and membership checks below read. -->
+      <FundPermissionsRolesV2Grants
+        v-if="roleModAddress"
+        class="mt-8"
+        :chain-id="fund.chainId"
+        :fund-address="fund.address"
+        :safe-address="fund.safeAddress"
+        :roles-mod-address="roleModAddress"
+        :base-token="fund.baseToken?.address"
+        :logs="scopeLogs"
+        :is-loading="isReadingScopeLogs"
+        :error="scopeLogsError"
+        :pending-activation="pendingActivation"
+        @refresh="refreshScopes"
+      />
+
       <!-- Membership: reads straight off the modifier, writes through the
            connected wallet's own assignRoles permission. The admin card only
            shows on a vault that has the admin role — one created before the
@@ -200,6 +217,7 @@ import { UPDATE_SETTINGS_SELECTOR } from "~/composables/permissions/rolesV2Permi
 import {
   fetchRoleScopeLogs,
   reduceRoleScopeLogs,
+  type IRoleScopeLog,
 } from "~/services/onchain/roleScopes";
 import {
   NO_DELEGATES_TITLE,
@@ -264,6 +282,11 @@ const proposesSettingsAuthority = computed(
     !!activationState.value?.needsGovernorMigration &&
     settingsPermissionGranted.value !== false,
 );
+// What the granted-permissions view marks as inert until activation.
+const pendingActivation = computed(() => ({
+  modifier: !!activationState.value?.needsOwnershipTransfer,
+  settings: !!activationState.value?.needsGovernorMigration,
+}));
 const needsActivation = computed(
   () =>
     proposesSettingsAuthority.value ||
@@ -395,18 +418,45 @@ const hasAdminRole = ref(false);
 // Which spelling of the executor's key this vault was created with
 // ("defaulManagerRole" or "defaultManagerRole"), read off the same log.
 const executorRoleKey = ref(EXECUTOR_ROLE_KEY_V2);
+
+// The modifier's full event log as last read, and which modifier it is for:
+// the granted-permissions view folds it, and the checks below answer from it.
+const scopeLogs = ref<IRoleScopeLog[] | null>(null);
+const scopeLogsModifier = ref("");
+const isReadingScopeLogs = ref(false);
+const scopeLogsError = ref("");
+// The vault's fields land one by one and each re-runs this, so reads
+// overlap. A read is applied unless a newer one already was; only the newest
+// may report a failure, which then leaves the last applied read on screen.
+let scopeLogsRead = 0;
+let scopeLogsApplied = 0;
+
 const refreshHasAdminRole = async () => {
-  hasAdminRole.value = false;
-  executorRoleKey.value = EXECUTOR_ROLE_KEY_V2;
-  settingsPermissionGranted.value = null;
-  if (!fund?.fundFactoryContractV2Used || !roleModAddress.value) return;
+  const read = ++scopeLogsRead;
   const modifier = roleModAddress.value;
+  // A different modifier starts from scratch; a refresh of the same one keeps
+  // what is on screen until the new read lands.
+  if (scopeLogsModifier.value !== modifier) {
+    hasAdminRole.value = false;
+    executorRoleKey.value = EXECUTOR_ROLE_KEY_V2;
+    settingsPermissionGranted.value = null;
+    scopeLogs.value = null;
+    scopeLogsModifier.value = modifier;
+    scopeLogsApplied = 0;
+  }
+  scopeLogsError.value = "";
+  if (!fund?.fundFactoryContractV2Used || !modifier) return;
+  isReadingScopeLogs.value = true;
   try {
-    // One read of the modifier's log answers both questions: whether the
-    // admin role is in use, and whether either role may change the vault's
+    // One read of the modifier's log answers every question here: whether
+    // the admin role is in use, whether either role may change the vault's
     // settings (the admin, or the executor on a vault created before the
-    // split).
+    // split), and what each role is granted.
     const logs = await fetchRoleScopeLogs(fund.chainId, modifier);
+    if (modifier !== scopeLogsModifier.value || read < scopeLogsApplied) return;
+    scopeLogsApplied = read;
+    scopeLogsError.value = "";
+    scopeLogs.value = logs;
     executorRoleKey.value = resolveExecutorRoleKey(listLiveRoleKeys(logs));
     const admin = reduceRoleScopeLogs(logs, toRoleKeyBytes32(ADMIN_ROLE_KEY_V2));
     const executor = reduceRoleScopeLogs(logs, toRoleKeyBytes32(executorRoleKey.value));
@@ -420,15 +470,29 @@ const refreshHasAdminRole = async () => {
       return;
     }
   } catch (error) {
+    if (read !== scopeLogsRead) return;
     console.warn("Could not read the roles' scopes", error);
+    scopeLogsError.value =
+      "Could not read the Roles modifier's history right now. This is " +
+      "usually transient: try Refresh.";
+    // The last read that did land stays on screen, and so does what it
+    // said about the roles.
+    if (scopeLogsApplied > 0) return;
+  } finally {
+    if (read === scopeLogsRead) isReadingScopeLogs.value = false;
   }
   try {
     const members = await fetchRoleMembers(fund.chainId, modifier, ADMIN_ROLE_KEY_V2);
+    if (modifier !== scopeLogsModifier.value || read < scopeLogsApplied) return;
     hasAdminRole.value = members.length > 0;
   } catch (error) {
     console.warn("Could not read the admin role's members", error);
   }
 };
+
+// The granted-permissions view's Refresh: its log, and the activation state
+// that decides which of its grants are inert.
+const refreshScopes = () => Promise.all([refreshActivationState(), refreshHasAdminRole()]);
 
 /**
  * Every queued change with the role it applies to, in the order it has to be
@@ -506,6 +570,8 @@ const executeMemberChanges = async () => {
     isExecutingMemberChanges.value = false;
     roleMembersRef.value?.reload();
     adminMembersRef.value?.reload();
+    // The granted-permissions view lists members off the same log.
+    refreshHasAdminRole();
     // Membership drives the execution buttons on the NAV / settlement /
     // execution pages, so drop what they cached about it.
     clearCuratorRoleCache();
