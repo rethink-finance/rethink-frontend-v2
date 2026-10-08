@@ -228,8 +228,10 @@ export default defineNuxtConfig({
       // Every backend call goes to production, image uploads included:
       // POST /vault-image now stores to the R2 bucket behind
       // assets.rethink.finance and returns the public URL.
+      // BACKEND_PROXY_TARGET points it at a local backend instead (a
+      // worktree dev server on any port then reaches it without CORS).
       "/backend-api": {
-        target: "https://backend.rethink.finance",
+        target: process.env.BACKEND_PROXY_TARGET || "https://backend.rethink.finance",
         changeOrigin: true,
       },
     },

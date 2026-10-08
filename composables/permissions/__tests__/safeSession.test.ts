@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   EXECUTION_MODE_HINTS,
   isSafeSession,
+  EXECUTION_MODE_LABELS,
   resolveExecutionMode,
 } from "../safeSession";
 
@@ -40,6 +41,23 @@ describe("resolveExecutionMode", () => {
   it("routes a role member through the modifier, and nobody else", () => {
     expect(resolveExecutionMode(true, false, true)).toBe("curator");
     expect(resolveExecutionMode(true, false, false)).toBe("none");
+  });
+
+  it("never calls an unread membership a curator", () => {
+    // The log could not be read: the buttons stay live for the dry-run to
+    // gate, but the wallet is labelled as unverified, not as a curator.
+    expect(resolveExecutionMode(true, false, false, true)).toBe("unverified");
+    // A confirmed role, or a Safe session, wins over the unknown flag.
+    expect(resolveExecutionMode(true, false, true, true)).toBe("curator");
+    expect(resolveExecutionMode(true, true, false, true)).toBe("safe");
+    expect(resolveExecutionMode(false, false, false, true)).toBe("none");
+  });
+
+  it("labels every live mode", () => {
+    expect(EXECUTION_MODE_LABELS.safe).toMatch(/custody Safe/);
+    expect(EXECUTION_MODE_LABELS.curator).toMatch(/vault curator/);
+    expect(EXECUTION_MODE_LABELS.unverified).toMatch(/not verified/);
+    expect(EXECUTION_MODE_HINTS.unverified).toMatch(/dry-run/);
   });
 
   it("explains both executable modes", () => {
