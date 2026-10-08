@@ -52,6 +52,8 @@ const PROTOCOL_LABELS: Record<string, string> = {
   compound_v3: "Compound v3",
   morphoMarkets: "Morpho Blue markets",
   morphoVaults: "Morpho vaults",
+  lido: "Lido",
+  cowswap: "CoW Swap",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -94,6 +96,19 @@ const ACTION_HINTS: Record<string, string> = {
     "Sky's “stake USDS, earn SKY” farm. There is nothing to choose here: " +
     "enabling this grants staking, reward claiming and unstaking on that " +
     "one farm, paid out to the vault Safe.",
+  swap:
+    "Sign swap orders that sell the chosen tokens for the chosen tokens, " +
+    "paid to the vault Safe.",
+  "lido.deposit":
+    "Each part is its own grant: stETH stakes ETH; wstETH wraps stETH and " +
+    "unwraps it back; the withdrawal queue requests exits (owned by the " +
+    "vault Safe) and claims the ETH; the CoW Swap part sells stETH for " +
+    "WETH through a pre-signed order paid to the vault Safe.",
+  "cowswap.swap":
+    "Sign CoW Protocol orders that sell the chosen tokens for the chosen " +
+    "tokens, paid to the vault Safe, and cancel them. Orders are placed " +
+    "through CoW's order book and filled by solvers. Selling ETH wraps it " +
+    "first; ETH itself cannot be bought, only WETH.",
   "compound_v3.deposit":
     "Supply and withdraw assets on the selected Compound v3 markets, and " +
     "claim COMP rewards. Each market is its own contract with its own base " +
@@ -128,6 +143,9 @@ const ACTION_HINTS: Record<string, string> = {
  * — so one chip grants more than the one vault it names.
  */
 const ACTION_WARNINGS: Record<string, string> = {
+  "lido.deposit":
+    "wstETH and queued withdrawals are not valued by the spot NAV method; " +
+    "a vault that wraps or queues needs its own NAV method for them.",
   delegate:
     "Governance-sensitive: the permission pins delegation to exactly the " +
     "delegatee address entered here, but that address is your own choice and " +
@@ -165,6 +183,9 @@ const FIELD_LABELS: Record<string, string> = {
   "morphoMarkets.deposit.targets": "Markets",
   "morphoMarkets.borrow.targets": "Markets",
   "morphoVaults.deposit.targets": "Vaults",
+  "cowswap.swap.sell": "Sell",
+  "cowswap.swap.buy": "Buy",
+  "lido.deposit.targets": "Permissions",
 };
 
 const getFieldLabel = (
@@ -344,6 +365,18 @@ export interface IProtocolFieldGroupMember {
   action: string;
   /** Schema field key IN THAT ACTION — merged fields may differ by key. */
   key: string;
+  /**
+   * What this member is called as a per-value scope. A group's members are
+   * usually one field per action, and the action names the scope
+   * ("Deposit", "Borrow"). When one action brings TWO fields into a group —
+   * CoW Swap's `sell` and `buy` over the same token list — the action name
+   * cannot tell them apart, so the field names them, and `scope` carries
+   * the action-qualified key so writes land in the right field.
+   */
+  scope: string;
+  scopeLabel: string;
+  /** The field's own label, from which `scopeLabel` is drawn when needed. */
+  fieldLabel: string;
   values: string[];
   optional: boolean;
   /** The schema's own default, when it declares one (see `schemaDefault`). */
@@ -721,6 +754,12 @@ interface IMergeFamily {
 
 const MERGE_FAMILIES: IMergeFamily[] = [
   { actions: new Set(["deposit", "borrow"]), match: "nested" },
+  /**
+   * A swap's two lists over one token universe: pick a token once and its
+   * Sell / Buy switches say which side it may be on (CoW Swap's `buy` set
+   * is its `sell` set minus the native token, so they nest).
+   */
+  { actions: new Set(["swap"]), match: "nested", label: "Assets", noun: "asset" },
   {
     actions: new Set(["stake", "delegate"]),
     match: "overlapping",
@@ -802,6 +841,9 @@ const buildFieldGroups = (
       const member: IProtocolFieldGroupMember = {
         action: action.action,
         key: field.key,
+        scope: action.action,
+        scopeLabel: getActionLabel(action.action),
+        fieldLabel: field.label,
         values: (field.options ?? []).map((option) => option.value),
         optional: field.optional,
         ...(field.defaultValue === undefined
@@ -837,6 +879,16 @@ const buildFieldGroups = (
         continue;
       }
 
+      // Two fields of one action in one group: the action can no longer
+      // name a scope, so each member goes by its field.
+      for (const existing of target.members) {
+        if (existing.action === member.action) {
+          existing.scope = `${existing.action}.${existing.key}`;
+          existing.scopeLabel = existing.fieldLabel;
+          member.scope = `${member.action}.${member.key}`;
+          member.scopeLabel = member.fieldLabel;
+        }
+      }
       const merged = new Map(
         (target.options ?? []).map((option) => [option.value, option]),
       );
@@ -845,7 +897,12 @@ const buildFieldGroups = (
         merged.set(
           option.value,
           existing
-            ? { ...existing, actions: [...existing.actions, action.action] }
+            ? {
+              ...existing,
+              actions: existing.actions.includes(action.action)
+                ? existing.actions
+                : [...existing.actions, action.action],
+            }
             : { ...option, actions: [action.action] },
         );
       }
@@ -856,6 +913,12 @@ const buildFieldGroups = (
       }
       target.options = [...merged.values()];
       target.members.push(member);
+      // A family that names its shared control wins over either field's
+      // own label: "Assets", not "Sell", for a swap's one list.
+      if (family?.label) {
+        target.label = family.label;
+        target.noun = family.noun ?? singularize(family.label);
+      }
     }
   }
 
@@ -1043,6 +1106,14 @@ export const initProtocolSelections = (
 
 // ─── Group ⇄ per-action selection state ─────────────────────────────────────
 
+/** One scope a control's values can carry: a member, as the chips name it. */
+export interface IProtocolScopeDescriptor {
+  scope: string;
+  label: string;
+  action: string;
+  optional: boolean;
+}
+
 /**
  * A group as it stands right now, given which of its actions are live. The
  * state itself stays per-action — the registry is handed exactly the params
@@ -1057,11 +1128,14 @@ export interface IProtocolGroupView {
   selected: string[];
   /** No active member requires a value. */
   optional: boolean;
-  /** Active member actions, in descriptor order. */
+  /** Active member actions, in descriptor order (one entry per action). */
   actions: string[];
+  /** Active members as per-value scopes, in descriptor order. */
+  scopes: IProtocolScopeDescriptor[];
   /** Options another setting currently takes off the table; 0 when none. */
   narrowed: number;
 }
+
 
 // ─── Value spaces the generator narrows ─────────────────────────────────────
 
@@ -1211,13 +1285,13 @@ export const viewGroup = (
   const members = activeMembers(entry, group);
   const narrowing = new Map(
     members.map((member) => [
-      member.action,
+      member.scope,
       memberNarrowing(entry, group, member),
     ]),
   );
   const accepts = (member: IProtocolFieldGroupMember, value: string) => {
     if (!member.values.includes(value)) return false;
-    const allowed = narrowing.get(member.action);
+    const allowed = narrowing.get(member.scope);
     return !allowed || allowed.has(value);
   };
   // Two passes, so "narrowed" counts only what the GENERATOR took off the
@@ -1257,7 +1331,13 @@ export const viewGroup = (
     options,
     selected,
     optional: members.every((member) => member.optional),
-    actions: members.map((member) => member.action),
+    actions: [...new Set(members.map((member) => member.action))],
+    scopes: members.map((member) => ({
+      scope: member.scope,
+      label: member.scopeLabel,
+      action: member.action,
+      optional: member.optional,
+    })),
     narrowed: offered.length - options.length,
   };
 };
@@ -1275,19 +1355,21 @@ export const applyGroupSelection = (
   group: IProtocolFieldGroup,
   values: string[],
 ): IProtocolSelectionState => {
-  const members = new Map(
-    activeMembers(entry, group).map((member) => [member.action, member]),
-  );
+  const members = activeMembers(entry, group);
   return normalizeActionEnablement(descriptor, {
     ...entry,
     actions: entry.actions.map((action) => {
-      const member = members.get(action.action);
-      if (!member) return action;
-      const next =
-        group.control === "multi-select"
-          ? values.filter((value) => member.values.includes(value))
-          : (values[0] ?? "");
-      return { ...action, params: { ...action.params, [member.key]: next } };
+      const mine = members.filter((member) => member.action === action.action);
+      if (!mine.length) return action;
+      let params = action.params;
+      for (const member of mine) {
+        const next =
+          group.control === "multi-select"
+            ? values.filter((value) => member.values.includes(value))
+            : (values[0] ?? "");
+        params = { ...params, [member.key]: next };
+      }
+      return { ...action, params };
     }),
   });
 };
@@ -1300,6 +1382,9 @@ export const applyGroupSelection = (
  * why this is read per value rather than per control.
  */
 export interface IProtocolValueScope {
+  /** The scope's id: the action, or `action.key` when the action has two fields in the group. */
+  scope: string;
+  label: string;
   action: string;
   /** The schema field this scope writes into, for the optional caveat. */
   optional: boolean;
@@ -1317,6 +1402,8 @@ export const viewValueScopes = (
     .map((member) => {
       const held = memberValue(entry, member);
       return {
+        scope: member.scope,
+        label: member.scopeLabel,
         action: member.action,
         optional: member.optional,
         granted: Array.isArray(held) && held.includes(value),
@@ -1335,31 +1422,30 @@ export const applyValueScopes = (
   entry: IProtocolSelectionState,
   group: IProtocolFieldGroup,
   value: string,
-  actions: string[],
+  scopes: string[],
 ): IProtocolSelectionState => {
-  const members = new Map(
-    activeMembers(entry, group)
-      .filter((member) => member.values.includes(value))
-      .map((member) => [member.action, member]),
+  const members = activeMembers(entry, group).filter((member) =>
+    member.values.includes(value),
   );
   return normalizeActionEnablement(descriptor, {
     ...entry,
     actions: entry.actions.map((action) => {
-      const member = members.get(action.action);
-      if (!member) return action;
-      const held = action.params[member.key];
-      const values = Array.isArray(held) ? (held as string[]) : [];
-      const wanted = actions.includes(action.action);
-      if (wanted === values.includes(value)) return action;
-      return {
-        ...action,
-        params: {
-          ...action.params,
+      const mine = members.filter((member) => member.action === action.action);
+      if (!mine.length) return action;
+      let params = action.params;
+      for (const member of mine) {
+        const held = params[member.key];
+        const values = Array.isArray(held) ? (held as string[]) : [];
+        const wanted = scopes.includes(member.scope);
+        if (wanted === values.includes(value)) continue;
+        params = {
+          ...params,
           [member.key]: wanted
             ? [...values, value]
             : values.filter((existing) => existing !== value),
-        },
-      };
+        };
+      }
+      return params === action.params ? action : { ...action, params };
     }),
   });
 };

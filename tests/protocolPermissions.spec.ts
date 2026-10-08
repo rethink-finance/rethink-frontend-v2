@@ -100,6 +100,7 @@ describe("getRegistryProtocols", () => {
       "aave_v3",
       "morphoMarkets",
       "morphoVaults",
+      "cowswap",
     ]);
     const aave = protocols[0];
     expect(aave.protocol).toBe("aave_v3");
@@ -614,6 +615,80 @@ describe("field groups", () => {
   });
 });
 
+describe("one control for a swap's two lists (CoW Swap)", () => {
+  const cowswap = () =>
+    getRegistryProtocols(ETHEREUM).find((p) => p.protocol === "cowswap")!;
+
+  it("merges sell and buy into one asset list whose scopes are the two fields", () => {
+    const descriptor = cowswap();
+    expect(descriptor.groups).toHaveLength(1);
+    const [assets] = descriptor.groups;
+    expect(assets.label).toBe("Assets");
+    expect(assets.members.map((m) => [m.scope, m.scopeLabel])).toEqual([
+      ["swap.sell", "Sell"],
+      ["swap.buy", "Buy"],
+    ]);
+    const entry = initProtocolSelections([descriptor])[0];
+    const view = viewGroup(entry, assets);
+    expect(view.actions).toEqual(["swap"]);
+    expect(view.scopes.map((scope) => scope.label)).toEqual(["Sell", "Buy"]);
+    // ETH can only be sold; a token offers both sides.
+    expect(viewValueScopes(entry, assets, "ETH").map((s) => s.label)).toEqual([
+      "Sell",
+    ]);
+    expect(viewValueScopes(entry, assets, "USDC").map((s) => s.label)).toEqual(
+      ["Sell", "Buy"],
+    );
+  });
+
+  it("picking a token grants both sides; a side can be switched off per token", () => {
+    const descriptor = cowswap();
+    const [assets] = descriptor.groups;
+    const picked = applyGroupSelection(
+      descriptor,
+      initProtocolSelections([descriptor])[0],
+      assets,
+      ["ETH", "USDC", "WETH"],
+    );
+    const swap = picked.actions[0];
+    expect(swap.enabled).toBe(true);
+    expect(swap.params).toEqual({
+      sell: ["ETH", "USDC", "WETH"],
+      buy: ["USDC", "WETH"],
+    });
+
+    const buyOnlyUsdc = applyValueScopes(descriptor, picked, assets, "USDC", [
+      "swap.buy",
+    ]);
+    expect(buyOnlyUsdc.actions[0].params).toEqual({
+      sell: ["ETH", "WETH"],
+      buy: ["USDC", "WETH"],
+    });
+    expect(viewGroup(buyOnlyUsdc, assets).selected).toEqual([
+      "ETH",
+      "USDC",
+      "WETH",
+    ]);
+    expect(
+      viewValueScopes(buyOnlyUsdc, assets, "USDC").map((s) => [s.label, s.granted]),
+    ).toEqual([
+      ["Sell", false],
+      ["Buy", true],
+    ]);
+
+    // Emptying one list switches the action off: both lists are required.
+    const noBuy = applyValueScopes(
+      descriptor,
+      applyValueScopes(descriptor, buyOnlyUsdc, assets, "WETH", ["swap.sell"]),
+      assets,
+      "USDC",
+      [],
+    );
+    expect(noBuy.actions[0].params.buy).toEqual([]);
+    expect(noBuy.actions[0].enabled).toBe(false);
+  });
+});
+
 describe("initProtocolSelections", () => {
   it("starts protocols off, and every asset-granted action with them", () => {
     // An action whose grant IS an asset list starts off: picking assets for
@@ -680,6 +755,22 @@ describe("initProtocolSelections", () => {
         enabled: false,
         actions: [
           { action: "deposit", enabled: false, params: { targets: [] } },
+        ],
+      },
+      // Lido's deposit is gated on its parts list, so it starts off.
+      {
+        protocol: "lido",
+        enabled: false,
+        actions: [
+          { action: "deposit", enabled: false, params: { targets: [] } },
+        ],
+      },
+      // CoW Swap is gated on two required lists, so it starts off.
+      {
+        protocol: "cowswap",
+        enabled: false,
+        actions: [
+          { action: "swap", enabled: false, params: { sell: [], buy: [] } },
         ],
       },
     ]);
