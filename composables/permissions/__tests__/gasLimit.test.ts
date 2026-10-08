@@ -3,6 +3,9 @@ import {
   BLOCK_SHARE,
   GAS_BUFFER,
   TX_GAS_CAPS,
+  TransactionGasCapError,
+  bracketRequiredGas,
+  formatGas,
   planGasLimit,
 } from "../gasLimit";
 
@@ -59,5 +62,57 @@ describe("planGasLimit", () => {
     expect(planGasLimit(1_000_000, 1_200_000, 5_000_000).gas).toBe(
       Math.floor(1_200_000 * BLOCK_SHARE),
     );
+  });
+});
+
+describe("the per-transaction gas cap", () => {
+  const BASE_CAP = TX_GAS_CAPS["0x2105"];
+
+  it("knows Base enforces 2^24, like Ethereum", () => {
+    expect(BASE_CAP).toBe(2 ** 24);
+    expect(TX_GAS_CAPS["0x1"]).toBe(2 ** 24);
+  });
+
+  it("holds a Base limit under the cap when the call itself fits", () => {
+    // 12M needed: buffered would be 18M, which Base would refuse outright.
+    expect(planGasLimit(12_000_000, 400_000_000, BASE_CAP)).toEqual({
+      gas: BASE_CAP,
+      exceedsBlockLimit: false,
+    });
+  });
+
+  it("brackets what a call needs from dry runs alone", async () => {
+    // INDEFI's NAV update: fails at the cap, mined at 17.8M used in April.
+    const needs = 18_400_000;
+    const probed: number[] = [];
+    const required = await bracketRequiredGas(BASE_CAP, (gas) => {
+      probed.push(gas);
+      return Promise.resolve(gas >= needs);
+    });
+    expect(required).toBeGreaterThanOrEqual(needs);
+    expect(required).toBeLessThan(needs * 1.1);
+    expect(probed.length).toBe(6);
+  });
+
+  it("gives up on a figure when even four times the cap fails", async () => {
+    expect(
+      await bracketRequiredGas(BASE_CAP, () => Promise.resolve(false)),
+    ).toBeUndefined();
+  });
+
+  it("says what is wrong in one sentence, with or without a figure", () => {
+    const measured = new TransactionGasCapError(BASE_CAP, 18_400_000, "Base");
+    expect(measured.message).toContain("about 18.4M gas");
+    expect(measured.message).toContain("Base allows at most 16.8M");
+    expect(measured.message).toContain("from any wallet");
+    expect(measured).toBeInstanceOf(Error);
+
+    const unmeasured = new TransactionGasCapError(BASE_CAP, undefined, "Base");
+    expect(unmeasured.message).toContain("more than 16.8M gas");
+  });
+
+  it("formats gas for reading", () => {
+    expect(formatGas(17_838_341)).toBe("17.8M");
+    expect(formatGas(437_310)).toBe("437,310");
   });
 });

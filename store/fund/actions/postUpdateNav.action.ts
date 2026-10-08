@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import { useFundStore } from "../fund.store";
 import { GovernableFund } from "~/assets/contracts/GovernableFund";
+import { TransactionGasCapError } from "~/composables/permissions/gasLimit";
 import { sendCuratorTransaction } from "~/composables/permissions/useCuratorExecution";
 
 const fundIface = new ethers.Interface(GovernableFund.abi as any);
@@ -69,6 +70,18 @@ export const postUpdateNAVAction = async (): Promise<any> => {
     // Roles pre-flight failures arrive here with the modifier's own reason —
     // surface it instead of the generic message, it is what tells the
     // curator which permission is missing.
+    if (error instanceof TransactionGasCapError) {
+      // Nothing about the wallet or this press can change it, so say what
+      // can: every NAV method is evaluated on every update, closed positions
+      // included, and only governance can take them out.
+      fundStore.toastStore.errorToast(
+        `${error.message} A NAV update costs more with every NAV method, ` +
+          "including those of positions that are already closed. Remove them " +
+          "with a NAV methods proposal (Manage NAV methods), then update again.",
+        30000,
+      );
+      throw error;
+    }
     fundStore.toastStore.errorToast(
       error?.message ||
         "There has been an error. Please contact the Rethink Finance support.",
