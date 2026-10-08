@@ -11,7 +11,6 @@ export default defineNuxtPlugin(() => {
   const ETHERSCAN_KEY = config.public.ETHERSCAN_KEY as string;
   const POLYGONSCAN_KEY = config.public.POLYGONSCAN_KEY as string;
   const ARBISCAN_KEY = config.public.ARBISCAN_KEY as string;
-  const BASESCAN_KEY = config.public.BASESCAN_KEY as string;
   const TRY_ETHERNAL_KEY = config.public.TRY_ETHERNAL_KEY as string;
 
   if (!ETHERSCAN_KEY) throw new Error("ETHERSCAN_KEY env is not set");
@@ -34,10 +33,9 @@ export default defineNuxtPlugin(() => {
     [ChainId.ARBITRUM]: etherscanV2(ChainId.ARBITRUM),
     [ChainId.ETHEREUM]: etherscanV2(ChainId.ETHEREUM),
     [ChainId.BASE]: etherscanV2(ChainId.BASE),
-    [ChainId.HYPEREVM]: {
-      apiUrl: "https://api.purrsec.com/api",
-      apiKey: BASESCAN_KEY
-    },
+    // HyperEVM's own explorer API (api.purrsec.com) no longer answers at all;
+    // Etherscan v2 serves chain 999 like the others, proxies included.
+    [ChainId.HYPEREVM]: etherscanV2(ChainId.HYPEREVM),
     [ChainId.LOCAL_NODE]: {
       apiUrl: "https://api.tryethernal.com",
       apiKey: TRY_ETHERNAL_KEY,

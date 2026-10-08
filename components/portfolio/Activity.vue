@@ -30,6 +30,13 @@
       Reading your transactions…
     </div>
 
+    <div v-else-if="!allRows.length && failedChainNames" class="activity__placeholder">
+      Couldn't read your transactions on {{ failedChainNames }}.
+      <button type="button" class="activity__retry" @click="emit('retry')">
+        Retry
+      </button>
+    </div>
+
     <div v-else-if="!allRows.length" class="activity__placeholder">
       No transactions yet - deposit into a vault from the Discover page.
     </div>
@@ -39,6 +46,12 @@
     </div>
 
     <template v-else>
+      <p v-if="failedChainNames" class="activity__partial">
+        Activity on {{ failedChainNames }} couldn't be read, so some rows may be missing.
+        <button type="button" class="activity__retry" @click="emit('retry')">
+          Retry
+        </button>
+      </p>
       <div class="activity__rows">
         <div v-for="row in pagedRows" :key="row.id" class="activity__row">
           <div class="activity__vault" @click="openVault(row)">
@@ -95,6 +108,7 @@
 <script setup lang="ts">
 import type IFund from "~/types/fund";
 import type { ChainId } from "~/types/enums/chain_id";
+import { networksMap } from "~/store/web3/networksMap";
 import AddressLink from "~/components/common/AddressLink.vue";
 import { formatTokenValue } from "~/composables/formatters";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
@@ -120,7 +134,17 @@ const props = defineProps<{
   flows: PortfolioFlow[];
   funds: IFund[];
   isLoading: boolean;
+  /** Chains whose history could not be read; the list may be missing rows there. */
+  failedChains?: ChainId[];
 }>();
+
+const emit = defineEmits<{ (e: "retry"): void }>();
+
+const failedChainNames = computed(() =>
+  (props.failedChains ?? [])
+    .map((chainId) => networksMap[chainId]?.chainName ?? chainId)
+    .join(", "),
+);
 
 const PAGE_SIZE = 5;
 const page = ref(1);
@@ -294,6 +318,22 @@ const openVault = (row: { fund: IFund }) => {
     width: 6px;
     height: 6px;
     border-radius: 999px;
+  }
+
+  &__partial {
+    margin: 0 0 0.5rem;
+    font-size: $text-sm;
+    color: $color-steel-blue;
+  }
+
+  &__retry {
+    padding: 0;
+    background: none;
+    border: none;
+    font: inherit;
+    color: $color-white;
+    text-decoration: underline;
+    cursor: pointer;
   }
 
   &__placeholder {

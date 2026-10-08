@@ -62,7 +62,8 @@
 import { formatNumberShort, formatTokenValue } from "~/composables/formatters";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import type { PricedPosition } from "~/composables/portfolioPositions";
-import type { PositionAttention } from "~/composables/portfolioAttention";
+import type { OpenVote, PositionAttention } from "~/composables/portfolioAttention";
+import { buildProposalSlug } from "~/composables/governance/proposalSlug";
 import type IPortfolioPositionRow from "~/types/portfolio_position_row";
 
 /**
@@ -160,8 +161,9 @@ const openPosition = (key: string) => {
 };
 
 /** Straight to the proposal, which is where the vote is actually cast. */
-const openVote = (position: PortfolioPosition, proposalId: string) => {
-  router.push(`${positionUrl(position)}/governance/proposal/${proposalId}`);
+const openVote = (position: PortfolioPosition, vote: OpenVote) => {
+  const slug = buildProposalSlug(vote.proposalId, vote.createdBlockNumber);
+  router.push(`${positionUrl(position)}/governance/proposal/${slug}`);
 };
 </script>
 

@@ -504,9 +504,9 @@ const previewSummary = computed((): string => {
  */
 const previewNote = computed((): string => {
   if (issues.value.length) {
-    return "No calls yet — settle the problem above and they appear here.";
+    return "No calls yet. Settle the problem above and they appear here.";
   }
-  return "No calls yet — nothing on this integration is granted.";
+  return "No calls yet. Nothing on this integration is granted.";
 });
 
 const friendlyDescription = (

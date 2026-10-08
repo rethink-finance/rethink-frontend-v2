@@ -1,8 +1,14 @@
 <template>
-  <div class="role_members">
+  <div class="role_members" :class="{ 'role_members--embedded': embedded }">
     <div class="role_members__head">
       <div class="role_members__title">
-        Role members &#183; {{ roleLabel }}
+        <template v-if="embedded">
+          Members
+        </template>
+        <template v-else>
+          Role members &#183; {{ roleLabel }}
+        </template>
+        <span v-if="rows.length" class="role_members__count">{{ memberCount }}</span>
         <button
           v-if="canReadMembers"
           type="button"
@@ -18,7 +24,7 @@
           v-model="addressInput"
           class="role_members__input"
           type="text"
-          placeholder="0x0000000000000000000000000000000000000000"
+          :placeholder="recommendMultisig ? '0x… multisig address recommended' : '0x… address'"
           @keyup.enter="queueAdd"
         >
         <button
@@ -47,6 +53,19 @@
       <span class="role_members__address">
         {{ row.address }}
         <span v-if="isSelf(row.address)" class="role_members__self">(you)</span>
+        <!-- Only on a role that should sit behind a multisig: held by one
+             key, it is one lost or stolen key away from being someone
+             else's, so say so where the address is listed. -->
+        <span
+          v-if="recommendMultisig && row.state !== 'TO_REMOVE' && addressKinds[row.address.toLowerCase()] === 'wallet'"
+          class="role_members__kind"
+          title="This address is a single wallet. A multisig (e.g. a Safe) is recommended for vault roles: one lost or stolen key would otherwise control this role."
+        >single key · multisig recommended</span>
+        <span
+          v-else-if="recommendMultisig && row.state !== 'TO_REMOVE' && addressKinds[row.address.toLowerCase()] === 'contract'"
+          class="role_members__kind role_members__kind--ok"
+          title="This address is a contract, such as a multisig."
+        >contract</span>
       </span>
       <span
         class="role_members__tag"
@@ -65,23 +84,33 @@
       <template v-if="isLoadingMembers">
         Reading members from the modifier…
       </template>
+      <template v-else-if="emptyText">
+        {{ emptyText }}
+      </template>
       <template v-else>
         Nobody holds this role. The wallet that initialized the vault normally
-        does — add one before saving, or the vault has no manager.
+        does. Add one before saving, or nobody can run the vault.
       </template>
     </div>
 
     <p v-else-if="leavesRoleEmpty" class="role_members__warning">
-      These changes leave the role with no members. Nothing would be able to
-      update NAV, settle flows or collect fees afterwards.
+      <template v-if="leavesEmptyText">
+        {{ leavesEmptyText }}
+      </template>
+      <template v-else>
+        These changes leave the role with no members. Nothing would be able to
+        update NAV, settle flows or collect fees afterwards.
+      </template>
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ethers } from "ethers";
+import { EXECUTOR_ROLE_KEY_V2 } from "~/composables/nav/generateNAVPermission";
 import { fetchRoleMembers } from "~/composables/permissions/useRoleExecution";
 import { useAccountStore } from "~/store/account/account.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
 
 type ChangeAction = "ADD" | "REMOVE";
@@ -96,8 +125,9 @@ const TAG_LABELS: Record<RowState, string> = {
 };
 
 /**
- * Membership of the manager role: who holds it now, and what the pending
- * save will change. Nothing here touches the chain on its own — queued rows
+ * Membership of one role on the vault's modifier — the executor role unless
+ * `roleKey` says otherwise: who holds it now, and what the pending save will
+ * change. Nothing here touches the chain on its own — queued rows
  * are intent, applied by whatever owns the save (the create flow's
  * submitPermissions, or an execTransactionWithRole from the vault's
  * Permissions page).
@@ -108,8 +138,25 @@ const TAG_LABELS: Record<RowState, string> = {
 const props = defineProps<{
   modelValue: ChangeItem[];
   roleLabel?: string;
+  /**
+   * The role whose members are listed, as its label or bytes32 key. Defaults
+   * to the executor role every Roles V2 vault is created with.
+   */
+  roleKey?: string;
   chainId?: ChainId;
   rolesModAddress?: string;
+  /** Drawn as a section of a role card: no frame of its own. */
+  embedded?: boolean;
+  /**
+   * Nudge towards a multisig: say so in the input, and tag each listed
+   * address as a contract or a single key. For the admin role; the executor
+   * is an everyday operating role and is fine on a plain wallet.
+   */
+  recommendMultisig?: boolean;
+  /** What to say when nobody holds the role and nothing is queued. */
+  emptyText?: string;
+  /** What to warn when the queued changes would leave the role empty. */
+  leavesEmptyText?: string;
 }>();
 
 const emit = defineEmits<{
@@ -117,6 +164,7 @@ const emit = defineEmits<{
 }>();
 
 const accountStore = useAccountStore();
+const web3Store = useWeb3Store();
 
 const addressInput = ref("");
 const error = ref("");
@@ -124,10 +172,9 @@ const loadError = ref("");
 const currentMembers = ref<string[]>([]);
 const isLoadingMembers = ref(false);
 
-// "Curator" is the app's name for this role everywhere it is shown (the
-// activity feed labels its executions the same way); the on-chain key stays
-// "defaulManagerRole".
-const roleLabel = computed(() => props.roleLabel || "curator");
+// "Executor" is the name of role 2 wherever its members are listed; the
+// on-chain key stays "defaulManagerRole" (or "defaultManagerRole").
+const roleLabel = computed(() => props.roleLabel || "executor");
 const canQueue = computed(() => !!addressInput.value.trim());
 const canReadMembers = computed(
   () => !!props.chainId && !!props.rolesModAddress,
@@ -152,6 +199,7 @@ const loadMembers = async () => {
     currentMembers.value = await fetchRoleMembers(
       props.chainId as ChainId,
       props.rolesModAddress as string,
+      props.roleKey || EXECUTOR_ROLE_KEY_V2,
     );
   } catch (e) {
     console.error("Failed loading role members", e);
@@ -188,10 +236,58 @@ const rows = computed<Row[]>(() => {
   return [...memberRows, ...unlistedRemovals, ...additions];
 });
 
+/** Who will hold the role once the queued changes are saved. */
+const memberCount = computed(
+  () => rows.value.filter((row) => row.state !== "TO_REMOVE").length,
+);
+
 const leavesRoleEmpty = computed(
   () =>
     rows.value.length > 0 &&
     rows.value.every((row) => row.state === "TO_REMOVE"),
+);
+
+/**
+ * What each listed address is: a contract (a multisig, typically) or a
+ * single wallet. Read from the chain once per address; an address that
+ * cannot be read simply carries no tag.
+ */
+type AddressKind = "contract" | "wallet";
+const addressKinds = ref<Record<string, AddressKind>>({});
+const requestedKinds = new Set<string>();
+
+const readAddressKind = async (address: string) => {
+  const chainId = props.chainId;
+  if (!chainId || !props.recommendMultisig) return;
+  const requestKey = `${chainId}:${address.toLowerCase()}`;
+  if (requestedKinds.has(requestKey)) return;
+  requestedKinds.add(requestKey);
+  try {
+    const code = String(
+      await web3Store.callWithRetry(chainId, () =>
+        web3Store.chainProviders[chainId].eth.getCode(address),
+      ),
+    ).toLowerCase();
+    // 0xef0100… is an EIP-7702 delegation: still one key behind the address.
+    const isContract = code.length > 2 && !code.startsWith("0xef0100");
+    addressKinds.value = {
+      ...addressKinds.value,
+      [address.toLowerCase()]: isContract ? "contract" : "wallet",
+    };
+  } catch (e) {
+    console.warn("Could not read what kind of address this is", address, e);
+    requestedKinds.delete(requestKey);
+  }
+};
+
+watch(
+  () => [
+    rows.value.map((row) => row.address).join(","),
+    props.chainId,
+    props.recommendMultisig,
+  ],
+  () => rows.value.forEach((row) => readAddressKind(row.address)),
+  { immediate: true },
 );
 
 const setChanges = (value: ChangeItem[]) => emit("update:modelValue", value);
@@ -243,7 +339,7 @@ const act = (row: Row) => {
 };
 
 watch(
-  () => [props.chainId, props.rolesModAddress],
+  () => [props.chainId, props.rolesModAddress, props.roleKey],
   () => loadMembers(),
   { immediate: true },
 );
@@ -278,6 +374,36 @@ defineExpose({ reload: loadMembers });
     color: $color-steel-blue;
   }
 
+  &__count {
+    color: $color-white;
+  }
+
+  /* As a section of a role card the card owns the frame; this only draws
+     the rule that separates it from the header above. */
+  &--embedded {
+    border: none;
+    border-top: 1px solid $color-line;
+    border-radius: 0;
+    background: none;
+
+    /* A role card can be half the step's width. The address field then
+       takes the row it wraps onto in full instead of stopping short, and
+       the member rows give the address every pixel the two tags leave. */
+    .role_members__controls {
+      flex: 1 1 22rem;
+    }
+
+    .role_members__input {
+      flex: 1 1 auto;
+      width: auto;
+    }
+
+    .role_members__row {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 1rem;
+    }
+  }
+
   &__refresh {
     border: none;
     background: none;
@@ -293,11 +419,18 @@ defineExpose({ reload: loadMembers });
 
   &__controls {
     display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
     gap: 0.625rem;
+    min-width: 0;
+    max-width: 100%;
   }
 
   &__input {
+    /* Shrinks before the row overflows a narrow card. */
+    flex: 0 1 340px;
     width: 340px;
+    min-width: 0;
     max-width: 100%;
     padding: 11px 12px;
     border: 1px solid $color-line-2;
@@ -366,6 +499,20 @@ defineExpose({ reload: loadMembers });
   &__self {
     margin-left: 0.375rem;
     color: $color-cyan;
+  }
+
+  &__kind {
+    display: inline-block;
+    margin-left: 0.5rem;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-warning;
+    cursor: help;
+
+    &--ok {
+      color: $color-steel-blue;
+    }
   }
 
   &__tag {

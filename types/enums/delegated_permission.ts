@@ -1,10 +1,13 @@
 import { encodeFunctionCall } from "web3-eth-abi";
+import { formRules } from "~/composables/formRules";
+import { prepRoleModEntryInput } from "~/composables/parseNavMethodDetails";
 import { InputType } from "~/types/enums/input_type";
 import type { IStepperStep } from "~/types/stepper";
 
 import ZodiacRoles from "~/assets/contracts/zodiac/RolesFull.json";
 import ZodiacRolesV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 import { isWriteFunction } from "~/composables/zodiac-roles/conditions";
+import { RolesVersion } from "~/types/enums/roles_version";
 
 export enum DelegatedStep {
   Setup = "setup",
@@ -128,21 +131,52 @@ const parseFuncInputDetails = (input: any) => {
   };
 };
 
+/**
+ * Encode the delegated-permissions form's transactions as calls to the Roles
+ * modifier. `version` selects the ABI: the two modifier generations share
+ * most function NAMES (scopeTarget, scopeFunction, assignRoles, ...) but not
+ * their signatures — V1 takes a uint16 role, V2 a bytes32 role key — so the
+ * same form filled for a V2 modifier must be encoded with the V2 fragments,
+ * and a name that only exists in the other generation is refused here rather
+ * than silently encoded into a call the modifier cannot dispatch.
+ */
 export const prepPermissionsProposalData = (
   roleModAddress: string,
   transactions: any[],
+  version: RolesVersion = RolesVersion.V1,
 ) => {
   const encodedRoleModEntries = [];
   const targets = [];
   const gasValues = [];
+  const stepsMap =
+    version === RolesVersion.V2
+      ? proposalRoleModMethodStepsMapV2
+      : proposalRoleModMethodStepsMap;
+  const abiMap =
+    version === RolesVersion.V2
+      ? roleModWriteFunctionAbiMapV2
+      : roleModWriteFunctionAbiMap;
 
   for (let i = 0; i < transactions.length; i++) {
     const trx = transactions[i];
+    const fields = stepsMap[trx.contractMethod];
+    const functionAbi = abiMap[trx.contractMethod];
+    if (!fields || !functionAbi) {
+      const otherVersion =
+        version === RolesVersion.V2 ? RolesVersion.V1 : RolesVersion.V2;
+      const existsElsewhere =
+        otherVersion === RolesVersion.V2
+          ? trx.contractMethod in roleModWriteFunctionAbiMapV2
+          : trx.contractMethod in roleModWriteFunctionAbiMap;
+      throw new Error(
+        `${trx.contractMethod} does not exist on a Roles ${version} modifier` +
+          (existsElsewhere ? ` (it is a Roles ${otherVersion} function)` : "") +
+          ".",
+      );
+    }
     // Make sure function parameters are in the correct order, take them from function ABI and copy from the trx data
     // that was filled from the form inputs. Then prepare data, parsing/casting to correct types.
-    const roleModFunctionData = proposalRoleModMethodStepsMap[
-      trx.contractMethod
-    ]
+    const roleModFunctionData = fields
       .filter((method: any) => method.key !== "contractMethod")
       .map((method: any) =>
         prepRoleModEntryInput({
@@ -150,17 +184,8 @@ export const prepPermissionsProposalData = (
           data: trx[method.key],
         }),
       );
-    console.warn(
-      "roleModFunctionData",
-      trx.contractMethod,
-      roleModFunctionData,
-    );
-    console.warn(
-      "roleModWriteFunctionAbiMap[trx.contractMethod]",
-      roleModWriteFunctionAbiMap[trx.contractMethod],
-    );
     const encodedRoleModFunction = encodeFunctionCall(
-      roleModWriteFunctionAbiMap[trx.contractMethod],
+      functionAbi,
       roleModFunctionData,
     );
     encodedRoleModEntries.push(encodedRoleModFunction);

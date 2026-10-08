@@ -4,8 +4,9 @@ import { c, flattenCondition } from "zodiac-roles-sdk";
 import RolesFullV2 from "../assets/contracts/zodiac/RolesFullV2.json";
 import {
   ASSIGN_ROLES_SELECTOR,
+  buildAssignRolesConditions,
   buildUpdateSettingsConditions,
-  generateManageRoleMembersPermissionRolesV2,
+  generateAssignRolesPermissionRolesV2,
   generateUpdateSettingsPermissionRolesV2,
   type IUpdateSettingsPinnedValues,
   parseUpdateSettingsPinnedValues,
@@ -284,48 +285,167 @@ describe("generateUpdateSettingsPermissionRolesV2", () => {
   });
 });
 
-describe("generateManageRoleMembersPermissionRolesV2", () => {
-  const entries = generateManageRoleMembersPermissionRolesV2(ROLES_MODIFIER);
+describe("buildUpdateSettingsConditions — open fields", () => {
+  const node = (conditions: any[], index: number) => ({
+    paramType: conditions[index][1],
+    operator: conditions[index][2],
+    compValue: conditions[index][3].toLowerCase(),
+  });
+  // Node indices from the spec table above: 2 metadata, 13 whitelist flag,
+  // 14 whitelist addresses, 21 fee collectors.
+  const METADATA = 2;
+  const WHITELIST_FLAG = 13;
+  const WHITELIST_ADDRESSES = 14;
+  const FEE_COLLECTORS = 21;
+  const pinnedWithMetadata = { ...PINNED, fundMetadata: "{\"photoUrl\":\"x\"}" };
 
-  it("allows ONLY assignRoles on the modifier, wildcarded, options None", () => {
+  it("opens the fee destinations without opening a single fee", () => {
+    const conditions = buildUpdateSettingsConditions(PINNED, {
+      metadata: true,
+      whitelist: true,
+      feeDestinations: true,
+    });
+    expect(node(conditions, FEE_COLLECTORS)).toEqual({
+      paramType: Tuple,
+      operator: Pass,
+      compValue: "0x",
+    });
+    // Fee rates (nodes 5-9) and both fee periods (3, 4) stay pinned.
+    for (const index of [3, 4, 5, 6, 7, 8, 9]) {
+      expect(conditions[index][2], `node ${index}`).toBe(EqualTo);
+    }
+    // Same shape as the default tree: only the operator of one node moved.
+    const base = buildUpdateSettingsConditions(PINNED);
+    expect(conditions.length).toBe(base.length);
+    expect(conditions.map((c) => c[0])).toEqual(base.map((c) => c[0]));
+  });
+
+  it("closes the whitelist by pinning the flag and an empty delta", () => {
+    const conditions = buildUpdateSettingsConditions(pinnedWithMetadata, {
+      metadata: true,
+      whitelist: false,
+      feeDestinations: false,
+    });
+    expect(node(conditions, WHITELIST_FLAG)).toEqual({
+      paramType: Static,
+      operator: EqualTo,
+      compValue: encBool(true),
+    });
+    expect(node(conditions, WHITELIST_ADDRESSES)).toEqual({
+      paramType: ArrayT,
+      operator: EqualTo,
+      compValue: abiCoder.encode(["address[]"], [[]]),
+    });
+  });
+
+  it("closes metadata by pinning the stored string", () => {
+    const conditions = buildUpdateSettingsConditions(pinnedWithMetadata, {
+      metadata: false,
+      whitelist: true,
+      feeDestinations: false,
+    });
+    expect(node(conditions, METADATA)).toEqual({
+      paramType: Dynamic,
+      operator: EqualTo,
+      compValue: encString("{\"photoUrl\":\"x\"}"),
+    });
+  });
+
+  it("refuses to close metadata without the stored string to pin", () => {
+    expect(() =>
+      buildUpdateSettingsConditions(PINNED, {
+        metadata: false,
+        whitelist: true,
+        feeDestinations: false,
+      }),
+    ).toThrow(/metadata/);
+  });
+});
+
+describe("assignRoles permissions", () => {
+  const ADMIN_KEY = ethers.encodeBytes32String("adminRole");
+  const encKeys = (keys: string[]) => abiCoder.encode(["bytes32[]"], [keys]);
+  const encBools = (values: boolean[]) => abiCoder.encode(["bool[]"], [values]);
+  const { None } = RolesV2ParameterType;
+  const { Or } = RolesV2Operator;
+
+  it("pins one role and leaves the direction open", () => {
+    expect(
+      buildAssignRolesConditions({ roleKeys: ["defaulManagerRole"] }),
+    ).toEqual([
+      [0, Calldata, Matches, "0x"],
+      [0, Static, Pass, "0x"], // module — a condition cannot see the caller
+      [0, ArrayT, EqualTo, encKeys([ROLE_KEY_BYTES])],
+      [0, ArrayT, Pass, "0x"], // memberOf
+      [2, Static, Pass, "0x"],
+      [3, Static, Pass, "0x"],
+    ]);
+  });
+
+  it("pins removals only for a self-revoke", () => {
+    expect(
+      buildAssignRolesConditions({
+        roleKeys: ["defaulManagerRole"],
+        memberOf: false,
+      }),
+    ).toEqual([
+      [0, Calldata, Matches, "0x"],
+      [0, Static, Pass, "0x"],
+      [0, ArrayT, EqualTo, encKeys([ROLE_KEY_BYTES])],
+      [0, ArrayT, EqualTo, encBools([false])],
+      [2, Static, Pass, "0x"],
+      [3, Static, Pass, "0x"],
+    ]);
+  });
+
+  it("offers several roles as alternatives, one per call", () => {
+    expect(
+      buildAssignRolesConditions({
+        roleKeys: ["defaulManagerRole", "adminRole"],
+      }),
+    ).toEqual([
+      [0, Calldata, Matches, "0x"],
+      [0, Static, Pass, "0x"],
+      [0, None, Or, "0x"],
+      [0, ArrayT, Pass, "0x"],
+      [2, ArrayT, EqualTo, encKeys([ROLE_KEY_BYTES])],
+      [2, ArrayT, EqualTo, encKeys([ADMIN_KEY])],
+      [3, Static, Pass, "0x"],
+      [4, Static, Pass, "0x"],
+      [5, Static, Pass, "0x"],
+    ]);
+  });
+
+  it("never emits an unpinned role list", () => {
+    expect(() => buildAssignRolesConditions({ roleKeys: [] })).toThrow();
+  });
+
+  it("scopes ONLY assignRoles on the modifier, for the holder's role, options None", () => {
+    const entries = generateAssignRolesPermissionRolesV2(
+      ROLES_MODIFIER,
+      "adminRole",
+      { roleKeys: ["defaulManagerRole"] },
+    );
     expect(entries).toHaveLength(2);
 
     const scopeTarget = rolesInterface.parseTransaction({ data: entries[0] });
     expect(scopeTarget?.name).toBe("scopeTarget");
-    expect(scopeTarget?.args[0]).toBe(ROLE_KEY_BYTES);
+    expect(scopeTarget?.args[0]).toBe(ADMIN_KEY);
     expect(scopeTarget?.args[1].toLowerCase()).toBe(
       ROLES_MODIFIER.toLowerCase(),
     );
 
-    const allowFunction = rolesInterface.parseTransaction({
-      data: entries[1],
-    });
-    expect(allowFunction?.name).toBe("allowFunction");
-    expect(allowFunction?.args[0]).toBe(ROLE_KEY_BYTES);
-    expect(allowFunction?.args[1].toLowerCase()).toBe(
+    // scopeFunction, never allowFunction: a wildcarded assignRoles would let
+    // its holder assign members to any role key on the modifier.
+    const scopeFunction = rolesInterface.parseTransaction({ data: entries[1] });
+    expect(scopeFunction?.name).toBe("scopeFunction");
+    expect(scopeFunction?.args[0]).toBe(ADMIN_KEY);
+    expect(scopeFunction?.args[1].toLowerCase()).toBe(
       ROLES_MODIFIER.toLowerCase(),
     );
-    expect(allowFunction?.args[2]).toBe(ASSIGN_ROLES_SELECTOR);
-    expect(Number(allowFunction?.args[3])).toBe(RolesV2ExecutionOptions.None);
-  });
-
-  it("scopes no other selector — scope*/allow*/revoke*/transferOwnership stay denied", () => {
-    // The batch consists of exactly one scopeTarget and one allowFunction,
-    // and the only function selector being allowed is assignRoles. Every
-    // other selector on the modifier stays unscoped, which Roles V2 denies
-    // by default under Clearance.Function.
-    const allowedSelectors = entries.map((entry) =>
-      rolesInterface.parseTransaction({ data: entry }),
-    );
-    expect(allowedSelectors.map((tx) => tx?.name).sort()).toEqual([
-      "allowFunction",
-      "scopeTarget",
-    ]);
-    const allowFunction = allowedSelectors.find(
-      (tx) => tx?.name === "allowFunction",
-    );
-    expect(allowFunction?.args[2]).toBe(ASSIGN_ROLES_SELECTOR);
-    expect(allowFunction?.args[2]).not.toBe(TRANSFER_OWNERSHIP_SELECTOR);
+    expect(scopeFunction?.args[2]).toBe(ASSIGN_ROLES_SELECTOR);
+    expect(scopeFunction?.args[2]).not.toBe(TRANSFER_OWNERSHIP_SELECTOR);
+    expect(Number(scopeFunction?.args[4])).toBe(RolesV2ExecutionOptions.None);
   });
 });
 

@@ -11,6 +11,7 @@ import {
 } from "~/composables/permissions/rolesV2Permissions";
 import type IFund from "~/types/fund";
 import { flattenAbiFunctionInputs } from "~/composables/zodiac-roles/flattenAbiFunctionInputs";
+import { describeBitmask } from "~/composables/permissions/coreWriterPatterns";
 
 /**
  * Turns the calls a governance proposal makes into data a page can explain in
@@ -49,7 +50,25 @@ export const EXTRA_SIGNATURES = [
   "function delegate(address delegatee)",
   "function upgradeTo(address newImplementation)",
   "function upgradeToAndCall(address newImplementation, bytes data)",
+  // Targets vault permissions scope on HyperEVM: HyperCore's CoreWriter and
+  // the Across SpokePool. Named here so permissions on them read by argument.
+  "function sendRawAction(bytes data)",
+  "function depositV3Now(address depositor, address recipient, address inputToken, address outputToken, uint256 inputAmount, uint256 outputAmount, uint256 destinationChainId, address exclusiveRelayer, uint32 fillDeadlineOffset, uint32 exclusivityDeadline, bytes message)",
 ];
+
+const extraSignatureInterface = new ethers.Interface(EXTRA_SIGNATURES);
+
+/** A function from EXTRA_SIGNATURES by selector, with its parameter names. */
+export const findExtraSignature = (
+  selector: string | undefined,
+): ethers.FunctionFragment | undefined => {
+  if (!selector) return undefined;
+  try {
+    return extraSignatureInterface.getFunction(selector.slice(0, 10)) ?? undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 /* ---- Generic call decoding --------------------------------------------- */
 
@@ -764,6 +783,12 @@ const describeNode = (
       break;
   }
 
+  // A bitmask says which bytes at which offset, not a 70-digit number.
+  if (node.operator === RolesV2Operator.Bitmask) {
+    lines.push({ depth, label: label + typeHint, text: describeBitmask(node.compValue) });
+    return;
+  }
+
   const comparison = OPERATOR_TEXT[node.operator];
   if (comparison) {
     lines.push({
@@ -780,9 +805,11 @@ const describeNode = (
     // match descends into the tuple's fields or the array's elements.
     const isLogical = [RolesV2Operator.And, RolesV2Operator.Or, RolesV2Operator.Nor].includes(node.operator);
     lines.push({ depth, label: label + typeHint, text: group + ":" });
+    // "Any of" lists alternatives; "all of" lists checks that must all hold.
+    const memberWord = node.operator === RolesV2Operator.Or ? "option" : "check";
     node.children.forEach((child, i) => {
       if (isLogical) {
-        describeNode(child, depth + 1, `option ${i + 1}`, type, lines);
+        describeNode(child, depth + 1, `${memberWord} ${i + 1}`, type, lines);
       } else {
         describeNode(child, depth + 1, childLabel(type, i, `field ${i + 1}`), childType(type, i), lines);
       }
@@ -797,10 +824,59 @@ const describeNode = (
   });
 };
 
+const isCalldataMatch = (node: IConditionNode) =>
+  node.operator === RolesV2Operator.Matches &&
+  (node.paramType === RolesV2ParameterType.Calldata ||
+    node.paramType === RolesV2ParameterType.AbiEncoded);
+
+/**
+ * A node that is about the call's arguments as a whole: a calldata match, or
+ * an "all of" / "any of" group made only of such nodes.
+ */
+const isCalldataLevel = (node: IConditionNode): boolean =>
+  isCalldataMatch(node) ||
+  ((node.operator === RolesV2Operator.And || node.operator === RolesV2Operator.Or) &&
+    node.children.length > 0 &&
+    node.children.every(isCalldataLevel));
+
+/**
+ * Lines for a calldata-level node, with every argument under its own name:
+ * an "all of" group just adds up its matches' restrictions, and an "any of"
+ * group lists the combinations of which one must hold, each one numbered.
+ */
+const describeCalldata = (
+  node: IConditionNode,
+  depth: number,
+  inputs: ethers.ParamType[] | undefined,
+  lines: IConditionLine[],
+  hideUnrestricted = false,
+) => {
+  if (isCalldataMatch(node)) {
+    node.children.forEach((child, i) => {
+      const input = inputs?.[i];
+      const before = lines.length;
+      describeNode(child, depth, input?.name || `parameter ${i + 1}`, input, lines);
+      if (hideUnrestricted && lines.length === before + 1 && lines[before].muted) lines.pop();
+    });
+    return;
+  }
+  if (node.operator === RolesV2Operator.And) {
+    node.children.forEach((child) => describeCalldata(child, depth, inputs, lines, hideUnrestricted));
+    return;
+  }
+  lines.push({ depth, label: "", text: `One of these ${node.children.length} combinations:` });
+  node.children.forEach((child, i) => {
+    lines.push({ depth: depth + 1, label: "", text: `Combination ${i + 1}:` });
+    // A combination is what it pins; the arguments it leaves open are
+    // already listed above, once.
+    describeCalldata(child, depth + 2, inputs, lines, true);
+  });
+};
+
 /**
  * Flatten a Roles v2 condition tree into indented lines. The root describes
  * the calldata itself, so its children are the function's parameters and get
- * named after them when the ABI is known.
+ * named after them when the ABI is known. A line with no label is a heading.
  */
 export const describeConditionTree = (
   root: IConditionNode | undefined,
@@ -808,14 +884,8 @@ export const describeConditionTree = (
 ): IConditionLine[] => {
   const lines: IConditionLine[] = [];
   if (!root) return lines;
-  const rootIsCalldata =
-    root.paramType === RolesV2ParameterType.Calldata ||
-    root.paramType === RolesV2ParameterType.AbiEncoded;
-  if (rootIsCalldata && root.operator === RolesV2Operator.Matches) {
-    root.children.forEach((child, i) => {
-      const input = inputs?.[i];
-      describeNode(child, 0, input?.name || `parameter ${i + 1}`, input, lines);
-    });
+  if (isCalldataLevel(root)) {
+    describeCalldata(root, 0, inputs, lines);
     return lines;
   }
   describeNode(root, 0, "calldata", undefined, lines);

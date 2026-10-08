@@ -1,7 +1,7 @@
 <template>
   <div class="raw_perms">
     <p class="raw_perms__hint">
-      Paste calldata for the Roles modifier — one hex entry per line, or a
+      Paste calldata for the Roles modifier: one hex entry per line, or a
       JSON array of hex strings (encoded scopeTarget / scopeFunction /
       allowFunction calls). Every entry is checked against the Roles V2 ABI
       and submitted with the rest of this step's permissions.
@@ -32,26 +32,17 @@
       </button>
     </div>
 
-    <template v-if="modelValue.length">
-      <div class="raw_perms__queued">
-        Queued for submission
-      </div>
-      <div
-        v-for="(entry, index) in modelValue"
-        :key="entry.data.slice(0, 18) + '-' + index"
-        class="raw_perms__row"
-      >
-        <span class="raw_perms__label">{{ entry.label }}</span>
-        <span class="raw_perms__data">{{ shortData(entry.data) }}</span>
-        <button
-          type="button"
-          class="raw_perms__action"
-          @click="removeAt(index)"
-        >
-          Discard
-        </button>
-      </div>
-    </template>
+    <OnboardingRawPermissionsQueue
+      v-if="modelValue.length"
+      :entries="modelValue"
+      :chain-id="chainId"
+      :vault-address="vaultAddress"
+      :safe-address="safeAddress"
+      :roles-mod-address="rolesModAddress"
+      :base-token="baseToken"
+      :context-role="contextRole"
+      @discard="removeMany"
+    />
   </div>
 </template>
 
@@ -59,7 +50,9 @@
 import {
   type IRawPermissionCodeEntry,
   parseRawPermissionCode,
+  retargetBuiltInRoleCalls,
 } from "~/composables/permissions/parseRawPermissionCode";
+import type { ChainId } from "~/types/enums/chain_id";
 
 /**
  * Power-user escape hatch for the Roles V2 creation flow, living on the
@@ -70,6 +63,20 @@ import {
  */
 const props = defineProps<{
   modelValue: IRawPermissionCodeEntry[];
+  /** For explorer links and for naming the queued contracts and functions. */
+  chainId?: ChainId;
+  /** The vault's own contracts, named in the queue instead of shown as hex. */
+  vaultAddress?: string;
+  safeAddress?: string;
+  rolesModAddress?: string;
+  baseToken?: string;
+  /** The role the step is showing; queued calls naming another are tagged. */
+  contextRole?: string;
+  /**
+   * The key of the role whose card this is (label or bytes32). Pasted calls
+   * naming a built-in role are rewritten for it; see retargetBuiltInRoleCalls.
+   */
+  roleKey?: string;
 }>();
 
 const emit = defineEmits<{
@@ -81,15 +88,13 @@ const error = ref("");
 const placeholder =
   "0x0c6c76b8...\n0x7508dd98...\n\nor\n\n[\"0x0c6c76b8...\", \"0x7508dd98...\"]";
 
-const shortData = (data: string) =>
-  data.length > 24 ? `${data.slice(0, 14)}…${data.slice(-8)}` : data;
-
 const addEntries = () => {
   error.value = "";
   if (!input.value.trim()) return;
   let entries: IRawPermissionCodeEntry[];
   try {
     entries = parseRawPermissionCode(input.value);
+    if (props.roleKey) entries = retargetBuiltInRoleCalls(entries, props.roleKey);
   } catch (e: any) {
     // Keep the pasted text so the entry can be fixed in place.
     error.value = e.message;
@@ -99,10 +104,12 @@ const addEntries = () => {
   input.value = "";
 };
 
-const removeAt = (index: number) => {
-  const value = [...(props.modelValue || [])];
-  value.splice(index, 1);
-  emit("update:modelValue", value);
+const removeMany = (indices: number[]) => {
+  const dropped = new Set(indices);
+  emit(
+    "update:modelValue",
+    (props.modelValue || []).filter((_entry, index) => !dropped.has(index)),
+  );
 };
 </script>
 
@@ -184,56 +191,8 @@ const removeAt = (index: number) => {
     }
   }
 
-  &__queued {
-    margin-top: 0.25rem;
-    font-family: $font-mono;
-    font-size: 10.5px;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-  }
-
-  &__row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto 90px;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.625rem 0;
-    border-top: 1px solid $color-line;
-    font-family: $font-mono;
-    font-size: 12px;
-    color: $color-white;
-  }
-
-  &__label {
-    word-break: break-word;
-  }
-
-  &__data {
-    color: $color-steel-blue;
-  }
-
-  &__action {
-    justify-self: end;
-    border: none;
-    background: none;
-    font-family: $font-mono;
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-    cursor: pointer;
-    transition: color $default-transition-time ease;
-
-    &:hover {
-      color: $color-neg;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    &__add,
-    &__action {
+    &__add {
       transition: none;
     }
   }

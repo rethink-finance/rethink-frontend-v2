@@ -63,12 +63,17 @@ import {
   NO_DELEGATES_TITLE,
   useProposalDelegation,
 } from "~/composables/governance/useProposalDelegation";
+import {
+  toProposalCalls,
+  useProposalPreflight,
+} from "~/composables/governance/useProposalPreflight";
 
 // emits
 const emit = defineEmits(["updateBreadcrumbs"]);
 const loading = ref(false);
 
 const { canCreateProposal, assertCanCreateProposal } = useProposalDelegation();
+const { runPreflight } = useProposalPreflight();
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -211,6 +216,15 @@ const submitProposal = async () => {
       2,
     ),
   );
+  // Each action is the Safe executing with the governor's pre-validated
+  // signature; simulate that from the governor before the wallet opens.
+  if (
+    !(await runPreflight(
+      toProposalCalls(targets as string[], processedTxs as string[]),
+    ))
+  ) {
+    return;
+  }
   loading.value = true;
   const proposalData = [
     targets,

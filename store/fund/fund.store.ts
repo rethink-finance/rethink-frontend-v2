@@ -29,6 +29,13 @@ import { NAVCalculator } from "~/assets/contracts/NAVCalculator";
 import { RethinkFundGovernor } from "~/assets/contracts/RethinkFundGovernor";
 import GnosisSafeL2JSON from "~/assets/contracts/safe/GnosisSafeL2_v1_3_0.json";
 import { isSafeSession } from "~/composables/permissions/safeSession";
+import {
+  readableContractName,
+  rethinkContractName,
+  WELL_KNOWN_LABELS,
+  type ITokenIdentity,
+} from "~/composables/contracts/contractNames";
+import { useContractAddresses } from "~/composables/useContractAddresses";
 import type { Explorer } from "~/services/explorer";
 import { useAccountStore } from "~/store/account/account.store";
 import { fetchFundSettingsAction } from "~/store/fund/actions/fetchFundSettings.action";
@@ -78,6 +85,9 @@ const DEFAULT_FUND_USER_DATA: IFundUserData = {
 };
 
 // combine funds and fund store and map address => fund state; why only store one fund details at a time
+/** Token identities by chain and address; a contract's name and symbol do not change. */
+const tokenIdentityCache = new Map<string, Promise<ITokenIdentity | undefined>>();
+
 export const useFundStore = defineStore({
   id: "fund",
   state: (): IState => ({
@@ -596,16 +606,58 @@ export const useFundStore = defineStore({
         return this.fundsStore.chainAddressLabelMap[chainId]?.[address];
       }
 
-      const sourceCode = await this.fetchAddressSourceCode(chainId, address);
-      // Return the ERC20 token symbol if it exists, else try returning contract name.
-      if (sourceCode?.symbol) {
-        let label = sourceCode?.symbol;
-        if (sourceCode?.ContractName) {
-          label += ` (${sourceCode.ContractName})`;
-          return label;
-        }
+      // The open vault's own contracts, then Rethink's, then a hand-written
+      // name, then the token's own name, then the explorer's verified
+      // contract name in words (see contractNames.ts).
+      const key = address.toLowerCase();
+      const fund = this.fund;
+      if (fund && chainId === this.selectedFundChain) {
+        if (key === fund.address?.toLowerCase()) return `${fund.title} (this vault)`;
+        if (key === fund.safeAddress?.toLowerCase()) return "Vault Safe";
+        if (key === fund.governorAddress?.toLowerCase()) return "Vault governor";
+        if (key === this.fundRoleModAddress[fund.address]?.toLowerCase()) return "Roles modifier";
       }
-      return sourceCode?.ContractName;
+      const known =
+        WELL_KNOWN_LABELS[key] ??
+        rethinkContractName(useContractAddresses().rethinkContractAddresses, chainId, key);
+      if (known) return known;
+      const [sourceCode, token] = await Promise.all([
+        this.fetchAddressSourceCode(chainId, address).catch(() => undefined),
+        this.fetchTokenIdentity(chainId, address),
+      ]);
+      return readableContractName({
+        contractName: sourceCode?.ContractName,
+        isProxy: sourceCode?.Proxy === "1",
+        token,
+      });
+    },
+    /**
+     * A token's own name and symbol, read from the contract itself, so a
+     * token is named even where the explorer knows nothing about it.
+     * Undefined for anything that is not a token.
+     */
+    fetchTokenIdentity(chainId: ChainId, address: string): Promise<ITokenIdentity | undefined> {
+      const key = `${chainId}:${address.toLowerCase()}`;
+      const cached = tokenIdentityCache.get(key);
+      if (cached) return cached;
+      const pending = (async () => {
+        try {
+          const token = this.web3Store.getCustomContract(chainId, ERC20, address);
+          const symbol = String((await token.methods.symbol().call()) ?? "");
+          if (!symbol) return undefined;
+          let name: string | undefined;
+          try {
+            name = String((await token.methods.name().call()) ?? "") || undefined;
+          } catch {
+            // symbol without a name: still a token
+          }
+          return { symbol, name };
+        } catch {
+          return undefined;
+        }
+      })();
+      tokenIdentityCache.set(key, pending);
+      return pending;
     },
     /**
      * Fetches all needed fund data..

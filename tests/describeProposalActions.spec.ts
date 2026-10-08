@@ -333,3 +333,38 @@ describe("buildSettingsSections", () => {
     expect(sections.flatMap((s) => s.rows).every((r) => !r.comparable)).toBe(true);
   });
 });
+
+describe("describeConditionTree on calldata groups", () => {
+  const coder = ethers.AbiCoder.defaultAbiCoder();
+  const node = (operator: number, children: any[] = [], compValue = "0x", paramType = 1) => ({
+    paramType,
+    operator,
+    compValue,
+    children,
+  });
+  const inputs = [...ethers.FunctionFragment.from("f(address recipient, uint256 inputAmount, uint256 outputAmount)").inputs];
+
+  it("names arguments inside all-of and any-of groups, and numbers the combinations", () => {
+    const amounts = (sent: number, floor: number) =>
+      node(5, [node(0), node(16, [], coder.encode(["uint256"], [sent])), node(17, [], coder.encode(["uint256"], [floor]))], "0x", 5);
+    const lines = describeConditionTree(
+      node(1, [
+        node(5, [node(15), node(0), node(0)], "0x", 5),
+        node(2, [amounts(100, 99), amounts(50, 49)], "0x", 0),
+      ], "0x", 0) as any,
+      inputs,
+    );
+    expect(lines.map((line) => [line.depth, line.label, line.text])).toEqual([
+      [0, "recipient (address)", "must be the vault's Safe"],
+      [0, "inputAmount (uint256)", "any value"],
+      [0, "outputAmount (uint256)", "any value"],
+      [0, "", "One of these 2 combinations:"],
+      [1, "", "Combination 1:"],
+      [2, "inputAmount (uint256)", "must equal 100"],
+      [2, "outputAmount (uint256)", "must be greater than 99"],
+      [1, "", "Combination 2:"],
+      [2, "inputAmount (uint256)", "must equal 50"],
+      [2, "outputAmount (uint256)", "must be greater than 49"],
+    ]);
+  });
+});

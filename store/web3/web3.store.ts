@@ -137,11 +137,15 @@ export const useWeb3Store = defineStore({
 
       while (retries <= maxRetries && switchedRPCCount <= RPCUrlsLength) {
         try {
-          // Call the method, but also do a timeout promise of 1.5 seconds.
+          // Call the method, but give up on it after timeoutMs.
           return await Promise.race([
             method(),
             new Promise((_, reject) =>
-              setTimeout(() => reject(new Error(`Method call timed out after ${timeoutMs}ms`)), timeoutMs),
+              setTimeout(() => {
+                const timeout: any = new Error(`Method call timed out after ${timeoutMs}ms`);
+                timeout.isRpcTimeout = true;
+                reject(timeout);
+              }, timeoutMs),
             ),
           ]);
         } catch (error: any) {
@@ -165,9 +169,14 @@ export const useWeb3Store = defineStore({
           // Check Metamask errors:
           // https://github.com/MetaMask/rpc-errors/blob/main/src/error-constants.ts
           // Metamask rejected.
+          // A timeout is the RPC's trouble, never the call's answer: it always
+          // moves on to the next RPC. It carries no error code, so a caller
+          // listing `undefined` as ignorable (to stop on a plain revert) would
+          // otherwise give up on the first slow RPC.
           if (
-            ignorableErrorCodes.some((code) => errorCodes.has(code)) ||
-            error?.message?.indexOf("User denied transaction") >= 0
+            !error?.isRpcTimeout &&
+            (ignorableErrorCodes.some((code) => errorCodes.has(code)) ||
+              error?.message?.indexOf("User denied transaction") >= 0)
           ) {
             console.debug(
               "RPC error is one of known metamask errors",

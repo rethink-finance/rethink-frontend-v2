@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!hasAccess" class="access_gate">
+  <div class="access_gate">
     <div class="access_gate__card">
       <!-- Same theme swap as the navbar Logo: the white-text mark for dark,
            the ink-text variant for light (rules in app.scss). -->
@@ -76,33 +76,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref } from "vue";
 // Same inlined wordmarks as the navbar — see components/global/Logo.vue.
 import logo from "~/assets/images/logo.svg?inline";
 import logoLight from "~/assets/images/logo_light.svg?inline";
 
-// Hardcoded gate password & persistence key.
-const ACCESS_PASSWORD = "rethinkCreate";
-const STORAGE_KEY = "rethink_app_access";
-
 // Google Apps Script web app URL — see implementation/google-apps-script/Code.gs
 const SUBSCRIBE_ENDPOINT = "https://script.google.com/macros/s/AKfycbzHYr4p2TrANCPa0f4re8q8mLQUnJUU4e0o8l8pMbptepn0Q9UQOx597Jo0h-tEGt7QcQ/exec";
 
-const hasAccess = ref(true); // true until mounted to avoid SSR flash
+// app.vue shows this in place of the whole app until it lets the visitor in.
+const { unlock } = useAppAccess();
 const password = ref("");
 const errorMessage = ref("");
 const email = ref("");
 const isSubscribed = ref(false);
 
-onMounted(() => {
-  hasAccess.value = localStorage.getItem(STORAGE_KEY) === ACCESS_PASSWORD;
-});
-
-const submitPassword = () => {
-  if (password.value === ACCESS_PASSWORD) {
-    localStorage.setItem(STORAGE_KEY, ACCESS_PASSWORD);
-    hasAccess.value = true;
-  } else {
+const submitPassword = async () => {
+  if (!(await unlock(password.value))) {
     errorMessage.value = "Incorrect password. Please try again.";
   }
 };
@@ -131,17 +121,16 @@ const subscribe = async () => {
 </script>
 
 <style scoped lang="scss">
+/* The whole screen: the app is not behind it, so there is nothing to see
+   through to. */
 .access_gate {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: var(--veil);
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
+  background: $color-background;
 
   &__card {
     width: 100%;

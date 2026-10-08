@@ -2,15 +2,23 @@ import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
 import RolesFullV2 from "../assets/contracts/zodiac/RolesFullV2.json";
 import { getScopeTargetV2 } from "../composables/nav/generateNAVPermission";
-import { generateManageRoleMembersPermissionRolesV2 } from "../composables/permissions/rolesV2Permissions";
-import { parseRawPermissionCode } from "../composables/permissions/parseRawPermissionCode";
+import {
+  parseRawPermissionCode,
+  retargetBuiltInRoleCalls,
+} from "../composables/permissions/parseRawPermissionCode";
+import { generateSendFundsPermissionRolesV2 } from "../composables/permissions/rolesV2Permissions";
 
 const rolesInterface = new ethers.Interface((RolesFullV2 as any).abi);
 const TARGET = "0x111f164d91e3F8169a7043f7094f44af87Fb7CA4";
 
 describe("parseRawPermissionCode", () => {
   const scopeTarget = getScopeTargetV2("defaulManagerRole", TARGET);
-  const [, allowFunction] = generateManageRoleMembersPermissionRolesV2(TARGET);
+  const allowFunction = rolesInterface.encodeFunctionData("allowFunction", [
+    ethers.encodeBytes32String("defaulManagerRole"),
+    TARGET.toLowerCase(),
+    "0x957ed2b3",
+    0,
+  ]);
 
   it("accepts newline-separated hex entries and labels them", () => {
     const entries = parseRawPermissionCode(
@@ -47,5 +55,55 @@ describe("parseRawPermissionCode", () => {
       /array of hex strings/,
     );
     expect(() => parseRawPermissionCode("[nope")).toThrow(/not valid JSON/);
+  });
+});
+
+describe("retargetBuiltInRoleCalls", () => {
+  const key = (label: string) => ethers.encodeBytes32String(label).toLowerCase();
+  const roleOf = (data: string) =>
+    String(rolesInterface.parseTransaction({ data })!.args[0]).toLowerCase();
+  const grants = (role: string) =>
+    parseRawPermissionCode(
+      JSON.stringify(
+        generateSendFundsPermissionRolesV2(
+          "0x1111111111111111111111111111111111111111",
+          TARGET,
+          role,
+        ),
+      ),
+    );
+
+  it("writes either executor spelling and the admin key for the card's role", () => {
+    for (const from of ["defaulManagerRole", "defaultManagerRole", "adminRole"]) {
+      for (const to of ["adminRole", "defaultManagerRole", "defaulManagerRole"]) {
+        const entries = retargetBuiltInRoleCalls(grants(from), to);
+        expect(entries.map((entry) => roleOf(entry.data))).toEqual(
+          entries.map(() => key(to)),
+        );
+      }
+    }
+  });
+
+  it("keeps everything else of the call, conditions included", () => {
+    const original = grants("defaulManagerRole");
+    const back = retargetBuiltInRoleCalls(
+      retargetBuiltInRoleCalls(original, "adminRole"),
+      "defaulManagerRole",
+    );
+    expect(back.map((entry) => entry.data)).toEqual(original.map((entry) => entry.data));
+    expect(retargetBuiltInRoleCalls(original, "adminRole")[0].label).toContain("adminRole");
+  });
+
+  it("leaves custom roles and membership calls alone", () => {
+    const custom = grants("Trader");
+    expect(retargetBuiltInRoleCalls(custom, "adminRole")).toEqual(custom);
+    const membership = parseRawPermissionCode(
+      rolesInterface.encodeFunctionData("assignRoles", [
+        TARGET.toLowerCase(),
+        [key("defaulManagerRole")],
+        [true],
+      ]),
+    );
+    expect(retargetBuiltInRoleCalls(membership, "adminRole")).toEqual(membership);
   });
 });

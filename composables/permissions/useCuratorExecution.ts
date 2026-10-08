@@ -5,6 +5,10 @@ import {
   type TransactionReceipt,
 } from "web3";
 import {
+  ADMIN_ROLE_KEY_V2,
+  EXECUTOR_ROLE_KEY_ALIASES_V2,
+} from "~/composables/nav/generateNAVPermission";
+import {
   RolesVersion,
   defaultRoleFor,
   detectRolesVersion,
@@ -75,10 +79,87 @@ export interface ICuratorRoleState {
 export interface ICuratorRoute {
   chainId: ChainId;
   rolesModAddress: string;
-  /** Defaults to the manager role of the modifier's generation. */
+  /**
+   * Left out, the call is tried under the roles a Rethink vault is created
+   * with — on Roles V2 the executor role, then the admin role — and goes out
+   * under the first one the modifier lets through.
+   */
   role?: string;
   version?: RolesVersion;
 }
+
+/**
+ * The roles a routed call may go out under. A Roles V2 vault splits its
+ * prepopulated permissions over two roles (see vaultRoles.ts): settings and
+ * membership belong to the admin, everything else to the executor — and on a
+ * vault created before that split, to the executor alone. The surface does
+ * not have to know which: both are tried, the executor under each spelling
+ * its key has been created with.
+ */
+const routeRoles = (route: ICuratorRoute): string[] => {
+  if (route.role) return [route.role];
+  const version = route.version ?? RolesVersion.V2;
+  return version === RolesVersion.V1
+    ? [defaultRoleFor(version)]
+    : [...EXECUTOR_ROLE_KEY_ALIASES_V2, ADMIN_ROLE_KEY_V2];
+};
+
+/**
+ * Dry-run `call` under each of the route's roles and settle on the first the
+ * modifier lets through (an inner revert counts: the permission passed).
+ * When none does, the denial reported is one from a role the wallet actually
+ * holds, where there is one — "you do not hold the executor role" is the
+ * wrong thing to tell an admin whose own role refused the call.
+ */
+const simulateRoute = async (
+  call: IRoleCall,
+  route: ICuratorRoute,
+): Promise<{ role: string; simulation: IRoleSimulationResult }> => {
+  const version = route.version ?? RolesVersion.V2;
+  let denied: { role: string; simulation: IRoleSimulationResult } | undefined;
+  for (const role of routeRoles(route)) {
+    const simulation = await simulateRoleExecution(
+      route.chainId,
+      route.rolesModAddress,
+      call,
+      role,
+      version,
+    );
+    if (simulation.ok || simulation.innerRevert) return { role, simulation };
+    if (!denied || (denied.simulation.noMembership && !simulation.noMembership)) {
+      denied = { role, simulation };
+    }
+  }
+
+  // Neither of the two roles a vault is created with carries the call. A
+  // vault can define further roles of its own (the create flow's custom
+  // roles), so whatever else the wallet holds is tried before giving up.
+  const account = useAccountStore().activeAccountAddress;
+  if (!route.role && version === RolesVersion.V2 && account) {
+    const tried = new Set(
+      routeRoles(route).map((role) => encodedRoleId(version, role).toLowerCase()),
+    );
+    let held: string[] = [];
+    try {
+      held = await fetchMemberRoles(route.chainId, route.rolesModAddress, account, version);
+    } catch (error) {
+      console.warn("Could not read Roles membership", error);
+    }
+    for (const role of held) {
+      if (tried.has(role.toLowerCase())) continue;
+      const simulation = await simulateRoleExecution(
+        route.chainId,
+        route.rolesModAddress,
+        call,
+        role,
+        version,
+      );
+      if (simulation.ok || simulation.innerRevert) return { role, simulation };
+      if (denied?.simulation.noMembership) denied = { role, simulation };
+    }
+  }
+  return denied!;
+};
 
 /** Performs the send; see deferredSend for why it is a thunk. */
 type SendThunk = () => Web3PromiEvent<any, any>;
@@ -258,7 +339,7 @@ const warnOfInnerRevert = async (chainId: ChainId, call: IRoleCall) => {
  * fact about the sender, not the transaction: big blocks (30M instead of 3M)
  * are an opt-in per address, and without it the transaction is never mined.
  */
-const warnIfOversized = (chainId: ChainId, plan: IGasPlan | undefined) => {
+export const warnIfOversized = (chainId: ChainId, plan: IGasPlan | undefined) => {
   if (!plan?.exceedsBlockLimit) return;
   const needed = plan.gas.toLocaleString("en-US");
   useToastStore().warningToast(
@@ -295,6 +376,9 @@ const wrappedSend = async (
   return () =>
     sendRoleExecution(chainId, rolesModAddress, call, role, version, plan?.gas);
 };
+
+const DELEGATECALL_NEEDS_EXECUTOR =
+  "This action is a delegatecall through the Roles modifier. Send it from an executor wallet, not from a session connected as the Safe.";
 
 /** Is the connected account the selected vault's custody Safe? */
 export const isConnectedAsSafe = (): boolean =>
@@ -389,18 +473,12 @@ export const simulateCuratorTransaction = async (
   route: ICuratorRoute,
 ): Promise<IRoleSimulationResult> => {
   if (isConnectedAsSafe()) {
+    if (call.operation === 1) return { ok: false, reason: DELEGATECALL_NEEDS_EXECUTOR };
     const account = useAccountStore().activeAccountAddress;
     if (!account) return { ok: false, reason: "Connect your wallet first." };
     return await simulateDirectCall(route.chainId, account, call);
   }
-  const version = route.version ?? RolesVersion.V2;
-  return await simulateRoleExecution(
-    route.chainId,
-    route.rolesModAddress,
-    call,
-    route.role ?? defaultRoleFor(version),
-    version,
-  );
+  return (await simulateRoute(call, route)).simulation;
 };
 
 /**
@@ -429,17 +507,20 @@ export const sendCuratorTransaction = (
       route?.chainId ??
       ((fundStore.fund?.chainId ?? fundStore.selectedFundChain) as ChainId);
 
-    if (isConnectedAsSafe()) return () => sendAsSafe(chainId, call);
+    if (isConnectedAsSafe()) {
+      // An unwrapped transaction from the Safe is always a plain call; there
+      // is no way to say "delegatecall" in it.
+      if (call.operation === 1) throw new Error(DELEGATECALL_NEEDS_EXECUTOR);
+      return () => sendAsSafe(chainId, call);
+    }
 
     if (route) {
       const version = route.version ?? RolesVersion.V2;
-      return wrappedSend(
-        chainId,
-        route.rolesModAddress,
-        call,
-        route.role ?? defaultRoleFor(version),
-        version,
-      );
+      // A route that names its role is sent as is. One that does not is
+      // dry-run first, to find which of the vault's roles carries the call.
+      const role =
+        route.role ?? (await simulateRoute(call, { ...route, chainId })).role;
+      return wrappedSend(chainId, route.rolesModAddress, call, role, version);
     }
 
     const state = await resolveCuratorRoleState(
