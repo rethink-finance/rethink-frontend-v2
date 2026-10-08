@@ -17,7 +17,10 @@
       :image-url="fund?.photoUrl"
     />
     <div class="fund_topbar">
-      <NuxtLink to="/" class="fund_topbar__back">
+      <!-- Inside a section the way back is to the vault's overview (the
+           overview is not among the section links); on the overview itself it
+           is out to all vaults. -->
+      <NuxtLink :to="sectionTitle ? fundDetailsRoute : '/'" class="fund_topbar__back">
         <svg
           width="13"
           height="13"
@@ -31,7 +34,7 @@
           <path d="M19 12H5" />
           <path d="M12 19l-7-7 7-7" />
         </svg>
-        All vaults
+        {{ sectionTitle ? "Back to overview" : "All vaults" }}
       </NuxtLink>
       <FundNavigation
         v-if="breadcrumbItems.length === 0"
@@ -50,7 +53,6 @@
         :fund="fund"
         :breadcrumb-items="breadcrumbItems"
         :section-title="sectionTitle"
-        :overview-route="fundDetailsRoute"
       />
       <UiBreadcrumbs
         v-if="breadcrumbItems.length > 0"

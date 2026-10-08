@@ -154,7 +154,7 @@
       </p>
       <p v-else-if="visibleOptions.hidden" class="field__note">
         Showing {{ visibleOptions.options.length }} of
-        {{ visibleOptions.matches }} — search to find the rest.
+        {{ visibleOptions.matches }}. Search to find the rest.
       </p>
 
       <!--
@@ -227,7 +227,7 @@
 
     <p v-else class="field__unsupported">
       The registry offers a “{{ group.label }}” setting this interface
-      cannot render yet — it stays unset.
+      cannot render yet, so it stays unset.
     </p>
 
     <p v-if="group.note && view.optional" class="field__note">
@@ -296,7 +296,7 @@ const DEFERRED_SECTIONS = [
     label: "Pendle PT tokens",
     hint:
       "Fixed-yield principal tokens, each maturing on the date in its " +
-      "name. Granted like any other asset — they just expire.",
+      "name. Granted like any other asset, they just expire.",
     match: (value: string) => /^PT-/i.test(value),
   },
 ];

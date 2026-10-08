@@ -4,9 +4,10 @@
       Only the state that permits something. Why a wallet cannot execute is
       not news at the top of a screen most people open to read: it belongs on
       the button it disables, at the moment that button is reached for, and
-      every execute button on this screen carries it.
+      every execute button on this screen carries it. The Scientific Vote
+      console names the executor itself, so it does not get the pill twice.
     -->
-    <UiHeader v-if="canExecuteAsCurator">
+    <UiHeader v-if="canExecuteAsCurator && !isSciEthVault">
       <div class="data_bar__item">
         <div class="curator_status">
           <Icon
@@ -29,20 +30,22 @@
 
     <!-- The design puts the execution status first on this screen, so the
          console follows it rather than sitting above the page's own header. -->
-    <ExecutionCrtConsole v-if="isCrtVault" />
+    <ExecutionCrtV2Console v-if="isCrtV2Vault" />
+    <ExecutionCrtConsole v-else-if="isCrtVault" />
     <ExecutionDocConsole v-else-if="isDocVault" />
+    <ExecutionSciEthConsole v-else-if="isSciEthVault" />
     <ExecutionIndefiConsole v-else-if="isIndefiVault" />
 
     <!-- The raw transfer / raw-calldata / performance-fee tools. A vault with
          a console of its own does not get them: everything they reach is
          already offered there in terms the operator can check, and a free-text
          calldata box beside it is an invitation to bypass that. -->
-    <div v-if="showGeneralTools" class="group_title execution-app__section">
+    <div v-if="!hasGuidedConsole" class="group_title execution-app__section">
       General
     </div>
 
     <div
-      v-if="showGeneralTools"
+      v-if="!hasGuidedConsole"
       :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`"
     >
       <UiHeader>
@@ -145,7 +148,7 @@
     </div>
 
     <div
-      v-if="showGeneralTools"
+      v-if="!hasGuidedConsole"
       :class="`main_card ${!canExecuteAsCurator ? 'disabled' : ''}`"
     >
       <UiHeader>
@@ -259,6 +262,7 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useContractAddresses } from "~/composables/useContractAddresses";
+import { CRT_V2_ADDR } from "~/composables/execution/crtV2Vault";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
@@ -284,6 +288,13 @@ const isCrtVault = computed(
     (fundStore.fund?.address || "").toLowerCase() === CRT_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x3e7",
 );
+// The second CarrotFunding Vault runs on Roles v2 with an admin role beside
+// the executor; its console splits the two and proposes to the admin Safe.
+const isCrtV2Vault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === CRT_V2_ADDR.fund.toLowerCase() &&
+    fundStore.selectedFundChain === "0x3e7",
+);
 // DoC Treasury Protection runs a Roles v1 whitelist of its own — 1inch swaps
 // between six assets and Aave DAI — so it gets its own console rather than
 // being driven through the raw-transaction box below.
@@ -292,6 +303,15 @@ const isDocVault = computed(
   () =>
     (fundStore.fund?.address || "").toLowerCase() === DOC_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x89",
+);
+// The Scientific Vote Vault keeps every share at exactly one ETH, and its
+// console works out what may move; the raw tools beside it would let an
+// operator act without that arithmetic, so it does not get them either.
+const SCIETH_VAULT_ADDRESS = "0x2741408077cd7c7d3943d0142bafae28c97eaa35";
+const isSciEthVault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === SCIETH_VAULT_ADDRESS &&
+    fundStore.selectedFundChain === "0x1",
 );
 // INDEFI (Base) trades on 1inch under a Roles v1 whitelist that accepts only
 // the router's generic swap() — which the 1inch web app can no longer be made
@@ -302,7 +322,7 @@ const isIndefiVault = computed(
     (fundStore.fund?.address || "").toLowerCase() === INDEFI_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x2105",
 );
-const showGeneralTools = computed(() => !isDocVault.value && !isIndefiVault.value);
+const hasGuidedConsole = computed(() => isCrtV2Vault.value || isCrtVault.value || isDocVault.value || isSciEthVault.value || isIndefiVault.value);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({

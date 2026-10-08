@@ -7,15 +7,32 @@ import {
   DEFAULT_ROLE_KEY_V2,
 } from "~/composables/nav/generateNAVPermission";
 import {
+  SAFE_IFACE,
+  decodeSafeControl,
+} from "~/composables/governance/safeExecution";
+import {
   TX_GAS_CAPS,
   planGasLimit,
   type IGasPlan,
 } from "~/composables/permissions/gasLimit";
-import { useAccountStore } from "~/store/account/account.store";
 import { fetchExplorerLogs } from "~/services/onchain/explorerLogs";
 import { fetchBlockscoutRoleLogs } from "~/services/onchain/roleScopes";
+import type { ILiveFundSettingsState } from "~/composables/permissions/roleCalldata";
+import { useAccountStore } from "~/store/account/account.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
+import { RolesVersion } from "~/types/enums/roles_version";
+
+// Re-exported so the many existing importers keep working; the enum itself
+// lives in types/ so encoders can share it without importing the stores.
+export { RolesVersion };
+// The calldata builders live in a store-free module so the acceptance tests
+// can run the exact bytes the pages send against the deployed contracts.
+export {
+  buildAssignRolesCalldata,
+  buildCuratorUpdateSettingsCalldata,
+  type ILiveFundSettingsState,
+} from "~/composables/permissions/roleCalldata";
 
 /**
  * Curator-mode execution through the vault's Roles modifier.
@@ -32,11 +49,6 @@ import type { ChainId } from "~/types/enums/chain_id";
  * `bytes32`. Everything version-dependent is resolved from `RolesVersion`,
  * which is probed on chain (see detectRolesVersion) rather than guessed.
  */
-
-export enum RolesVersion {
-  V1 = "V1",
-  V2 = "V2",
-}
 
 const rolesIfaceV1 = new ethers.Interface((RolesFullV1 as any).abi);
 const rolesIface = new ethers.Interface((RolesFullV2 as any).abi);
@@ -65,14 +77,32 @@ const roleArg = (version: RolesVersion, role: string): string | number => {
 const CONDITION_VIOLATION_SELECTOR = "0xd0a9bf58"; // ConditionViolation(uint8,bytes32)
 const MODULE_TRANSACTION_FAILED_SELECTOR = "0xd27b44a9"; // ModuleTransactionFailed()
 const NO_MEMBERSHIP_SELECTOR = "0xfd8e9f28"; // NoMembership()
+// What the modifier answers a wallet it has never been told about: holding a
+// role is what enables an address on it, so a wallet that was never assigned
+// one is refused before any role is even looked at. (Verified on a fork: a
+// wallet whose role was removed gets NoMembership, one that never had a role
+// gets this.)
+const NOT_AUTHORIZED_SELECTOR = ethers.id("NotAuthorized(address)").slice(0, 10);
 const ERROR_STRING_SELECTOR = "0x08c379a0"; // Error(string)
+// OpenZeppelin 5 Ownable — what a Roles V2 modifier answers a sender that is
+// not its owner (V1 still uses the "Ownable: caller is not the owner" string).
+const OWNABLE_UNAUTHORIZED_SELECTOR = ethers
+  .id("OwnableUnauthorizedAccount(address)")
+  .slice(0, 10);
+const PANIC_SELECTOR = "0x4e487b71"; // Panic(uint256)
+const PANIC_HINTS: Record<number, string> = {
+  0x01: "an assertion failed",
+  0x11: "an arithmetic overflow or underflow",
+  0x12: "a division by zero",
+  0x32: "an array index out of bounds",
+};
 
 // Status codes confirmed empirically against the deployed v2.1 checker.
 // Do NOT extend this table from an SDK enum — orderings differ.
 const CONDITION_STATUS_HINTS: Record<number, string> = {
   1: "Delegate calls are not allowed by this permission.",
-  2: "This target address is not allowed for the manager role.",
-  3: "This function is not allowed on this target for the manager role.",
+  2: "This target address is not allowed for your role.",
+  3: "This function is not allowed on this target for your role.",
   4: "Sending value is not allowed by this permission.",
   7: "A parameter does not match the value pinned by the permission.",
 };
@@ -105,6 +135,8 @@ export interface IRoleSimulationResult {
   ok: boolean;
   /** Permission layer passed but the wrapped call itself reverted. */
   innerRevert?: boolean;
+  /** Denied because the sender does not hold the role it was tried under. */
+  noMembership?: boolean;
   reason?: string;
 }
 
@@ -112,6 +144,12 @@ export interface IRoleCall {
   to: string;
   data: string;
   value?: string;
+  /**
+   * 1 = delegatecall. Only for a target the role is scoped to delegatecall
+   * into (today: the CoW order signer on the Scientific Vote Vault). Left
+   * out, the call is a plain call, which is what every other permission is.
+   */
+  operation?: 0 | 1;
 }
 
 const encodeExecWithRole = (
@@ -123,7 +161,7 @@ const encodeExecWithRole = (
     call.to,
     call.value ?? "0",
     call.data,
-    0, // Operation.Call — the manager permissions never allow delegatecall
+    call.operation ?? 0, // Operation.Call unless the caller asked for a delegatecall
     roleArg(version, role),
     true, // shouldRevert: surface inner failures instead of returning false
   ]);
@@ -148,6 +186,14 @@ const revertPayload = (error: any): string | undefined => {
 };
 
 /**
+ * How long one RPC gets before the next is tried. An endpoint can stop
+ * answering heavy calls while still answering light ones (purroofgroup on
+ * HyperEVM, eth_estimateGas of a permissions batch, 2026-10-05), and a fetch
+ * has no deadline of its own.
+ */
+const RPC_REQUEST_TIMEOUT_MS = 10_000;
+
+/**
  * One JSON-RPC request over the chain's configured RPCs. Mirrors the fallback
  * pattern in services/onchain/delegates.ts: try each RPC until one answers,
  * and treat an execution revert as the answer.
@@ -167,6 +213,7 @@ const rpcRequest = async (
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+        signal: AbortSignal.timeout(RPC_REQUEST_TIMEOUT_MS),
       });
       const json = await response.json();
       if (!json.error) return { result: json.result };
@@ -180,19 +227,31 @@ const rpcRequest = async (
   throw lastError ?? new Error(`No RPC available for chain ${chainId}`);
 };
 
-/** Raw eth_call from a spoofed sender. */
+/**
+ * Raw eth_call from a spoofed sender. `gas` caps the call the way a
+ * transaction's gas limit would; without it the node runs the call with its
+ * own (large) default, which is how an action that can never fit a real
+ * transaction still "succeeds" in simulation.
+ */
 const ethCallFrom = async (
   chainId: ChainId,
   from: string,
   to: string,
   data: string,
   value?: string,
+  gas?: number,
 ): Promise<{ reverted: boolean; returnData: string }> => {
   // A zero value is simply left out, the way a wallet would send it.
   const callValue =
     value && BigInt(value) > 0n ? ethers.toQuantity(BigInt(value)) : undefined;
   const { result, revertData } = await rpcRequest(chainId, "eth_call", [
-    { from, to, data, ...(callValue ? { value: callValue } : {}) },
+    {
+      from,
+      to,
+      data,
+      ...(callValue ? { value: callValue } : {}),
+      ...(gas ? { gas: ethers.toQuantity(gas) } : {}),
+    },
     "latest",
   ]);
   if (revertData !== undefined) return { reverted: true, returnData: revertData };
@@ -238,11 +297,36 @@ const describeRevert = (
         `The Roles modifier denied this call (status ${status}).`,
     };
   }
-  if (selector === NO_MEMBERSHIP_SELECTOR) {
+  if (selector === NO_MEMBERSHIP_SELECTOR || selector === NOT_AUTHORIZED_SELECTOR) {
+    return {
+      ok: false,
+      noMembership: true,
+      reason:
+        "The connected wallet does not hold the role this action needs on this vault.",
+    };
+  }
+  if (selector === OWNABLE_UNAUTHORIZED_SELECTOR) {
     return {
       ok: false,
       reason:
-        "The connected wallet does not hold the manager role on this vault.",
+        "The sender does not own the target contract (OwnableUnauthorizedAccount).",
+    };
+  }
+  if (selector === PANIC_SELECTOR) {
+    let code = -1;
+    try {
+      code = Number(
+        ethers.AbiCoder.defaultAbiCoder().decode(
+          ["uint256"],
+          "0x" + returnData.slice(10),
+        )[0],
+      );
+    } catch {
+      /* keep the generic message */
+    }
+    return {
+      ok: false,
+      reason: `The call hit a Solidity panic: ${PANIC_HINTS[code] ?? `code 0x${code.toString(16)}`}.`,
     };
   }
   if (selector === MODULE_TRANSACTION_FAILED_SELECTOR) {
@@ -296,6 +380,7 @@ export const simulateDirectCall = async (
   chainId: ChainId,
   from: string,
   call: IRoleCall,
+  gas?: number,
 ): Promise<IRoleSimulationResult> => {
   const { reverted, returnData } = await ethCallFrom(
     chainId,
@@ -303,6 +388,7 @@ export const simulateDirectCall = async (
     call.to,
     call.data,
     call.value,
+    gas,
   );
   if (!reverted) return { ok: true };
   return { ok: false, innerRevert: true, reason: describeRevert(returnData).reason };
@@ -314,7 +400,7 @@ export const simulateDirectCall = async (
  * opted in is ever routed to a big one — so the smaller of the last two
  * blocks is the limit that applies. Two big blocks are never adjacent.
  */
-const standardBlockGasLimit = async (
+export const standardBlockGasLimit = async (
   chainId: ChainId,
 ): Promise<number | undefined> => {
   try {
@@ -374,6 +460,179 @@ export const estimateRoleExecutionGas = async (
 };
 
 /**
+ * eth_estimateGas for `call` sent by `from`, with no modifier in between —
+ * what a governance proposal's action costs when the governor executes it.
+ * Undefined when the call reverts or no RPC answers; the caller decides how
+ * to phrase either.
+ */
+export const estimateGasFrom = async (
+  chainId: ChainId,
+  from: string,
+  call: IRoleCall,
+): Promise<number | undefined> => {
+  try {
+    const value =
+      call.value && BigInt(call.value) > 0n
+        ? ethers.toQuantity(BigInt(call.value))
+        : "0x0";
+    const { result, revertData } = await rpcRequest(chainId, "eth_estimateGas", [
+      { from, to: call.to, data: call.data, value },
+    ]);
+    if (revertData !== undefined || !result) return undefined;
+    return Number(BigInt(result));
+  } catch (error) {
+    console.warn("Could not estimate gas for the call", error);
+    return undefined;
+  }
+};
+
+/**
+ * The gas limit for `from` sending `call` straight to a contract, worked out
+ * from the app's RPCs with the same headroom and block ceiling as a role
+ * execution (see gasLimit.ts). Undefined when it cannot be estimated, and the
+ * wallet then chooses, as it always did.
+ */
+export const planCallGas = async (
+  chainId: ChainId,
+  from: string,
+  call: IRoleCall,
+): Promise<IGasPlan | undefined> => {
+  const required = await estimateGasFrom(chainId, from, call);
+  if (required === undefined) return undefined;
+  return planGasLimit(required, await standardBlockGasLimit(chainId), TX_GAS_CAPS[chainId]);
+};
+
+const OWNER_SELECTOR = rolesIface.getFunction("owner")!.selector;
+const AVATAR_SELECTOR = rolesIface.getFunction("avatar")!.selector;
+const SAFE_GET_OWNERS = SAFE_IFACE.getFunction("getOwners")!.selector;
+const SAFE_GET_THRESHOLD = SAFE_IFACE.getFunction("getThreshold")!.selector;
+const FUND_GET_SETTINGS = fundIface.getFunction("getFundSettings")!.selector;
+
+/**
+ * Can `governor` drive `safe` from a proposal action — is it an owner, with
+ * threshold 1? Null when the Safe could not be read.
+ */
+export const fetchSafeControl = async (
+  chainId: ChainId,
+  safe: string,
+  governor: string,
+): Promise<boolean | null> => {
+  try {
+    const owners = await ethCallFrom(chainId, ethers.ZeroAddress, safe, SAFE_GET_OWNERS);
+    const threshold = await ethCallFrom(chainId, ethers.ZeroAddress, safe, SAFE_GET_THRESHOLD);
+    if (owners.reverted || threshold.reverted) return null;
+    const ownerList = SAFE_IFACE.decodeFunctionResult("getOwners", owners.returnData)[0] as string[];
+    const t = SAFE_IFACE.decodeFunctionResult("getThreshold", threshold.returnData)[0] as bigint;
+    return decodeSafeControl([...ownerList], t, governor);
+  } catch (error) {
+    console.warn("Could not read the Safe's owners", error);
+    return null;
+  }
+};
+
+/**
+ * The governor the VAULT checks on updateNav & co. (`settings.governor`),
+ * which is the Safe after a V2 activation, and the Safe itself. Read live.
+ */
+export const fetchSettingsGovernorAndSafe = async (
+  chainId: ChainId,
+  fundAddress: string,
+): Promise<{ governor: string; safe: string } | null> => {
+  try {
+    const { reverted, returnData } = await ethCallFrom(
+      chainId,
+      ethers.ZeroAddress,
+      fundAddress,
+      FUND_GET_SETTINGS,
+    );
+    if (reverted) return null;
+    const settings = fundIface.decodeFunctionResult("getFundSettings", returnData)[0];
+    return { governor: String(settings.governor), safe: String(settings.safe) };
+  } catch (error) {
+    console.warn("Could not read the fund settings", error);
+    return null;
+  }
+};
+const DEFAULT_ROLES_SELECTOR = rolesIface.getFunction("defaultRoles")!.selector;
+
+/**
+ * avatar() of a Safe module: the Safe a Roles modifier (either generation)
+ * executes for, or null when the module has no such getter — the vault
+ * contract itself is enabled as a module on every Rethink Safe and reverts
+ * here. A revert is an answer, not a retry: this goes through the same
+ * revert-aware RPC call the simulations use, never callWithRetry.
+ */
+export const fetchModuleAvatar = async (
+  chainId: ChainId,
+  module: string,
+): Promise<string | null> => {
+  const { reverted, returnData } = await ethCallFrom(
+    chainId,
+    ethers.ZeroAddress,
+    module,
+    AVATAR_SELECTOR,
+  );
+  if (reverted || (returnData?.length ?? 0) < 66) return null;
+  return ethers.getAddress("0x" + returnData.slice(-40));
+};
+
+/**
+ * The role the modifier itself files `member` under — defaultRoles(address),
+ * set by setDefaultRole alongside the membership on every Rethink vault.
+ * One eth_call, so it works where the AssignRoles log replay does not (Base's
+ * public RPCs refuse unbounded eth_getLogs). Returns the id in the same
+ * encoding fetchMemberRoles uses (decimal string on V1, bytes32 on V2), or
+ * null when unset or unreadable.
+ */
+export const fetchDefaultRole = async (
+  chainId: ChainId,
+  rolesModAddress: string,
+  member: string,
+  version: RolesVersion,
+): Promise<string | null> => {
+  try {
+    const { reverted, returnData } = await ethCallFrom(
+      chainId,
+      ethers.ZeroAddress,
+      rolesModAddress,
+      DEFAULT_ROLES_SELECTOR +
+        ethers.zeroPadValue(ethers.getAddress(member), 32).slice(2),
+    );
+    if (reverted || (returnData?.length ?? 0) < 66) return null;
+    const word = returnData.slice(0, 66);
+    if (BigInt(word) === 0n) return null;
+    return version === RolesVersion.V1 ? String(BigInt(word)) : word;
+  } catch (error) {
+    console.warn("Could not read the member's default role", error);
+    return null;
+  }
+};
+
+/**
+ * Who administers the modifier — the governor until the one-time V2
+ * activation hands it to the Safe. Null when it cannot be read (no code at
+ * the address, every RPC refusing). Both generations expose owner().
+ */
+export const fetchRolesModifierOwner = async (
+  chainId: ChainId,
+  rolesModAddress: string,
+): Promise<string | null> => {
+  try {
+    const { reverted, returnData } = await ethCallFrom(
+      chainId,
+      ethers.ZeroAddress,
+      rolesModAddress,
+      OWNER_SELECTOR,
+    );
+    if (reverted || (returnData?.length ?? 0) < 66) return null;
+    return ethers.getAddress("0x" + returnData.slice(-40));
+  } catch (error) {
+    console.warn("Could not read the Roles modifier owner", error);
+    return null;
+  }
+};
+
+/**
  * Send the wrapped call with the connected wallet. Callers are expected to
  * have simulated first; this returns the CustomContract PromiEvent so pages
  * keep their usual .on("transactionHash"/"receipt"/"error") flow. `gas` is
@@ -400,7 +659,7 @@ export const sendRoleExecution = (
     call.to,
     call.value ?? "0",
     call.data,
-    0,
+    call.operation ?? 0,
     roleArg(version, roleKey),
     true,
   );
@@ -452,13 +711,6 @@ export const detectRolesVersion = async (
  * Roles permission pins these values EXACTLY: an echo built from a stale
  * cache doesn't fail loudly, it fails as an opaque permission denial.
  */
-export interface ILiveFundSettingsState {
-  settings: Record<string, any>;
-  fundMetadata: string;
-  feePerformancePeriod: string;
-  feeManagePeriod: string;
-}
-
 /**
  * Just the metadata JSON, in one call rather than the four
  * fetchLiveFundSettingsState makes.
@@ -521,59 +773,6 @@ export const fetchLiveFundSettingsState = async (
   };
 };
 
-/**
- * updateSettings calldata for the curator-editable surfaces the Roles
- * permission leaves open: the depositor whitelist — its enforcement flag and
- * its addresses (XOR-toggle deltas) — and the metadata JSON. Everything else
- * echoes the live struct verbatim, with two deliberate exceptions the
- * permission demands:
- *
- * - governor is sent as the SAFE address (the permission pins it there; the
- *   fund's own governor check only passes once activation has run).
- * - allowedManagers is always [] (pinned empty — and, being an XOR delta,
- *   anything else would toggle live entries).
- *
- * Omitting isWhitelistedDeposits echoes the live flag, so a caller that only
- * edits addresses never races a concurrent flip.
- */
-export const buildCuratorUpdateSettingsCalldata = (
-  live: ILiveFundSettingsState,
-  changes: {
-    whitelistDeltas?: string[];
-    isWhitelistedDeposits?: boolean;
-    fundMetadata?: string;
-  },
-): string => {
-  const settings = live.settings;
-  const echoedSettings = {
-    depositFee: settings.depositFee,
-    withdrawFee: settings.withdrawFee,
-    performanceFee: settings.performanceFee,
-    managementFee: settings.managementFee,
-    performaceHurdleRateBps: settings.performaceHurdleRateBps,
-    baseToken: settings.baseToken,
-    safe: settings.safe,
-    isExternalGovTokenInUse: settings.isExternalGovTokenInUse,
-    isWhitelistedDeposits:
-      changes.isWhitelistedDeposits ?? settings.isWhitelistedDeposits,
-    // XOR-toggle deltas: ONLY the addresses whose state should flip.
-    allowedDepositAddrs: changes.whitelistDeltas ?? [],
-    allowedManagers: [] as string[],
-    governanceToken: settings.governanceToken,
-    fundAddress: settings.fundAddress,
-    governor: settings.safe,
-    fundName: settings.fundName,
-    fundSymbol: settings.fundSymbol,
-    feeCollectors: settings.feeCollectors,
-  };
-  return fundIface.encodeFunctionData("updateSettings", [
-    Object.values(echoedSettings),
-    changes.fundMetadata ?? live.fundMetadata,
-    live.feePerformancePeriod,
-    live.feeManagePeriod,
-  ]);
-};
-
 // keccak256 topic of AssignRoles — the role array type differs per
 // generation, so the two events hash differently. V2's is the constant that
 // was verified against the live modifier; V1's is derived from its ABI.
@@ -581,94 +780,128 @@ const ASSIGN_ROLES_TOPIC =
   "0x9f8368fa4ddcbd561efd7ad2a2174235bf5b840a73fb18f20db9705c11462498";
 const ASSIGN_ROLES_TOPIC_V1 = rolesIfaceV1.getEvent("AssignRoles")!.topicHash;
 
+/** The raw log fields the membership replay needs, however the log was fetched. */
+interface IAssignRolesLog {
+  topics: readonly string[];
+  data: string;
+  blockNumber: number;
+  logIndex: number;
+}
+
+/** Block numbers and log indexes arrive as hex strings from an RPC, as numbers from the explorers. */
+const toLogNumber = (value: unknown): number => {
+  const text = String(value ?? "");
+  if (!text) return 0;
+  return text.startsWith("0x") ? parseInt(text, 16) : Number(text);
+};
+
+const toAssignRolesLog = (log: any): IAssignRolesLog => ({
+  topics: log?.topics ?? [],
+  data: log?.data ?? "0x",
+  blockNumber: toLogNumber(log?.blockNumber),
+  logIndex: toLogNumber(log?.logIndex),
+});
+
+/** One RPC's answer to an unbounded, topic-filtered eth_getLogs on the modifier. */
+const fetchRpcAssignRolesLogs = async (
+  rpcUrl: string,
+  rolesModAddress: string,
+  topic: string,
+): Promise<any[]> => {
+  const response = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_getLogs",
+      params: [
+        {
+          address: rolesModAddress,
+          topics: [topic],
+          fromBlock: "0x0",
+          toBlock: "latest",
+        },
+      ],
+    }),
+  });
+  const json = await response.json();
+  if (json.error) throw new Error(json.error.message);
+  return json.result ?? [];
+};
+
 /**
- * The modifier's full AssignRoles history, from the first source that can
- * serve it whole: the block explorer (topic-filtered, unbounded), then
- * Blockscout (no key, and it covers Base, whose public RPCs all cap the
- * eth_getLogs range), then each configured RPC.
+ * The modifier's full AssignRoles history, oldest first, from the first
+ * source with data: the block explorer (unbounded history, topic-filtered),
+ * then Blockscout (no key, and the only tier that serves Base, whose RPCs
+ * all cap the eth_getLogs range), then each configured RPC. The same tiering
+ * as services/onchain/rolesV1.ts, which the permissions page reads with.
  *
- * An RPC that answers [] is not believed on its own: a range-capped node says
- * [] for history it cannot see, and taking that at face value once told a
- * vault's real manager he held no role while telling strangers the read had
- * failed. "No assignments" is only the answer once every source that answered
- * agrees; when nothing answers at all this throws, and the caller treats the
- * membership as unknown rather than as absent.
+ * A tier that answers empty is remembered but not trusted over a later tier
+ * with data (an explorer can lag or know nothing of a fresh modifier); when
+ * every tier fails the error propagates, so a failed read never turns into
+ * "no membership".
  */
-const fetchAssignRolesLogs = async (
+const readAssignRolesLogs = async (
   chainId: ChainId,
   rolesModAddress: string,
   version: RolesVersion,
-): Promise<{ topics: string[]; data: string }[]> => {
+): Promise<IAssignRolesLog[]> => {
   const web3Store = useWeb3Store();
   const topic = (
     version === RolesVersion.V1 ? ASSIGN_ROLES_TOPIC_V1 : ASSIGN_ROLES_TOPIC
   ).toLowerCase();
-  const modifier = rolesModAddress.toLowerCase();
-
-  // Every source hands back a slightly different shape; keep only what
-  // parseLog needs, and only this modifier's AssignRoles.
-  const onlyAssignRoles = (logs: any[]) =>
-    logs
-      .filter(
-        (log) =>
-          String(log?.topics?.[0] ?? "").toLowerCase() === topic &&
-          (!log?.address || String(log.address).toLowerCase() === modifier),
-      )
-      .map((log) => ({
-        topics: (log.topics ?? []).filter(Boolean).map(String),
-        data: String(log.data ?? "0x"),
-      }));
-
   const sources: (() => Promise<any[]>)[] = [
     () => fetchExplorerLogs(chainId, rolesModAddress, topic),
     () => fetchBlockscoutRoleLogs(chainId, rolesModAddress),
-    ...web3Store.networkRpcUrls(chainId).map((rpcUrl: string) => async () => {
-      const response = await fetch(rpcUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "eth_getLogs",
-          params: [
-            {
-              address: rolesModAddress,
-              topics: [topic],
-              fromBlock: "0x0",
-              toBlock: "latest",
-            },
-          ],
-        }),
-      });
-      const json = await response.json();
-      if (json.error) throw new Error(json.error.message);
-      return json.result ?? [];
-    }),
+    ...web3Store
+      .networkRpcUrls(chainId)
+      .map(
+        (rpcUrl: string) => () =>
+          fetchRpcAssignRolesLogs(rpcUrl, rolesModAddress, topic),
+      ),
   ];
 
-  let answeredEmpty = false;
+  let answered = false;
   let lastError: unknown;
   for (const source of sources) {
-    let logs: { topics: string[]; data: string }[];
     try {
-      logs = onlyAssignRoles(await source());
+      const logs = (await source())
+        .map(toAssignRolesLog)
+        .filter((log) => String(log.topics[0] ?? "").toLowerCase() === topic);
+      answered = true;
+      if (logs.length) {
+        return logs.sort(
+          (a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex,
+        );
+      }
     } catch (error) {
       lastError = error;
-      continue;
     }
-    if (!logs.length) {
-      answeredEmpty = true;
-      continue;
-    }
-    return logs;
   }
-  if (answeredEmpty) return [];
-  throw (
-    lastError ??
-    new Error(
-      `No source could read the AssignRoles history of ${rolesModAddress} on chain ${chainId}`,
-    )
+  if (answered) return [];
+  throw lastError ?? new Error(`No log source available for chain ${chainId}`);
+};
+
+// Several readers ask for the same history at once — the Permissions step
+// lists the members of two roles side by side — and each read is a full log
+// scan. Share the one in flight; nothing is kept once it settles, so a
+// refresh still goes back to the chain.
+const assignRolesLogsInFlight = new Map<string, Promise<IAssignRolesLog[]>>();
+
+const fetchAssignRolesLogs = (
+  chainId: ChainId,
+  rolesModAddress: string,
+  version: RolesVersion,
+): Promise<IAssignRolesLog[]> => {
+  const key = `${chainId}:${rolesModAddress.toLowerCase()}:${version}`;
+  const pending = assignRolesLogsInFlight.get(key);
+  if (pending) return pending;
+  const request = readAssignRolesLogs(chainId, rolesModAddress, version).finally(
+    () => assignRolesLogsInFlight.delete(key),
   );
+  assignRolesLogsInFlight.set(key, request);
+  return request;
 };
 
 /**
@@ -745,15 +978,3 @@ export const fetchMemberRoles = async (
     .filter(([, isMember]) => isMember)
     .map(([roleId]) => roleId);
 };
-
-/** assignRoles calldata for one membership change, targeting the modifier. */
-export const buildAssignRolesCalldata = (
-  memberAddress: string,
-  isMember: boolean,
-  roleKey: string = DEFAULT_ROLE_KEY_V2,
-): string =>
-  rolesIface.encodeFunctionData("assignRoles", [
-    memberAddress,
-    [ethers.encodeBytes32String(roleKey)],
-    [isMember],
-  ]);

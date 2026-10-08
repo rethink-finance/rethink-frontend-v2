@@ -1,5 +1,10 @@
 import { ethers } from "ethers";
 import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
+import {
+  ADMIN_ROLE_KEY_V2,
+  isExecutorRoleKey,
+  toRoleKeyBytes32,
+} from "~/composables/nav/generateNAVPermission";
 
 export interface IRawPermissionCodeEntry {
   data: string;
@@ -74,5 +79,43 @@ export const parseRawPermissionCode = (
       );
     }
     return { data, label: describe(parsed) };
+  });
+};
+
+// The calls that grant or take back a permission, each for the role that is
+// its first argument. Membership (assignRoles, setDefaultRole) is never
+// rewritten: who holds a role is set on the role's own card.
+const PERMISSION_CALLS = new Set([
+  "allowFunction",
+  "allowTarget",
+  "revokeFunction",
+  "revokeTarget",
+  "scopeFunction",
+  "scopeTarget",
+]);
+
+const ADMIN_KEY_BYTES = toRoleKeyBytes32(ADMIN_ROLE_KEY_V2).toLowerCase();
+const isBuiltInRoleKey = (key: string) =>
+  isExecutorRoleKey(key) || key.toLowerCase() === ADMIN_KEY_BYTES;
+
+/**
+ * Raw calls pasted on a role's card are that role's permissions. Calldata
+ * exported from another vault names a built-in role (the executor, under
+ * either spelling of its key, or the admin) that may not be the one on
+ * screen, or not even the key this vault's executor holds; those calls are
+ * re-encoded for `roleKey`. A call naming a custom role keeps it.
+ */
+export const retargetBuiltInRoleCalls = (
+  entries: IRawPermissionCodeEntry[],
+  roleKey: string,
+): IRawPermissionCodeEntry[] => {
+  const target = toRoleKeyBytes32(roleKey).toLowerCase();
+  return entries.map((entry) => {
+    const parsed = rolesInterface.parseTransaction({ data: entry.data });
+    if (!parsed || !PERMISSION_CALLS.has(parsed.name)) return entry;
+    const [current, ...rest] = parsed.args.toArray(true);
+    if (!isBuiltInRoleKey(current) || current.toLowerCase() === target) return entry;
+    const data = rolesInterface.encodeFunctionData(parsed.fragment, [target, ...rest]);
+    return { data, label: describe(rolesInterface.parseTransaction({ data })!) };
   });
 };

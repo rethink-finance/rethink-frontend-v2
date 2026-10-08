@@ -61,7 +61,7 @@ export class Explorer {
     return [json, address]
   }
 
-  async sourceCode(address: string): Promise<Record<string, any>> {
+  async sourceCode(address: string, depth = 0): Promise<Record<string, any>> {
     const client = await this.getHttpClient()
     // First, fetch ABI only, as it is a faster call, less likely to fail.
     const [abiResponse, proxyAddress] = await explorerApiLimit(() => this.abi(address))
@@ -82,7 +82,26 @@ export class Explorer {
       throw new Error(response.data.result)
     }
 
-    return response.data.result[0] as any;
+    const result = response.data.result[0] as any;
+    // A proxy evm-proxy-detection did not recognise: the explorer still names
+    // its implementation, and that is what names the contract and its
+    // functions. One level is enough; a proxy behind a proxy is not a thing.
+    const implementation = result?.Implementation;
+    const resolved = (proxyAddress || address).toLowerCase();
+    if (
+      depth === 0 &&
+      result?.Proxy === "1" &&
+      typeof implementation === "string" &&
+      /^0x[0-9a-fA-F]{40}$/.test(implementation) &&
+      implementation.toLowerCase() !== resolved
+    ) {
+      try {
+        return await this.sourceCode(implementation, depth + 1)
+      } catch {
+        // keep the proxy's own source
+      }
+    }
+    return result;
   }
 
   /**

@@ -1,8 +1,10 @@
 import { Web3 } from "web3";
-import { ethers } from "ethers";
 import { fetchExplorerLogs } from "./explorerLogs";
-import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
-import type { IPermissionScope } from "~/composables/permissions/revokePermissions";
+import {
+  reduceRoleScopeLogs,
+  type ICurrentRoleScopes,
+  type IRoleScopeLog,
+} from "~/composables/permissions/roleScopeLogs";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { BLOCKSCOUT_BASE_URLS, type ChainId } from "~/types/enums/chain_id";
 
@@ -24,114 +26,15 @@ import { BLOCKSCOUT_BASE_URLS, type ChainId } from "~/types/enums/chain_id";
  * same as a failed one. Callers must fail the save closed on either.
  */
 
-const rolesInterface = new ethers.Interface((RolesFullV2 as any).abi);
+const ZERO_ROLE_KEY = "0x" + "0".repeat(64);
 
-/** The six events that move a role's target/function grants. */
-const SCOPE_EVENT_NAMES = [
-  "AllowTarget",
-  "ScopeTarget",
-  "RevokeTarget",
-  "AllowFunction",
-  "ScopeFunction",
-  "RevokeFunction",
-] as const;
-
-const scopeEventTopics = new Set(
-  SCOPE_EVENT_NAMES.map(
-    (name) => rolesInterface.getEvent(name)!.topicHash.toLowerCase(),
-  ),
-);
-
-/** The raw log fields the replay needs, however the log was fetched. */
-export interface IRoleScopeLog {
-  topics: readonly string[];
-  data: string;
-  blockNumber: number;
-  logIndex: number;
-}
-
-export interface ICurrentRoleScopes {
-  /**
-   * Every (target, selector) with a stored function grant. RevokeTarget does
-   * not clear these on-chain — the modifier only drops the target clearance,
-   * and a later scopeTarget would bring the stored grants back to life — so
-   * the replay keeps them across RevokeTarget too, and an authoritative save
-   * revokes them explicitly.
-   */
-  scopes: IPermissionScope[];
-  /** Targets with a live clearance (wildcard-allowed or scoped). */
-  targets: string[];
-  /** Highest block among the modifier's permission logs; 0 when none. */
-  latestBlock: number;
-}
-
-/**
- * Fold the modifier's permission logs into the role's current grants,
- * mirroring the contract's storage semantics: clearances are last-write-wins
- * per target, function grants live in their own map keyed by
- * (target, selector) and only RevokeFunction deletes them.
- */
-export const reduceRoleScopeLogs = (
-  logs: IRoleScopeLog[],
-  roleKeyBytes: string,
-): ICurrentRoleScopes => {
-  const roleKeyLower = roleKeyBytes.toLowerCase();
-  const sorted = [...logs].sort(
-    (a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex,
-  );
-
-  // Lowercased key → original-cased value, so callers get real addresses
-  // back while matching stays case-insensitive.
-  const clearances = new Map<string, string>();
-  const grants = new Map<string, IPermissionScope>();
-  let latestBlock = 0;
-
-  for (const log of sorted) {
-    const topic = (log.topics?.[0] ?? "").toLowerCase();
-    if (!scopeEventTopics.has(topic)) continue;
-    const parsed = rolesInterface.parseLog({
-      topics: [...log.topics],
-      data: log.data,
-    });
-    if (!parsed) continue;
-    // Any permission event proves how far this source has read, whichever
-    // role it touches — the floor check compares against this.
-    latestBlock = Math.max(latestBlock, log.blockNumber);
-    if (String(parsed.args.roleKey).toLowerCase() !== roleKeyLower) continue;
-
-    const target = String(parsed.args.targetAddress);
-    const targetLower = target.toLowerCase();
-    switch (parsed.name) {
-      case "AllowTarget":
-      case "ScopeTarget":
-        clearances.set(targetLower, target);
-        break;
-      case "RevokeTarget":
-        clearances.delete(targetLower);
-        break;
-      case "AllowFunction":
-      case "ScopeFunction": {
-        const selector = String(parsed.args.selector);
-        grants.set(`${targetLower}:${selector.toLowerCase()}`, {
-          target,
-          selector,
-        });
-        break;
-      }
-      case "RevokeFunction": {
-        const selector = String(parsed.args.selector);
-        grants.delete(`${targetLower}:${selector.toLowerCase()}`);
-        break;
-      }
-    }
-  }
-
-  return {
-    scopes: [...grants.values()],
-    targets: [...clearances.values()],
-    latestBlock,
-  };
-};
+// The replay itself is a pure fold and lives in a store-free module, so the
+// acceptance tests can run it over logs taken straight from an EVM.
+export {
+  reduceRoleScopeLogs,
+  type ICurrentRoleScopes,
+  type IRoleScopeLog,
+} from "~/composables/permissions/roleScopeLogs";
 
 /**
  * Chains where a full modifier log history is actually readable today
@@ -306,7 +209,21 @@ export const fetchCurrentRoleScopes = async (
   chainId: ChainId,
   rolesModAddress: string,
   roleKeyBytes: string,
-): Promise<ICurrentRoleScopes> => {
+): Promise<ICurrentRoleScopes> =>
+  reduceRoleScopeLogs(
+    await fetchRoleScopeLogs(chainId, rolesModAddress),
+    roleKeyBytes,
+  );
+
+/**
+ * The modifier's own log, from the first source that is both available and
+ * fresh — for callers that fold it more than one way (the Permissions step
+ * shows what is stored and diffs its save against it, off one read).
+ */
+export const fetchRoleScopeLogs = async (
+  chainId: ChainId,
+  rolesModAddress: string,
+): Promise<IRoleScopeLog[]> => {
   const web3Store = useWeb3Store();
   const floor = readPermissionsSaveFloor(chainId, rolesModAddress);
 
@@ -334,18 +251,18 @@ export const fetchCurrentRoleScopes = async (
   let lastError: unknown;
   for (const source of sources) {
     try {
-      const state = reduceRoleScopeLogs(
-        (await source()).map(toRoleScopeLog),
-        roleKeyBytes,
-      );
-      if (floor > state.latestBlock) {
+      const logs = (await source()).map(toRoleScopeLog);
+      // How far this source has read is the same whichever role is asked
+      // about: the fold counts every role's permission events.
+      const { latestBlock } = reduceRoleScopeLogs(logs, ZERO_ROLE_KEY);
+      if (floor > latestBlock) {
         lastError = new Error(
           `log source is behind the last save (floor block ${floor}, ` +
-          `saw ${state.latestBlock})`,
+          `saw ${latestBlock})`,
         );
         continue;
       }
-      return state;
+      return logs;
     } catch (error) {
       lastError = error;
     }

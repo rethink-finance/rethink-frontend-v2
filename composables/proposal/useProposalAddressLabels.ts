@@ -2,6 +2,7 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useContractAddresses } from "~/composables/useContractAddresses";
 import { getRegistryProtocols } from "~/composables/permissions/protocolPermissions";
+import { WELL_KNOWN_LABELS } from "~/composables/proposal/permissionSummary";
 
 /**
  * Names for the addresses a proposal touches, so the page can say "the
@@ -77,7 +78,14 @@ export const useProposalAddressLabels = () => {
     addresses.forEach((address) => {
       if (!address || !/^0x[0-9a-fA-F]{40}$/.test(address)) return;
       const key = address.toLowerCase();
-      if (requested.has(key) || knownLabel(address) || registryLabels.value[key]) return;
+      if (
+        requested.has(key) ||
+        knownLabel(address) ||
+        registryLabels.value[key] ||
+        WELL_KNOWN_LABELS[key]
+      ) {
+        return;
+      }
       requested.add(key);
       fundStore
         .getAddressLabel(address, chainId)
@@ -91,7 +99,12 @@ export const useProposalAddressLabels = () => {
   const labelFor = (address?: string): string | undefined => {
     if (!address) return undefined;
     const key = address.toLowerCase();
-    return knownLabel(address) ?? registryLabels.value[key] ?? explorerLabels[key];
+    return (
+      knownLabel(address) ??
+      registryLabels.value[key] ??
+      WELL_KNOWN_LABELS[key] ??
+      explorerLabels[key]
+    );
   };
 
   return { labelFor, resolve, roleModAddress };

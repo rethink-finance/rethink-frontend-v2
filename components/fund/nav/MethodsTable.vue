@@ -453,6 +453,7 @@
 
 <script lang="ts">
 import { ethers } from "ethers";
+import AddressLink from "~/components/common/AddressLink.vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -490,6 +491,9 @@ type INAVMethodRow = INAVMethod & {
  */
 export default defineComponent({
   name: "FundNavMethodsTable",
+  // Lives in components/common, so its auto-import name is CommonAddressLink;
+  // the template uses the short one.
+  components: { AddressLink },
   props: {
     methods: {
       type: Array as () => INAVMethod[],
@@ -1084,7 +1088,14 @@ export default defineComponent({
 
         // Do not include the pastNAVUpdateEntryFundAddress in the details, as when we fetch entries
         // they don't include this data and details hash would be broken if we included it.
-        newNavEntry.pastNAVUpdateEntryFundAddress = 0;
+        // On the entry itself it names the vault the method is defined on, and updateNav
+        // takes one per entry: an edited method is a new definition on this vault
+        // (isPastNAVUpdate is false below), the same as one made in the new method form.
+        newNavEntry.pastNAVUpdateEntryFundAddress = this.fundAddress || undefined;
+        // The copied value was simulated for the method as it was before the edit.
+        delete newNavEntry.simulatedNav;
+        delete newNavEntry.simulatedNavFormatted;
+        delete newNavEntry.isSimulatedNavError;
 
         // Set default fields that are required for each entry.
         // All methods details have this data.
@@ -1165,6 +1176,9 @@ export default defineComponent({
         if (this.hasChanged()) {
           // remove original method from the all methods
           this.deleteMethod(this.originalNavEntry, false, newNavEntry);
+          // Replacing a new row keeps the list the same length, which the
+          // methods watcher does not see, so the edited row is simulated here.
+          this.$nextTick(() => this.simulateNAV());
         }
 
         this.toastStore.addToast("Method added successfully.");

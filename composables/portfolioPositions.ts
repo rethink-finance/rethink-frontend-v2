@@ -265,21 +265,36 @@ const explorerChainFlows = async (
  * explorer cannot give. This is the same merge, and the same precedence, the
  * vault's own activity table uses.
  */
+export interface PortfolioFlowsResult {
+  flows: PortfolioFlow[];
+  /**
+   * Chains whose history could not be read. Without this an explorer that
+   * refused (rate limit, outage) looked exactly like a wallet that never
+   * transacted: "No transactions yet".
+   */
+  failedChains: ChainId[];
+}
+
 export const fetchPortfolioFlows = async (
   vaultsByChain: Record<string, string[]>,
   account: string,
   etherscanApiKey = "",
-): Promise<PortfolioFlow[]> => {
+): Promise<PortfolioFlowsResult> => {
   const chainIds = Object.keys(vaultsByChain) as ChainId[];
+  const failedChains = new Set<ChainId>();
 
-  // A chain failing costs that chain and that feed, nothing else.
-  const settle = async (tasks: Promise<UnresolvedFlow[]>[]) =>
-    (await Promise.allSettled(tasks))
-      .filter(
-        (result): result is PromiseFulfilledResult<UnresolvedFlow[]> =>
-          result.status === "fulfilled",
-      )
-      .flatMap((result) => result.value);
+  // A chain failing costs that chain and that feed, nothing else — but it is
+  // recorded when the feed was that chain's only source.
+  const settle = async (
+    tasks: { chainId: ChainId; task: Promise<UnresolvedFlow[]>; isOnlySource: boolean }[],
+  ) =>
+    (await Promise.allSettled(tasks.map((entry) => entry.task))).flatMap((result, index) => {
+      if (result.status === "fulfilled") return result.value;
+      const { chainId, isOnlySource } = tasks[index];
+      console.warn(`Portfolio activity unavailable on ${chainId}`, result.reason);
+      if (isOnlySource) failedChains.add(chainId);
+      return [];
+    });
 
   // The explorer walk is the expensive feed — Base's blockscout pages at
   // multiple seconds each — so it only runs where the subgraph cannot stand
@@ -297,13 +312,19 @@ export const fetchPortfolioFlows = async (
     settle(
       chainIds
         .filter((chainId) => !SUBGRAPH_FLOW_COVERAGE.has(chainId))
-        .map(explorerFor),
+        .map((chainId) => ({ chainId, task: explorerFor(chainId), isOnlySource: true })),
     ),
     settle(
       chainIds.map((chainId) =>
         SUBGRAPH_FLOW_COVERAGE.has(chainId)
-          ? subgraphChainFlows(chainId, account).catch(() => explorerFor(chainId))
-          : subgraphChainFlows(chainId, account),
+          ? {
+            chainId,
+            task: subgraphChainFlows(chainId, account).catch(() => explorerFor(chainId)),
+            isOnlySource: true,
+          }
+          : // A supplement where the explorer is the source: its subgraph is
+        // stale or absent, so its failure is expected and not reported.
+          { chainId, task: subgraphChainFlows(chainId, account), isOnlySource: false },
       ),
     ),
   ]);
@@ -325,10 +346,13 @@ export const fetchPortfolioFlows = async (
 
   // A settled deposit records no amount of its own — it takes the one from the
   // request it completed, per vault and per direction.
-  return resolveSettledAmounts(
-    [...merged, ...byTransaction.values()],
-    (flow) => `${flow.chainId}-${flow.fundAddress}`,
-  );
+  return {
+    flows: resolveSettledAmounts(
+      [...merged, ...byTransaction.values()],
+      (flow) => `${flow.chainId}-${flow.fundAddress}`,
+    ),
+    failedChains: [...failedChains],
+  };
 };
 
 /** A vault the wallet holds, with everything known before the flows arrive. */
@@ -427,8 +451,13 @@ export const loadPortfolioPositions = async (
   // instance, where useRuntimeConfig cannot be called.
   etherscanApiKey = "",
   onBalances?: (positions: PortfolioPosition[], scanDone: boolean) => void,
-  onFlows?: (flows: PortfolioFlow[]) => void,
-): Promise<{ positions: PortfolioPosition[]; flows: PortfolioFlow[]; scanned: number }> => {
+  onFlows?: (flows: PortfolioFlow[], failedChains: ChainId[]) => void,
+): Promise<{
+  positions: PortfolioPosition[];
+  flows: PortfolioFlow[];
+  failedChains: ChainId[];
+  scanned: number;
+}> => {
   const fundsStore = useFundsStore();
 
   // The discover fetch hydrates chainFunds from the localStorage cache
@@ -460,13 +489,13 @@ export const loadPortfolioPositions = async (
     account,
     etherscanApiKey,
   )
-    .catch((error) => {
+    .catch((error): PortfolioFlowsResult => {
       console.error("Failed fetching portfolio flows", error);
-      return [] as PortfolioFlow[];
+      return { flows: [], failedChains: Object.keys(vaultsByChain) as ChainId[] };
     })
-    .then((flows) => {
-      onFlows?.(flows);
-      return flows;
+    .then((result) => {
+      onFlows?.(result.flows, result.failedChains);
+      return result;
     });
 
   // Left unsorted: the order is by dollar value, which is not known until the
@@ -491,10 +520,11 @@ export const loadPortfolioPositions = async (
   // should not wait for the flows.
   emitBalances(true);
 
-  const flows = await flowsPromise;
+  const { flows, failedChains } = await flowsPromise;
   return {
     positions: heldVaults.map((held) => assemblePosition(held, flows)),
     flows,
+    failedChains,
     scanned: funds.length,
   };
 };

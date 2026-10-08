@@ -5,6 +5,65 @@ import RolesFullV2 from "~/assets/contracts/zodiac/RolesFullV2.json";
 
 export const DEFAULT_ROLE_KEY = "1";
 export const DEFAULT_ROLE_KEY_V2 = "defaulManagerRole"; // typo is intentional
+/**
+ * The two roles a Roles V2 vault is created with.
+ *
+ * The executor — "role 2" in the create flow — keeps the factory's own key:
+ * GovernableFundFactoryV1_5.initCreateFund assigns the creating wallet to
+ * bytes32("defaulManagerRole"), and every execution surface (NAV, flows,
+ * fees, protocols) runs under it. The admin — "role 1" — is a second key on
+ * the same modifier that exists only because the Permissions step scopes it.
+ */
+export const EXECUTOR_ROLE_KEY_V2 = DEFAULT_ROLE_KEY_V2;
+export const ADMIN_ROLE_KEY_V2 = "adminRole";
+
+/**
+ * A Roles V2 role key as the modifier wants it: bytes32. Accepts either the
+ * human label the create flow uses ("defaulManagerRole") or an id that was
+ * read back off chain, which arrives already encoded — re-encoding the hex
+ * as a string would silently produce a different, unassigned role.
+ */
+export const toRoleKeyBytes32 = (roleKey: string): string =>
+  ethers.isHexString(roleKey, 32) ? roleKey : ethers.encodeBytes32String(roleKey);
+
+/**
+ * Every spelling the executor's key has been created under. Vaults have
+ * come out of the factory with the misspelt "defaulManagerRole" and with
+ * "defaultManagerRole"; a vault holds one of them, and it is that vault's
+ * executor either way — never a custom role of its own.
+ */
+export const EXECUTOR_ROLE_KEY_ALIASES_V2 = [
+  EXECUTOR_ROLE_KEY_V2,
+  "defaultManagerRole",
+];
+const EXECUTOR_ROLE_KEY_ALIAS_BYTES = EXECUTOR_ROLE_KEY_ALIASES_V2.map((key) =>
+  ethers.encodeBytes32String(key).toLowerCase(),
+);
+
+/** Whether a key, as a label or bytes32, is one of the executor's spellings. */
+export const isExecutorRoleKey = (roleKey?: string): boolean => {
+  if (!roleKey) return false;
+  try {
+    return EXECUTOR_ROLE_KEY_ALIAS_BYTES.includes(toRoleKeyBytes32(roleKey).toLowerCase());
+  } catch {
+    // too long for a bytes32 string: not a role key at all
+    return false;
+  }
+};
+
+/**
+ * The executor key a vault actually uses, as a label, picked from the keys
+ * its modifier knows (bytes32, as listLiveRoleKeys reports them). Falls back
+ * to EXECUTOR_ROLE_KEY_V2 while nothing has been read.
+ */
+export const resolveExecutorRoleKey = (liveRoleKeys: string[]): string => {
+  const live = liveRoleKeys.map((key) => key.toLowerCase());
+  return (
+    EXECUTOR_ROLE_KEY_ALIASES_V2.find((_, i) =>
+      live.includes(EXECUTOR_ROLE_KEY_ALIAS_BYTES[i]),
+    ) ?? EXECUTOR_ROLE_KEY_V2
+  );
+};
 
 // Build a minimal ABI map for Roles V2 write functions we need
 export const rolesV2WriteFunctionAbiMap: Record<string, any> = {
@@ -17,21 +76,28 @@ export const rolesV2WriteFunctionAbiMap: Record<string, any> = {
 };
 
 /**
- * Generate NAV permissions to allow manager to keep
- * updating NAV based on these methods
+ * Generate NAV permissions (Roles V1 descriptors) to allow the manager to
+ * keep updating NAV based on these methods: scopeFunction(role, fund,
+ * executeNAVUpdate, navExecutor pinned) and scopeTarget(role, fund).
  * @param fundAddress
  * @param navExecutorAddress
+ * @param role the V1 role id (uint16, as a decimal string) the manager holds
+ *             on this modifier — read it off the modifier (see
+ *             resolveRolesModifierProfile); "1" is only what Rethink vaults
+ *             are created with.
  */
 export const generateNAVPermission = (
   fundAddress: string,
   navExecutorAddress: string,
+  role: string = DEFAULT_ROLE_KEY,
 ) => {
+  const roleId = String(role);
   // Default NAV entry permission
   const navEntryPermission: Record<string, any> = {
     value: [
       {
         isArray: false,
-        data: "1",
+        data: roleId,
         internalType: "uint16",
         name: "role",
       },
@@ -86,8 +152,7 @@ export const generateNAVPermission = (
       {
         idx: 0,
         isArray: false,
-        // TODO: ASSUMES ROLE ID OF 1, BUT COULD BE ANY OTHER ID, NEED A WAY TO POPULATE IT SMARTLY
-        data: "1",
+        data: roleId,
         internalType: "uint16",
         name: "role",
       },
@@ -134,8 +199,8 @@ export const defaultScopedTargetPermissionRolesV2 = (
   compValue: string, // address (Static) or full bytes blob (Dynamic)
   paramType: number = 1, // default ParameterType.Static = 1; use 2 for Dynamic
 ): string => {
-  // Encode roleKey from a string to bytes32
-  const encodedRoleKey = ethers.encodeBytes32String(roleKey);
+  // Encode roleKey to bytes32 (labels are encoded, on-chain ids pass through)
+  const encodedRoleKey = toRoleKeyBytes32(roleKey);
 
   // Encode compValue depending on paramType
   // - Static (1): treat compValue as address and left-pad to 32 bytes
@@ -221,7 +286,7 @@ export const getScopeTargetV2 = (
   roleKey: string = DEFAULT_ROLE_KEY_V2,
   target: string,
 )=> {
-  const encodedRoleKey = ethers.encodeBytes32String(roleKey);
+  const encodedRoleKey = toRoleKeyBytes32(roleKey);
 
   return encodeFunctionCall(rolesV2WriteFunctionAbiMap.scopeTarget, [
     encodedRoleKey,
@@ -238,7 +303,7 @@ export const getAssignMembersRoleV2 = (
   const assignRolesAbi: any = (RolesFullV2 as any).abi.find(
     (f: any) => f?.type === "function" && f?.name === "assignRoles",
   );
-  const roleKeyBytes = ethers.encodeBytes32String(roleKey);
+  const roleKeyBytes = toRoleKeyBytes32(roleKey);
   const encodedRoleModEntries: string[] = [];
 
   for (const member of members) {

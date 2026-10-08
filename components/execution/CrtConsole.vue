@@ -40,6 +40,60 @@
       </v-btn>
     </div>
 
+    <!--
+      What the last press did. Every button on this screen acts at once: the
+      whitelist is checked, then the wallet signs (role 1) or the payout Safe
+      is proposed to (role 2). This strip is where the outcome lands.
+    -->
+    <div v-if="activity" class="brand_card crt_activity">
+      <div class="crt_activity__head">
+        <div class="crt_activity__title">
+          {{ activity.title }}
+        </div>
+        <button
+          class="crt_activity__close"
+          aria-label="Dismiss"
+          @click="dismiss"
+        >
+          <Icon icon="material-symbols:close" width="1.125rem" height="1.125rem" />
+        </button>
+      </div>
+      <div v-if="activity.quote" class="crt_mono_dim">
+        Across fee {{ fmt6(activity.quote.fee, 4) }} USDC · {{ fmt6(activity.quote.reserve, 4) }} USDC reserved for the relayer ·
+        the payout wallet receives at least {{ fmt6(activity.quote.outputAmount, 2) }} USDC on Arbitrum
+      </div>
+      <div v-if="activity.role === 2" class="crt_mono_dim">
+        {{ proposeHint }}
+      </div>
+      <div v-for="(step, i) in activity.steps" :key="i" class="crt_activity__step">
+        <span>{{ step.label }}</span>
+        <span class="crt_activity__state">
+          <a
+            v-if="step.txStatus === 'ok'"
+            :href="CRT.EXPLORER + '/tx/' + step.txHash"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="crt_ok"
+          >✓ mined · view</a>
+          <span v-else-if="step.txStatus === 'fail'" class="crt_bad">✗ reverted on-chain</span>
+          <span v-else-if="step.txStatus === 'refused'" class="crt_bad">✗ {{ step.sim?.name }} · {{ step.sim?.hint }}</span>
+          <span v-else-if="step.txStatus === 'declined'" class="crt_mono_dim">declined in the wallet</span>
+          <span v-else-if="step.txStatus === 'error'" class="crt_bad">✗ {{ step.error }}</span>
+          <span v-else-if="step.txStatus === 'pending'" class="crt_mono_dim">{{ step.txHash ? "pending " + shortAddr(step.txHash) + "…" : "waiting for your wallet…" }}</span>
+          <span v-else-if="step.txStatus === 'proposing'" class="crt_mono_dim">waiting for your signature…</span>
+          <a
+            v-else-if="step.proposal"
+            :href="proposalUrl(step)"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="crt_ok"
+          >proposed · nonce {{ step.proposal.nonce }} · {{ step.proposal.confirmations }}/{{ step.proposal.required }} signed · open in Safe{Wallet}</a>
+          <span v-else-if="step.sim === 'pending'" class="crt_mono_dim">checking the whitelist…</span>
+          <span v-else class="crt_mono_dim">queued</span>
+        </span>
+      </div>
+    </div>
+
     <div class="crt_layout">
       <div class="crt_main">
         <div class="group_title crt_section">
@@ -84,10 +138,11 @@
             />
             <v-btn
               variant="outlined"
-              :disabled="bridgeDir === 'toCore' && !validAmt(bridgeAmt)"
-              @click="stageBridge"
+              :disabled="(bridgeDir === 'toCore' && !validAmt(bridgeAmt)) || busy || !canExecuteRole1"
+              :title="role1Reason"
+              @click="runBridge"
             >
-              Review
+              {{ bridgeDir === "toCore" ? "Deposit to Core" : "Send to EVM" }}
             </v-btn>
           </div>
         </div>
@@ -124,8 +179,13 @@
               hide-details
               class="crt_field--tiny"
             />
-            <v-btn variant="outlined" @click="stageClassTransfer">
-              Review
+            <v-btn
+              variant="outlined"
+              :disabled="busy || !canExecuteRole1"
+              :title="role1Reason"
+              @click="runClassTransfer"
+            >
+              Move
             </v-btn>
           </div>
         </div>
@@ -136,18 +196,43 @@
         </div>
 
         <div class="brand_card crt_card crt_card--payout">
-          <div class="crt_stat">
-            <div class="crt_label">
-              Destination · pinned
+          <div class="crt_payout__head">
+            <div class="crt_stat">
+              <div class="crt_label">
+                Destination · pinned
+              </div>
+              <div class="crt_stat__value">
+                {{ shortAddr(CRT.ADDR.payout) }}
+              </div>
+              <div class="crt_card__sub">
+                Payout wallet. Every other address reverts
+              </div>
             </div>
-            <div class="crt_stat__value">
-              {{ shortAddr(CRT.ADDR.payoutEOA) }}
-            </div>
-            <div class="crt_card__sub">
-              Payout EOA. Every other address reverts
+            <div class="crt_payout__balances">
+              <div class="crt_stat crt_stat--right">
+                <div class="crt_label">
+                  Payout · HyperEVM
+                </div>
+                <div class="crt_stat__value">
+                  {{ payoutBal ? fmt6(payoutBal.hyperEvm) + " USDC" : "—" }}
+                </div>
+              </div>
+              <div class="crt_stat crt_stat--right">
+                <div class="crt_label">
+                  Payout · Arbitrum
+                </div>
+                <div class="crt_stat__value">
+                  {{ payoutBal ? fmt6(payoutBal.arbitrum) + " USDC" : "—" }}
+                </div>
+              </div>
             </div>
           </div>
           <div class="crt_row">
+            <UiSegmented
+              v-model="payoutChain"
+              :options="payoutChains"
+              class="crt_payout__toggle"
+            />
             <v-text-field
               v-model="payoutAmt"
               placeholder="Amount"
@@ -157,11 +242,18 @@
             />
             <v-btn
               variant="outlined"
-              :disabled="!validAmt(payoutAmt)"
-              @click="stagePayout"
+              :disabled="!validAmt(payoutAmt) || quoting || busy || payoutStanding === 'none'"
+              :loading="quoting"
+              :title="proposeDisabledReason"
+              @click="runPayout"
             >
-              Review
+              {{ payoutChain === "arbitrum" ? "Propose bridge" : "Propose payout" }}
             </v-btn>
+          </div>
+          <div class="crt_card__sub">
+            {{ payoutChain === "arbitrum"
+              ? "Across bridge to Arbitrum · approve + depositV3Now in one Safe transaction · recipient and chain pinned"
+              : "USDC.transfer on HyperEVM · one Safe transaction" }}
           </div>
         </div>
 
@@ -199,10 +291,11 @@
               />
               <v-btn
                 variant="outlined"
-                :disabled="!validAmt(felixDep, CRT.APPROVE_CAP)"
-                @click="stageFelixDeposit"
+                :disabled="!validAmt(felixDep, CRT.APPROVE_CAP) || busy || !canExecuteRole1"
+                :title="role1Reason"
+                @click="runFelixDeposit"
               >
-                Review
+                Deposit
               </v-btn>
             </div>
             <div class="crt_row">
@@ -215,10 +308,11 @@
               />
               <v-btn
                 variant="outlined"
-                :disabled="!validAmt(felixWd)"
-                @click="stageFelixWithdraw"
+                :disabled="!validAmt(felixWd) || busy || !canExecuteRole1"
+                :title="role1Reason"
+                @click="runFelixWithdraw"
               >
-                Review
+                Withdraw
               </v-btn>
             </div>
             <div class="crt_card__foot">
@@ -226,7 +320,9 @@
                 variant="text"
                 size="small"
                 class="crt_text_action"
-                @click="stageFelixRedeemAll"
+                :disabled="busy || !canExecuteRole1"
+                :title="role1Reason"
+                @click="runFelixRedeemAll"
               >
                 Redeem all
               </v-btn>
@@ -262,10 +358,11 @@
               />
               <v-btn
                 variant="outlined"
-                :disabled="!validAmt(hlSup, CRT.APPROVE_CAP)"
-                @click="stageHlSupply"
+                :disabled="!validAmt(hlSup, CRT.APPROVE_CAP) || busy || !canExecuteRole1"
+                :title="role1Reason"
+                @click="runHlSupply"
               >
-                Review
+                Supply
               </v-btn>
             </div>
             <div class="crt_row">
@@ -278,10 +375,11 @@
               />
               <v-btn
                 variant="outlined"
-                :disabled="!validAmt(hlWd)"
-                @click="stageHlWithdraw(false)"
+                :disabled="!validAmt(hlWd) || busy || !canExecuteRole1"
+                :title="role1Reason"
+                @click="runHlWithdraw(false)"
               >
-                Review
+                Withdraw
               </v-btn>
             </div>
             <div class="crt_card__foot">
@@ -289,7 +387,9 @@
                 variant="text"
                 size="small"
                 class="crt_text_action"
-                @click="stageHlWithdraw(true)"
+                :disabled="busy || !canExecuteRole1"
+                :title="role1Reason"
+                @click="runHlWithdraw(true)"
               >
                 Withdraw all
               </v-btn>
@@ -302,6 +402,38 @@
         </div>
 
         <div class="brand_card crt_card">
+          <div class="crt_slots">
+            <div class="crt_label">
+              Live on HyperCore
+            </div>
+            <div v-if="!agents" class="crt_card__sub">
+              {{ agentsError ? "Could not read the Safe's agents from HyperCore" : "checking…" }}
+            </div>
+            <template v-else>
+              <div v-for="slot in liveSlots" :key="slot.key" class="crt_slot">
+                <span class="crt_dot crt_dot--on" />
+                <span class="crt_slot__kind">{{ slot.kind }}</span>
+                <span class="crt_mono">{{ shortAddr(slot.address) }}</span>
+                <span class="crt_mono_dim">{{ slot.who }}</span>
+                <span class="crt_mono_dim crt_slot__until">{{ slot.until }}</span>
+                <v-btn
+                  v-if="slot.removable"
+                  variant="text"
+                  size="small"
+                  class="crt_text_action"
+                  :disabled="busy || !canExecuteRole1"
+                  :title="role1Reason"
+                  @click="runRemove(slot.named)"
+                >
+                  Remove
+                </v-btn>
+              </div>
+              <div v-if="!liveSlots.length" class="crt_card__sub">
+                No agent registered
+              </div>
+            </template>
+          </div>
+
           <div v-for="a in CRT.AGENTS" :key="a.addr" class="crt_agent">
             <div class="crt_agent__body">
               <div class="crt_agent__name">
@@ -317,210 +449,30 @@
               {{ agentState(a.addr).text }}
             </div>
             <div class="crt_agent__actions">
-              <template v-if="a.kind === 'backup'">
-                <input
-                  v-model="backupArm"
-                  placeholder="type DEREGISTER"
-                  class="crt_arm_input"
-                >
-                <v-btn
-                  variant="outlined"
-                  size="small"
-                  :disabled="backupArm.trim().toUpperCase() !== 'DEREGISTER'"
-                  @click="stageAgent(a)"
-                >
-                  Register
-                </v-btn>
-              </template>
+              <v-btn
+                variant="outlined"
+                size="small"
+                :disabled="!longValidUntil || busy || !canExecuteRole1"
+                :title="role1Reason || (longValidUntil ? `Valid until ${crtFormatDate(longValidUntil)}` : 'No whitelisted expiry date fits within 180 days')"
+                @click="runAgent(a, true)"
+              >
+                Register · 180 days
+              </v-btn>
+              <v-btn
+                variant="text"
+                size="small"
+                class="crt_text_action"
+                :disabled="busy || !canExecuteRole1"
+                :title="role1Reason"
+                @click="runAgent(a, false)"
+              >
+                14 days
+              </v-btn>
             </div>
           </div>
         </div>
       </div>
 
-      <aside class="crt_aside">
-        <!-- Carries the same section caption the left column does, so the panel
-             below starts level with the first card over there. -->
-        <div class="group_title crt_section">
-          Simulate &amp; sign
-        </div>
-
-        <div v-if="!staged" class="brand_card crt_panel crt_panel--empty">
-          <p class="crt_panel__intro">
-            No action staged
-          </p>
-        </div>
-
-        <div v-else class="brand_card crt_panel">
-          <div class="crt_panel__head">
-            <div class="crt_panel__titles">
-              <div class="crt_panel__title">
-                {{ staged.title }}
-              </div>
-            </div>
-            <button
-              class="crt_panel__close"
-              aria-label="Discard staged action"
-              @click="staged = null"
-            >
-              <Icon icon="material-symbols:close" width="1.125rem" height="1.125rem" />
-            </button>
-          </div>
-
-          <div v-for="wtext in staged.warns || []" :key="wtext" class="crt_warn">
-            {{ wtext }}
-          </div>
-
-          <label v-if="staged.confirmPhrase" class="crt_confirm">
-            <input v-model="confirmed" type="checkbox">
-            <span>I understand: {{ staged.confirmPhrase }}</span>
-          </label>
-
-          <!-- Who will sign a role-2 proposal, and where the rest of the
-               signatures happen. -->
-          <div
-            v-if="staged.role === 2"
-            class="crt_signer"
-            :class="`crt_signer--${payoutStanding}`"
-          >
-            <span>{{ proposeHint }}</span>
-            <a
-              :href="payoutSafeUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="crt_ok"
-            >
-              Open in Safe{Wallet}
-            </a>
-          </div>
-
-          <div
-            class="crt_steps"
-            :class="{ 'crt_steps--gated': staged.confirmPhrase && !confirmed }"
-          >
-            <div v-for="(step, i) in staged.steps" :key="i" class="crt_step">
-              <div class="crt_step__head">
-                <b>{{ step.label }}</b>
-                <span class="crt_mono_dim">{{ step.wrapped.inner.sig }}</span>
-              </div>
-              <div v-for="p in step.wrapped.inner.params" :key="p.k" class="crt_param">
-                <span>{{ p.k }}</span>
-                <span>{{ p.v }}<em v-if="p.pinned" class="crt_pinned"> · pinned</em></span>
-              </div>
-              <!-- A Pilot session (connected as the vault Safe) sends the
-                   inner call and lets Pilot apply the Roles route on submit;
-                   everyone else signs the wrap. Show whichever it will be. -->
-              <div v-if="sendsUnwrapped" class="crt_mono_dim">
-                from the Safe to {{ shortAddr(step.wrapped.inner.to) }} ·
-                unwrapped, for Pilot to route
-              </div>
-              <div v-else class="crt_mono_dim">
-                to Roles {{ shortAddr(CRT.ADDR.roles) }} ·
-                execTransactionWithRole(role {{ staged.role }})
-                {{ crtValidateWrapped(step.wrapped.data) ? "· 0x6928e74b ✓" : "· BAD PREFIX" }}
-              </div>
-              <div class="crt_hex">
-                {{ sentCalldata(step) }}
-              </div>
-              <div
-                v-if="step.sim"
-                class="crt_sim"
-                :class="step.sim === 'pending'
-                  ? ''
-                  : step.sim.ok
-                    ? 'crt_sim--ok'
-                    : step.sim.soft && step.expectSoftFail
-                      ? 'crt_sim--soft'
-                      : 'crt_sim--bad'"
-              >
-                <template v-if="step.sim === 'pending'">
-                  simulating from the whitelisted sender…
-                </template>
-                <template v-else-if="step.sim.ok">
-                  ✓ simulation passed
-                </template>
-                <template v-else>
-                  ✗ {{ step.sim.name }}
-                  <div class="crt_sim__hint">
-                    {{ step.sim.soft && step.expectSoftFail
-                      ? "Expected before the approve step is mined. Not a permission failure."
-                      : step.sim.hint }}
-                  </div>
-                </template>
-              </div>
-              <div class="crt_step__actions">
-                <span v-if="step.txStatus === 'pending'" class="crt_mono_dim">
-                  pending {{ shortAddr(step.txHash) }}…
-                </span>
-                <a
-                  v-if="step.txStatus === 'ok'"
-                  :href="CRT.EXPLORER + '/tx/' + step.txHash"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="crt_ok"
-                >
-                  ✓ mined · view
-                </a>
-                <span v-if="step.txStatus === 'fail'" class="crt_bad">✗ reverted on-chain</span>
-                <v-btn
-                  variant="text"
-                  size="small"
-                  class="crt_text_action"
-                  @click="simulateStep(step)"
-                >
-                  Re-simulate
-                </v-btn>
-                <v-btn
-                  v-if="staged.role === 1"
-                  class="bg-primary text-secondary"
-                  size="small"
-                  :disabled="!canExecuteRole1 || step.txStatus === 'pending' || step.txStatus === 'ok'"
-                  :title="canExecuteRole1 ? '' : 'Connect the manager EOA, or the vault Safe through Zodiac Pilot'"
-                  @click="exec(step)"
-                >
-                  {{ step.txStatus === "ok" ? "Executed" : "Execute" }}
-                </v-btn>
-                <template v-else>
-                  <span v-if="step.txStatus === 'proposing'" class="crt_mono_dim">
-                    waiting for your signature…
-                  </span>
-                  <a
-                    v-if="step.proposal && !step.proposal.executed"
-                    :href="proposalUrl(step)"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="crt_ok"
-                  >
-                    proposed · nonce {{ step.proposal.nonce }} ·
-                    {{ step.proposal.confirmations }}/{{ step.proposal.required }} signed · open in Safe{Wallet}
-                  </a>
-                  <v-btn
-                    class="bg-primary text-secondary"
-                    size="small"
-                    :disabled="payoutStanding === 'none' || ['proposing', 'proposed', 'ok'].includes(step.txStatus)"
-                    :title="proposeDisabledReason"
-                    @click="propose(step)"
-                  >
-                    {{ step.txStatus === "proposed" || step.txStatus === "ok" ? "Proposed" : "Propose in Safe" }}
-                  </v-btn>
-                  <v-btn
-                    variant="text"
-                    size="small"
-                    class="crt_text_action"
-                    @click="copyText(sentCalldata(step))"
-                  >
-                    Copy calldata
-                  </v-btn>
-                </template>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="staged.steps.length > 1" class="crt_panel__note">
-            Step 2 always fails simulation until step 1 is mined; the pre-flight ✗
-            on it is expected, not an error.
-          </div>
-        </div>
-      </aside>
     </div>
   </div>
 </template>
@@ -532,7 +484,8 @@ import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useAccountStore } from "~/store/account/account.store";
 import { sendAsSafe } from "~/composables/permissions/useCuratorExecution";
-import { CRT, crtInner, crtWrap, crtValidateWrapped, crtSimulate, crtGetBalances, crtGetCore, crtAgentStatus, crtGetPayoutSafe, fmt6, shortAddr } from "~/composables/execution/crtConsole";
+import UiSegmented from "~/components/global/ui/Segmented.vue";
+import { CRT, crtInner, crtWrap, crtWrapBatch, crtSimulate, crtGetBalances, crtGetPayoutBalances, crtAcrossQuote, crtGetCore, crtGetAgents, crtAgentStatus, crtGetPayoutSafe, crtPickValidUntil, crtFormatDate, fmt6, shortAddr, usdc6, type CrtAgentSlot } from "~/composables/execution/crtConsole";
 import { buildSafeTx, fetchNextSafeNonce, fetchSafeTxStatus, proposeSafeTx, safeWalletUrl, signSafeTx } from "~/composables/safe/safeTransactionService";
 import { ChainId } from "~/types/enums/chain_id";
 
@@ -544,15 +497,24 @@ const formatUnits = ethers.formatUnits;
 const bal = ref<any>(null);
 const core = ref<any>(null);
 const loadingBal = ref(false);
-const staged = ref<any>(null);
-const confirmed = ref(false);
+/** The action the last press started, with each step's state; the strip above the cards shows it. */
+const activity = ref<any>(null);
+const busy = ref(false);
+/** Title of the action whose first press has been taken as "are you sure"; the second press runs it. */
+const armed = ref<string | null>(null);
+let armTimer: ReturnType<typeof setTimeout> | null = null;
 const agentsStatus = reactive<Record<string, any>>({});
 const payoutSafe = ref<{ owners: string[]; threshold: number; nonce: number } | null>(null);
 
 const bridgeDir = ref("toCore"); const bridgeAmt = ref("1"); const bridgeFixed = ref("1");
 const ctDir = ref("toPerp"); const ctAmt = ref("1"); const ctReps = ref("1");
 const payoutAmt = ref(""); const felixDep = ref(""); const felixWd = ref("");
-const hlSup = ref(""); const hlWd = ref(""); const backupArm = ref("");
+/** Where a payout lands: the wallet's HyperEVM balance, or its Arbitrum one via Across. */
+const payoutChain = ref<"hyperevm" | "arbitrum">("hyperevm");
+const payoutChains = [{ key: "hyperevm", label: "HyperEVM" }, { key: "arbitrum", label: "Arbitrum" }];
+const quoting = ref(false);
+const payoutBal = ref<{ hyperEvm: bigint; arbitrum: bigint } | null>(null);
+const hlSup = ref(""); const hlWd = ref("");
 
 const fixedItems = CRT.AMOUNTS.map((v) => ({ title: v.toLocaleString("en-US") + " USDC", value: String(v) }));
 const validAmt = (v: string, cap?: number) => { const x = Number(v); return v !== "" && isFinite(x) && x > 0 && (cap == null || x <= cap); };
@@ -568,9 +530,8 @@ const isManager = computed(() => (fundStore.activeAccountAddress || "").toLowerC
 const isVaultSafe = computed(() => (fundStore.activeAccountAddress || "").toLowerCase() === CRT.ADDR.safe.toLowerCase());
 const canExecuteRole1 = computed(() => isManager.value || isVaultSafe.value);
 /** Role-1 steps go out unwrapped on a Pilot session; role-2 proposals are always the wrap. */
-const sendsUnwrapped = computed(() => staged.value?.role === 1 && isVaultSafe.value);
-/** The bytes that will actually be signed for this step, in this session. */
-const sentCalldata = (step: any) => (sendsUnwrapped.value ? step.wrapped.inner.data : step.wrapped.data);
+const sendsUnwrapped = computed(() => isVaultSafe.value);
+const role1Reason = computed(() => (canExecuteRole1.value ? "" : "Connect the manager EOA, or the vault Safe through Zodiac Pilot"));
 const n2 = (x: number) => x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const statItems = computed(() => [
@@ -578,7 +539,6 @@ const statItems = computed(() => [
   { label: "Fund contract", value: bal.value ? fmt6(bal.value.fundUsdc) : "—" },
   { label: "Core spot", value: core.value ? n2(core.value.spotUsdc) : "—" },
   { label: "Core perp", value: core.value ? n2(core.value.perpValue) : "—" },
-  { label: "Payout", value: bal.value ? fmt6(bal.value.payoutUsdc) : "—" },
   { label: "Felix", value: bal.value ? fmt6(bal.value.felixAssets) : "—" },
   { label: "HyperLend", value: bal.value ? fmt6(bal.value.hlend) : "—" },
 ]);
@@ -594,12 +554,33 @@ const refresh = async () => {
   await Promise.all([
     crtGetBalances().then((b) => (bal.value = b)).catch(() => {}),
     crtGetCore().then((c) => (core.value = c)).catch(() => {}),
+    crtGetPayoutBalances().then((b) => (payoutBal.value = b)).catch(() => {}),
+    loadAgents(),
   ]);
   loadingBal.value = false;
 };
+
+/** The Safe's live HyperCore agents, both slots, with their expiry. */
+const agents = ref<{ unnamed: CrtAgentSlot | null; named: CrtAgentSlot[] } | null>(null);
+const agentsError = ref(false);
+const loadAgents = async () => {
+  agentsError.value = false;
+  CRT.AGENTS.forEach(async (a) => { agentsStatus[a.addr.toLowerCase()] = await crtAgentStatus(a.addr); });
+  try { agents.value = await crtGetAgents(); } catch { agentsError.value = true; }
+};
+/** The whitelisted expiry a 180-day registration would get right now. */
+const longValidUntil = ref<number | null>(crtPickValidUntil());
+const agentWho = (address: string) => CRT.AGENTS.find((a) => a.addr.toLowerCase() === address.toLowerCase())?.label.toLowerCase() ?? "not in this console";
+const untilText = (ms: number | null) => (ms ? `until ${crtFormatDate(ms)}` : "");
+const liveSlots = computed(() => {
+  if (!agents.value) return [];
+  const rows = [];
+  if (agents.value.unnamed) rows.push({ key: "unnamed", kind: "Unnamed", named: false, removable: true, address: agents.value.unnamed.address, who: agentWho(agents.value.unnamed.address), until: untilText(agents.value.unnamed.validUntil) });
+  for (const n of agents.value.named) rows.push({ key: "named-" + n.name, kind: `Named \u201C${n.name}\u201D`, named: true, removable: n.name === CRT.AGENT_NAME, address: n.address, who: agentWho(n.address), until: untilText(n.validUntil) });
+  return rows;
+});
 onMounted(() => {
   refresh();
-  CRT.AGENTS.forEach(async (a) => { agentsStatus[a.addr.toLowerCase()] = await crtAgentStatus(a.addr); });
   crtGetPayoutSafe().then((s) => (payoutSafe.value = s)).catch(() => {});
 });
 
@@ -609,7 +590,11 @@ onMounted(() => {
  * baked into the string.
  */
 const agentState = (addr: string): { tone: string; text: string } => {
-  const s = agentsStatus[addr.toLowerCase()];
+  const key = addr.toLowerCase();
+  const named = agents.value?.named.find((n) => n.address.toLowerCase() === key);
+  if (named) return { tone: "on", text: `live · ${untilText(named.validUntil) || "named"}` };
+  if (agents.value?.unnamed?.address.toLowerCase() === key) return { tone: "on", text: `live · ${untilText(agents.value.unnamed.validUntil) || "unnamed"}` };
+  const s = agentsStatus[key];
   if (!s) return { tone: "idle", text: "checking…" };
   if (s.error) return { tone: "idle", text: "unknown" };
   if (s.live && s.ours) return { tone: "on", text: "live · agent of Safe" };
@@ -619,17 +604,62 @@ const agentState = (addr: string): { tone: string; text: string } => {
 
 const simulateStep = async (step: any) => {
   step.sim = "pending";
-  step.sim = await crtSimulate(step.wrapped, staged.value.role === 1 ? CRT.ADDR.manager : CRT.ADDR.payoutSafe);
+  const sim = await crtSimulate(step.wrapped, activity.value?.role === 1 ? CRT.ADDR.manager : CRT.ADDR.payoutSafe);
+  // Role 2's payout routes have been whitelisted since the governance proposal
+  // of 2026-09-26 executed; the agents proposal (180-day dates, backup agent,
+  // removal) has not, so those exact payloads are the whitelist refusing.
+  if (activity.value?.route === "agents" && !sim.ok && sim.name === "ParameterNotOneOfAllowed") {
+    step.sim = { ...sim, hint: "This exact registration is not on role 1's whitelist yet. Today only the unnamed 14-day registration of the trading agent passes; the 180-day dates, the backup agent and removal arrive with the agents proposal." };
+  } else {
+    step.sim = sim;
+  }
 };
-const stage = (action: any) => {
-  confirmed.value = false;
+/**
+ * One press does the whole thing. The action's steps run in order: each is
+ * first checked against the Roles whitelist from the sender that will use
+ * it, then signed by the wallet (role 1) or filed with the payout Safe
+ * (role 2). A refusal stops the run and says why. Actions that move money
+ * out or swap the trading agent take a second press to confirm.
+ */
+/** Clears the strip. A wallet that never answers would otherwise keep every button locked. */
+const dismiss = () => { activity.value = null; busy.value = false; };
+const run = async (action: any) => {
+  if (busy.value) return;
+  if (action.role === 1 && !canExecuteRole1.value) { toastStore.errorToast(role1Reason.value); return; }
+  if (action.role === 2 && payoutStanding.value === "none") { toastStore.errorToast(proposeDisabledReason.value); return; }
+  if (action.confirmPhrase && armed.value !== action.title) {
+    armed.value = action.title;
+    if (armTimer) clearTimeout(armTimer);
+    armTimer = setTimeout(() => { armed.value = null; }, 12000);
+    toastStore.warningToast(`Press again to confirm: ${action.confirmPhrase}`, 12000);
+    return;
+  }
+  armed.value = null;
   action.steps = action.steps.map((s: any) => reactive({ ...s, sim: null, txStatus: null, txHash: null }));
-  staged.value = action;
-  action.steps.forEach((s: any) => simulateStep(s));
+  activity.value = action;
+  busy.value = true;
+  (action.warns || []).forEach((w: string) => toastStore.warningToast(w, 8000));
+  try {
+    for (const step of action.steps) {
+      await simulateStep(step);
+      const sim = step.sim;
+      // Step 2 of an approve + spend pair fails the dry run until step 1 is
+      // mined and the RPC has caught up; that one is sent regardless.
+      if (!sim.ok && !(sim.soft && step.expectSoftFail)) {
+        step.txStatus = "refused";
+        toastStore.errorToast(`${sim.name}: ${sim.hint || "the whitelist refused this call."}`, 15000);
+        return;
+      }
+      const ok = action.role === 2 ? await propose(step) : await exec(step);
+      if (!ok) return;
+    }
+  } finally {
+    busy.value = false;
+  }
 };
 
-const stageBridge = () => bridgeDir.value === "toCore"
-  ? stage({
+const runBridge = () => bridgeDir.value === "toCore"
+  ? run({
     title: `EVM → Core: deposit ${bridgeAmt.value} USDC`, role: 1,
     // 100 USDC went across live on 2026-08-12 (0x542aad20…), which retires the
     // old "only 1 USDC has ever worked" warning. The earlier 2/5/10 reverts
@@ -640,52 +670,104 @@ const stageBridge = () => bridgeDir.value === "toCore"
       { label: "2 · depositFor(Safe)", wrapped: crtWrap(crtInner.cdwDepositFor(bridgeAmt.value), 1), expectSoftFail: true },
     ],
   })
-  : stage({ title: `Core → EVM: send ${Number(bridgeFixed.value).toLocaleString("en-US")} USDC`, role: 1, steps: [{ label: "sendAsset (credits the Safe on HyperEVM)", wrapped: crtWrap(crtInner.sendAssetToEvm(Number(bridgeFixed.value)), 1) }] });
+  : run({ title: `Core → EVM: send ${Number(bridgeFixed.value).toLocaleString("en-US")} USDC`, role: 1, steps: [{ label: "sendAsset (credits the Safe on HyperEVM)", wrapped: crtWrap(crtInner.sendAssetToEvm(Number(bridgeFixed.value)), 1) }] });
 
-const stageClassTransfer = () => {
+const runClassTransfer = () => {
   const nReps = Number(ctReps.value); const v = Number(ctAmt.value); const toPerp = ctDir.value === "toPerp";
-  stage({
+  run({
     title: `Core: move ${(v * nReps).toLocaleString("en-US")} USDC ${toPerp ? "spot → perp" : "perp → spot"}`, role: 1,
     warns: nReps > 1 ? [`No ${(v * nReps).toLocaleString("en-US")}-rung exists, so this queues the ${v.toLocaleString("en-US")} USDC rung ${nReps} times.`] : [],
     steps: Array.from({ length: nReps }, (_, i) => ({ label: (nReps > 1 ? `${i + 1} · ` : "") + `usdClassTransfer ${v.toLocaleString("en-US")} USDC ${toPerp ? "→ perp" : "→ spot"}`, wrapped: crtWrap(crtInner.usdClassTransfer(v, toPerp), 1) })),
   });
 };
-const stagePayout = () => stage({
-  title: `Payout ${payoutAmt.value} USDC`, role: 2,
-  confirmPhrase: `${Number(payoutAmt.value).toLocaleString("en-US", { maximumFractionDigits: 6 })} USDC leaves the Safe to the payout EOA. Nothing on-chain bounds this amount.`,
-  steps: [{ label: "USDC.transfer(payout EOA)", wrapped: crtWrap(crtInner.payout(payoutAmt.value), 2) }],
-});
-const stageFelixDeposit = () => stage({
+const runPayout = async () => {
+  const amt = payoutAmt.value;
+  const shown = Number(amt).toLocaleString("en-US", { maximumFractionDigits: 6 });
+  if (payoutChain.value === "hyperevm") {
+    run({
+      title: `Payout ${amt} USDC on HyperEVM`, role: 2, route: "hyperevm",
+      confirmPhrase: `${shown} USDC leaves the Safe to the payout wallet on HyperEVM. Nothing on-chain bounds this amount.`,
+      steps: [{ label: "USDC.transfer(payout wallet)", wrapped: crtWrap(crtInner.payout(amt), 2) }],
+    });
+    return;
+  }
+  // Arbitrum: approve the SpokePool and deposit in ONE Safe transaction. The
+  // quote fixes the minimum the wallet receives; depositV3Now stamps its own
+  // time when the Safe executes, so the signers are not racing a clock.
+  quoting.value = true;
+  try {
+    const input = usdc6(amt);
+    const quote = await crtAcrossQuote(input);
+    const warns: string[] = [];
+    if (quote.minDeposit && input < quote.minDeposit) warns.push(`Below Across's minimum of ${fmt6(quote.minDeposit)} USDC for this route; the deposit would not be filled.`);
+    if (quote.maxDeposit && input > quote.maxDeposit) warns.push(`Above Across's current maximum of ${fmt6(quote.maxDeposit)} USDC for this route.`);
+    if (quote.outputAmount === 0n) warns.push("The amount does not cover the relayer reserve.");
+    run({
+      title: `Payout ${amt} USDC to Arbitrum`, role: 2, route: "arbitrum", warns, quote,
+      confirmPhrase: `${shown} USDC leaves the Safe into the Across bridge; the payout wallet receives at least ${fmt6(quote.outputAmount)} USDC on Arbitrum. Nothing on-chain bounds this amount.`,
+      steps: [{
+        label: "approve + Across depositV3Now (one Safe transaction)",
+        wrapped: crtWrapBatch([crtInner.approve(CRT.ADDR.spokePool, "Across SpokePool", amt), crtInner.acrossDeposit(amt, quote.outputAmount)], 2),
+      }],
+    });
+  } catch (error: any) {
+    toastStore.errorToast("Across could not quote this payout: " + (error?.message || error), 10000);
+  } finally {
+    quoting.value = false;
+  }
+};
+const runFelixDeposit = () => run({
   title: `Felix: deposit ${felixDep.value} USDC`, role: 1,
   steps: [
     { label: "1 · Approve Felix vault", wrapped: crtWrap(crtInner.approve(CRT.ADDR.felix, "Felix vault", felixDep.value), 1) },
     { label: "2 · Deposit", wrapped: crtWrap(crtInner.felixDeposit(felixDep.value), 1), expectSoftFail: true },
   ],
 });
-const stageFelixWithdraw = () => stage({ title: `Felix: withdraw ${felixWd.value} USDC`, role: 1, steps: [{ label: "Withdraw (exact USDC out)", wrapped: crtWrap(crtInner.felixWithdraw(felixWd.value), 1) }] });
-const stageFelixRedeemAll = () => stage({
+const runFelixWithdraw = () => run({ title: `Felix: withdraw ${felixWd.value} USDC`, role: 1, steps: [{ label: "Withdraw (exact USDC out)", wrapped: crtWrap(crtInner.felixWithdraw(felixWd.value), 1) }] });
+const runFelixRedeemAll = () => run({
   title: "Felix: redeem all shares", role: 1,
   warns: !bal.value || bal.value.felixShares === 0n ? ["No Felix shares held, so this will revert."] : [],
   steps: [{ label: "Redeem full share balance", wrapped: crtWrap(crtInner.felixRedeem(bal.value ? bal.value.felixShares : 0n), 1) }],
 });
-const stageHlSupply = () => stage({
+const runHlSupply = () => run({
   title: `HyperLend: supply ${hlSup.value} USDC`, role: 1,
   steps: [
     { label: "1 · Approve HyperLend pool", wrapped: crtWrap(crtInner.approve(CRT.ADDR.pool, "HyperLend pool", hlSup.value), 1) },
     { label: "2 · Supply", wrapped: crtWrap(crtInner.poolSupply(hlSup.value), 1), expectSoftFail: true },
   ],
 });
-const stageHlWithdraw = (max: boolean) => {
+const runHlWithdraw = (max: boolean) => {
   if (!max && !validAmt(hlWd.value)) return;
-  stage({ title: max ? "HyperLend: withdraw all" : `HyperLend: withdraw ${hlWd.value} USDC`, role: 1, steps: [{ label: max ? "Withdraw full position + interest" : "Withdraw", wrapped: crtWrap(crtInner.poolWithdraw(max ? "max" : hlWd.value), 1) }] });
+  run({ title: max ? "HyperLend: withdraw all" : `HyperLend: withdraw ${hlWd.value} USDC`, role: 1, steps: [{ label: max ? "Withdraw full position + interest" : "Withdraw", wrapped: crtWrap(crtInner.poolWithdraw(max ? "max" : hlWd.value), 1) }] });
 };
-const stageAgent = (a: any) => stage({
-  title: `Register ${a.label.toLowerCase()}`, role: 1,
-  warns: ["BREAK-GLASS: this deregisters the primary agent. Deregistered addresses can never be reused."],
-  steps: [{ label: "addApiWallet payload (exact-match)", wrapped: crtWrap(crtInner.addApiWallet(a.addr, a.name), 1) }],
+const runAgent = (a: any, long: boolean) => {
+  const validUntil = long ? crtPickValidUntil() : null;
+  if (long && !validUntil) {
+    toastStore.errorToast("No whitelisted expiry date fits within 180 days. A proposal has to add later dates.", 10000);
+    return;
+  }
+  const backup = a.kind === "backup";
+  run({
+    title: `Register ${a.label.toLowerCase()} ${validUntil ? "until " + crtFormatDate(validUntil) : "for 14 days"}`,
+    role: 1, route: "agents",
+    warns: [
+      validUntil
+        ? `Named \u201C${CRT.AGENT_NAME}\u201D registration: it replaces whichever agent holds that name.`
+        : "Unnamed registration: it replaces whichever unnamed agent HyperCore holds for the Safe. Renew it before it lapses.",
+      ...(backup ? ["Switch the bot to the backup key: the agent this replaces stops working."] : []),
+    ],
+    confirmPhrase: backup ? "the backup becomes the Safe's agent and the agent it replaces stops working immediately." : undefined,
+    steps: [{ label: "addApiWallet payload (exact-match)", wrapped: crtWrap(crtInner.registerAgent(a.addr, validUntil), 1) }],
+  });
+};
+/** Empties one HyperCore agent slot the way Hyperliquid's own app does: the zero address takes it. */
+const runRemove = (named: boolean) => run({
+  title: named ? `Remove the named \u201C${CRT.AGENT_NAME}\u201D agent` : "Remove the unnamed agent",
+  role: 1, route: "agents",
+  warns: ["The agent in this slot stops signing trades as soon as HyperCore processes this."],
+  confirmPhrase: "the agent in this slot stops working immediately.",
+  steps: [{ label: "addApiWallet(zero address) payload", wrapped: crtWrap(crtInner.removeAgent(named), 1) }],
 });
-
-const copyText = (t: string) => { navigator.clipboard.writeText(t); toastStore.addToast("Calldata copied. Paste it into Transaction Builder in Safe{Wallet} if you need to."); };
 
 /**
  * Role 2 belongs to the payout Safe, and a Safe cannot press Execute: its
@@ -702,7 +784,6 @@ const copyText = (t: string) => { navigator.clipboard.writeText(t); toastStore.a
  */
 const runtimeConfig = useRuntimeConfig();
 const proposalOrigin = JSON.stringify({ url: `https://${runtimeConfig.public.BASE_DOMAIN || "app.rethink.finance"}`, name: "Rethink" });
-const payoutSafeUrl = safeWalletUrl(ChainId.HYPEREVM, CRT.ADDR.payoutSafe);
 const proposalUrl = (step: any) => safeWalletUrl(ChainId.HYPEREVM, CRT.ADDR.payoutSafe, step.proposal?.safeTxHash);
 const account = computed(() => (fundStore.activeAccountAddress || "").toLowerCase());
 /**
@@ -735,7 +816,7 @@ const proposeDisabledReason = computed(() =>
 const proposalTimers = new Set<ReturnType<typeof setTimeout>>();
 const stopWatchingProposals = () => { proposalTimers.forEach((t) => clearTimeout(t)); proposalTimers.clear(); };
 onBeforeUnmount(stopWatchingProposals);
-watch(staged, (next) => { if (!next) stopWatchingProposals(); });
+watch(activity, (next) => { if (!next) stopWatchingProposals(); });
 
 /** Keep a filed proposal's signature count current until it has run. */
 const watchProposal = (step: any) => {
@@ -758,11 +839,11 @@ const watchProposal = (step: any) => {
   tick();
 };
 
-const propose = async (step: any) => {
+const propose = async (step: any): Promise<boolean> => {
   const provider = accountStore.connectedWallet?.provider;
   const signer = fundStore.activeAccountAddress;
-  if (!provider || !signer) { toastStore.errorToast("Connect your wallet."); return; }
-  if (payoutStanding.value === "none") return;
+  if (!provider || !signer) { toastStore.errorToast("Connect your wallet."); return false; }
+  if (payoutStanding.value === "none") return false;
   step.txStatus = "proposing";
   try {
     if (payoutStanding.value === "safe") {
@@ -782,7 +863,7 @@ const propose = async (step: any) => {
         step.txStatus = "ok"; step.txHash = hash;
         toastStore.successToast("The transaction was executed.");
         refresh();
-        return;
+        return true;
       }
       step.proposal = { safeTxHash: hash, nonce: status.nonce, confirmations: status.confirmations, required: status.confirmationsRequired, executed: status.isExecuted };
     } else {
@@ -801,8 +882,10 @@ const propose = async (step: any) => {
     step.txStatus = "proposed";
     toastStore.successToast("Proposed to the payout Safe. The other owners can now sign and execute it in Safe{Wallet}.");
     watchProposal(step);
+    return true;
   } catch (error: any) {
     failStep(step, error);
+    return false;
   }
 };
 
@@ -814,14 +897,15 @@ const propose = async (step: any) => {
  */
 const failStep = (step: any, error: any) => {
   console.error(error);
-  step.txStatus = null;
   const message = error?.innerError?.message || error?.message || "";
   const declined =
     error?.code === 4001 ||
     error?.innerError?.code === 4001 ||
     /user (denied|rejected)/i.test(message);
+  step.txStatus = declined ? "declined" : "error";
+  step.error = declined ? "" : explainSendFailure(message);
   if (declined) return;
-  toastStore.errorToast(explainSendFailure(message), 15000);
+  toastStore.errorToast(step.error, 15000);
 };
 
 /**
@@ -845,8 +929,8 @@ const explainSendFailure = (message: string) => {
   );
 };
 
-const exec = async (step: any) => {
-  if (!accountStore.connectedWalletWeb3) { toastStore.errorToast("Connect your wallet."); return; }
+const exec = async (step: any): Promise<boolean> => {
+  if (!accountStore.connectedWalletWeb3) { toastStore.errorToast("Connect your wallet."); return false; }
   try {
     step.txStatus = "pending";
     // Every address here is a HyperEVM one. Sending from another chain would
@@ -872,16 +956,35 @@ const exec = async (step: any) => {
         // non-nullish.
         { checkRevertBeforeSending: false, ignoreGasPricing: true },
       );
-    await transaction
-      .on("transactionHash", (hash: any) => { step.txHash = hash; toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed."); })
-      .on("receipt", (receipt: any) => {
-        step.txStatus = receipt.status ? "ok" : "fail";
-        if (receipt.status) { toastStore.successToast("The transaction was successful."); refresh(); }
-        else toastStore.errorToast("The transaction has failed.");
-      })
-      .on("error", (error: any) => failStep(step, error));
+    // The emitter is listened to, never awaited: awaiting a PromiEvent yields
+    // the receipt with no .on() left to register on. The run waits for the
+    // receipt through this promise so the next step starts once it is mined.
+    // A declined or failed send REJECTS the PromiEvent without an "error"
+    // event (seen with a wallet that throws 4001), so both paths are watched.
+    return await new Promise<boolean>((resolve) => {
+      transaction
+        .on("transactionHash", (hash: any) => { step.txHash = hash; toastStore.addToast("The transaction has been submitted. Please wait for it to be confirmed."); })
+        .on("receipt", (receipt: any) => {
+          step.txStatus = receipt.status ? "ok" : "fail";
+          if (receipt.status) {
+            toastStore.successToast("The transaction was successful.");
+            refresh();
+            // HyperCore applies a CoreWriter action a moment after the EVM block.
+            if (activity.value?.route === "agents") setTimeout(loadAgents, 5000);
+          } else {
+            toastStore.errorToast("The transaction has failed.");
+          }
+          resolve(!!receipt.status);
+        })
+        .on("error", (error: any) => { failStep(step, error); resolve(false); });
+      Promise.resolve(transaction).then(
+        () => resolve(step.txStatus === "ok"),
+        (error: any) => { if (step.txStatus === "pending") failStep(step, error); resolve(false); },
+      );
+    });
   } catch (error: any) {
     failStep(step, error);
+    return false;
   }
 };
 </script>
@@ -952,7 +1055,7 @@ const exec = async (step: any) => {
     color: $color-text-irrelevant;
   }
 
-  /* Seven balances plus the total only fit on one line on a wide desktop;
+  /* Six balances plus the total only fit on one line on a wide desktop;
      below that the divider would be left hanging at the end of the row. */
   &__divider {
     display: none;
@@ -960,7 +1063,7 @@ const exec = async (step: any) => {
     align-self: stretch;
     background: $color-line;
 
-    /* 1360px is where the total and all seven balances measurably share a
+    /* 1360px is where the total and all six balances measurably share a
        line with room to spare; .crt_layout below is keyed off the viewport
        the same way. */
     @media (min-width: 1360px) {
@@ -1071,12 +1174,51 @@ const exec = async (step: any) => {
 
 .crt_layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 400px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.75rem;
   align-items: start;
+}
 
-  @media (max-width: 1180px) {
-    grid-template-columns: 1fr;
+/* The outcome strip: what the last press did, one line per step. */
+.crt_activity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  &__title {
+    font-weight: 600;
+    color: $color-white;
+  }
+
+  &__close {
+    display: flex;
+    color: $color-text-irrelevant;
+    background: none;
+    border: 0;
+    cursor: pointer;
+
+  }
+
+  &__step {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    font-size: 13px;
+  }
+
+  &__state {
+    font-family: $font-mono;
+    font-size: 12px;
+    text-align: right;
   }
 }
 
@@ -1178,6 +1320,33 @@ const exec = async (step: any) => {
   }
 }
 
+/* The Safe's live agents on HyperCore, one line per slot. */
+.crt_slots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.875rem;
+  margin-bottom: 0.875rem;
+  border-bottom: 1px solid $color-line;
+}
+
+.crt_slot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 13px;
+
+  &__kind {
+    font-weight: 600;
+    color: $color-white;
+  }
+
+  &__until {
+    margin-left: auto;
+  }
+}
+
 /* State marker, same 7px disc the Zodiac pill uses. */
 .crt_dot {
   width: 7px;
@@ -1199,257 +1368,11 @@ const exec = async (step: any) => {
   }
 }
 
-.crt_aside {
-  position: sticky;
-  top: 1rem;
-  display: flex;
-  flex-direction: column;
-  /* Same rhythm as .crt_main, so the section caption puts this column's first
-     card on exactly the baseline the left column's first card sits on. */
-  gap: 1rem;
-}
-
-.crt_panel {
-  /**
-   * Squared off against the bridge card opposite it — brand_card padding, an
-   * eyebrow, a line of description and a control row measure 151px there, and
-   * the two are read as a pair. In px because the two cards have no shared
-   * unit to derive it from. Only a floor: a staged action grows past it.
-   */
-  &--empty {
-    min-height: 151px;
-    /* Centred rather than top-set: the slack the min-height creates should
-       read as deliberate, not as a card that ran out of content. */
-    display: grid;
-    align-content: center;
-  }
-
-  /* A state label, not prose — the mono caption the rest of the app uses for
-     "nothing here yet", so the empty card reads as deliberate. */
-  &__intro {
-    margin: 0;
-    font-family: $font-mono;
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    text-align: center;
-    color: $color-steel-blue;
-  }
-
-  &__head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.625rem;
-  }
-
-  &__titles {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-    min-width: 0;
-  }
-
-  &__title {
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.35;
-    color: $color-white;
-  }
-
-  /* Matches the dialog close control: a 32px hit area that lights up, not a
-     bare glyph. */
-  &__close {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 2rem;
-    height: 2rem;
-    margin: -0.375rem -0.5rem 0 0;
-    border-radius: $default-border-radius;
-    color: $color-steel-blue;
-    cursor: pointer;
-    transition: background-color $default-transition-time ease,
-      color $default-transition-time ease;
-
-    &:hover {
-      background: $color-gray-light-transparent;
-      color: $color-white;
-    }
-  }
-
-  &__note {
-    margin-top: 0.625rem;
-    font-size: 12px;
-    line-height: 1.5;
-    color: $color-steel-blue;
-  }
-}
-
-.crt_warn {
-  margin-top: 0.875rem;
-  border: 1px solid $color-neg-line;
-  background: $color-neg-soft;
-  border-radius: $default-border-radius;
-  padding: 0.5625rem 0.75rem;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: $color-neg;
-}
-
-.crt_confirm {
-  display: flex;
-  gap: 0.625rem;
-  align-items: flex-start;
-  margin-top: 0.875rem;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: $color-light-subtitle;
-  cursor: pointer;
-
-  input {
-    /* The global input rule sizes text fields; a checkbox needs none of it. */
-    min-height: 0;
-    height: auto;
-    padding: 0;
-    margin-top: 2px;
-    accent-color: $color-cyan;
-  }
-}
-
-.crt_steps {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-
-  &--gated {
-    opacity: 0.35;
-    pointer-events: none;
-  }
-}
-
-.crt_step {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  border: 1px solid $color-line;
-  border-radius: $default-border-radius;
-  background: $color-card-background;
-  padding: 0.875rem;
-  margin-top: 0.625rem;
-
-  &__head {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.625rem;
-    align-items: baseline;
-    font-size: 13px;
-  }
-
-  &__actions {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-}
-
 .crt_mono_dim {
   font-family: $font-mono;
   font-size: 11px;
   color: $color-steel-blue;
   word-break: break-all;
-}
-
-.crt_pinned {
-  font-style: normal;
-  color: $color-text-irrelevant;
-  font-size: 10.5px;
-}
-
-.crt_param {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  font-family: $font-mono;
-  font-size: 12px;
-
-  span:first-child {
-    color: $color-steel-blue;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-}
-
-.crt_hex {
-  font-family: $font-mono;
-  font-size: 10.5px;
-  line-height: 1.6;
-  color: $color-light-subtitle;
-  word-break: break-all;
-  max-height: 96px;
-  overflow: auto;
-  border: 1px solid $color-line;
-  border-radius: $default-border-radius;
-  padding: 0.5rem 0.625rem;
-}
-
-.crt_sim {
-  border-radius: $default-border-radius;
-  padding: 0.5rem 0.6875rem;
-  font-family: $font-mono;
-  font-size: 12px;
-  line-height: 1.5;
-  border: 1px solid $color-line;
-  color: $color-steel-blue;
-
-  /* Cyan, not green: in this palette an affirmative reading is the accent. */
-  &--ok {
-    color: $color-cyan;
-    border-color: $color-cyan-line;
-    background: $color-cyan-tint;
-  }
-
-  &--bad {
-    color: $color-neg;
-    border-color: $color-neg-line;
-    background: $color-neg-soft;
-  }
-
-  &--soft {
-    color: $color-light-subtitle;
-  }
-
-  &__hint {
-    font-family: inherit;
-    font-size: 11.5px;
-    opacity: 0.85;
-  }
-}
-
-/* Break-glass field: red text on the design's inset input, not a bare box. */
-.crt_arm_input {
-  width: 150px;
-  min-height: 0;
-  height: auto;
-  background: $color-card-background;
-  border: 1px solid $color-line-2;
-  border-radius: $default-border-radius;
-  color: $color-neg;
-  font-family: $font-mono;
-  font-size: 11.5px;
-  padding: 0.5rem 0.625rem;
-  outline: none;
-  transition: border-color $default-transition-time ease;
-
-  &::placeholder {
-    color: $color-steel-blue;
-  }
-
-  &:focus {
-    border-color: $color-line-3;
-  }
 }
 
 .crt_ok {
@@ -1469,24 +1392,23 @@ const exec = async (step: any) => {
   font-size: 12px;
 }
 
-/* Who signs a role-2 proposal, sitting between the confirmation and the steps. */
-.crt_signer {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.75rem;
-  margin-top: 0.875rem;
-  font-family: $font-mono;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: $color-steel-blue;
-
-  &--none {
-    color: $color-light-subtitle;
+.crt_payout {
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem 2rem;
+    flex-wrap: wrap;
   }
 
-  a {
-    white-space: nowrap;
+  &__balances {
+    display: flex;
+    gap: 1.75rem;
+  }
+
+  &__toggle {
+    flex: 0 0 auto;
   }
 }
+
 </style>
