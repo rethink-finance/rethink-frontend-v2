@@ -31,7 +31,8 @@ export class CustomContract extends Contract<any> {
     const promiEvent = new Web3PromiEvent<TransactionReceipt, any>((resolve, reject) => {
       // Ensure the network is correct before proceeding
       this.ensureCorrectNetwork()
-        .then(() => {
+        .then(() => this.withGasLimit(methodName, options, calldataArgs))
+        .then((sendOptions: any) => {
           if (!accountStore.connectedWallet?.provider) {
             reject("No user provider detected.");
             return
@@ -55,7 +56,7 @@ export class CustomContract extends Contract<any> {
           contractWithUserProvider.config.ignoreGasPricing = true;
           return contractWithUserProvider.methods[methodName](...calldataArgs).send({
             from: accountStore.activeAccountAddress,
-            ...options,
+            ...sendOptions,
           }).on("transactionHash", (hash: any) => promiEvent.emit("transactionHash", hash))
             .on("receipt", (receipt: any) => {
               promiEvent.emit("receipt", receipt);
@@ -81,6 +82,30 @@ export class CustomContract extends Contract<any> {
     });
 
     return promiEvent;
+  }
+
+  /**
+   * Fill in a gas limit when the caller didn't give one. Left to the wallet,
+   * the limit is whatever the wallet decides: on HyperEVM a vault
+   * initCreateFund needing ~4.9M gas was sent with a flat 1M and reverted out
+   * of gas, though every RPC we list estimated it correctly. So estimate on
+   * the app's own RPC (this contract's provider) and add a 20% buffer. If the
+   * estimate fails, fall back to letting the wallet estimate as before.
+   */
+  async withGasLimit(methodName: string, options: any, calldataArgs: any[]): Promise<any> {
+    if (options?.gas != null || options?.gasLimit != null) return options;
+
+    const accountStore = useAccountStore();
+    try {
+      const estimate = await this.methods[methodName](...calldataArgs).estimateGas({
+        from: accountStore.activeAccountAddress,
+        ...options,
+      });
+      return { ...options, gas: (BigInt(estimate) * 120n) / 100n };
+    } catch (error: any) {
+      console.warn(`Gas estimate for ${methodName} failed, leaving it to the wallet`, error);
+      return options;
+    }
   }
 
   ensureCorrectNetwork(): any {
