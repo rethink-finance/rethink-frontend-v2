@@ -73,9 +73,12 @@ export const useAccountStore = defineStore("accounts", {
     async addNewNetwork(chainId: ChainId) {
       console.log("Add New Network for chain:", chainId);
       const network = networksMap[chainId];
+      // One public node, not the app's whole list: the wallet keeps whatever
+      // it is given here for good, and that list carries private keys and
+      // paid-only endpoints that a wallet cannot use.
       console.log({
         chainId,
-        rpcUrls: toRaw(network.rpcUrls ?? []),
+        rpcUrls: [network.walletRpcUrl],
         chainName: toRaw(network.chainNameLong ?? network.chainName),
         nativeCurrency: toRaw(network.nativeCurrency),
         blockExplorerUrls: toRaw(network.blockExplorerUrls),
@@ -85,7 +88,7 @@ export const useAccountStore = defineStore("accounts", {
         params: [
           {
             chainId,
-            rpcUrls: toRaw(network.rpcUrls ?? []),
+            rpcUrls: [network.walletRpcUrl],
             chainName: toRaw(network.chainNameLong ?? network.chainName),
             nativeCurrency: toRaw(network.nativeCurrency),
             blockExplorerUrls: toRaw(network.blockExplorerUrls),

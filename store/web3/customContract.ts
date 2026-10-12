@@ -1,5 +1,9 @@
 import type { TransactionReceipt } from "viem";
 import { Contract, Web3, Web3PromiEvent, type HttpProvider } from "web3";
+import {
+  clearWalletRpcHint,
+  reportWalletSendFailure,
+} from "~/composables/web3/walletSendFailure";
 import { useAccountStore } from "~/store/account/account.store";
 import { type ChainId } from "~/types/enums/chain_id";
 
@@ -29,10 +33,21 @@ export class CustomContract extends Contract<any> {
 
     // Create a Web3PromiEvent with a valid PromiseExecutor
     const promiEvent = new Web3PromiEvent<TransactionReceipt, any>((resolve, reject) => {
+      // Whether the app's own RPC estimated this call. A failure after that
+      // cannot be a revert, which is what lets the wallet's RPC be blamed.
+      let appRpcOk = false;
+      const reportFailure = (error: any) =>
+        reportWalletSendFailure(error, {
+          chainId: this.initialChainId,
+          appRpcOk,
+          walletLabel: accountStore.connectedWallet?.label,
+        });
+
       // Ensure the network is correct before proceeding
       this.ensureCorrectNetwork()
         .then(() => this.withGasLimit(methodName, options, calldataArgs))
-        .then((sendOptions: any) => {
+        .then(({ sendOptions, estimated }: { sendOptions: any; estimated: boolean }) => {
+          appRpcOk = estimated;
           if (!accountStore.connectedWallet?.provider) {
             reject("No user provider detected.");
             return
@@ -57,7 +72,11 @@ export class CustomContract extends Contract<any> {
           return contractWithUserProvider.methods[methodName](...calldataArgs).send({
             from: accountStore.activeAccountAddress,
             ...sendOptions,
-          }).on("transactionHash", (hash: any) => promiEvent.emit("transactionHash", hash))
+          }).on("transactionHash", (hash: any) => {
+            // The wallet reached its node, so any standing RPC hint is stale.
+            clearWalletRpcHint();
+            promiEvent.emit("transactionHash", hash);
+          })
             .on("receipt", (receipt: any) => {
               promiEvent.emit("receipt", receipt);
               resolve(receipt); // Resolve the promise with the receipt
@@ -69,13 +88,18 @@ export class CustomContract extends Contract<any> {
             // and, when the endpoint refuses, fires a bogus "error" event on
             // a transaction that already succeeded.
             .on("error", (error) => {
+              reportFailure(error);
               promiEvent.emit("error", error);
               reject(error); // Reject the promise with the error
             });
         })
         .catch((error: any) => {
-          // Emit the network error and reject the promise
+          // web3 v4 rejects a declined or failed send without emitting
+          // "error", so this is where most wallet failures land. The page's
+          // own handler still speaks; this only adds the RPC hint when the
+          // failure was the wallet's node.
           console.log("caught promi event err", error);
+          reportFailure(error);
           promiEvent.emit("error", error);
           reject(error);
         });
@@ -91,9 +115,18 @@ export class CustomContract extends Contract<any> {
    * of gas, though every RPC we list estimated it correctly. So estimate on
    * the app's own RPC (this contract's provider) and add a 20% buffer. If the
    * estimate fails, fall back to letting the wallet estimate as before.
+   *
+   * `estimated` says whether the app's RPC actually ran the call: a later
+   * failure on the wallet side is then known not to be a revert.
    */
-  async withGasLimit(methodName: string, options: any, calldataArgs: any[]): Promise<any> {
-    if (options?.gas != null || options?.gasLimit != null) return options;
+  async withGasLimit(
+    methodName: string,
+    options: any,
+    calldataArgs: any[],
+  ): Promise<{ sendOptions: any; estimated: boolean }> {
+    if (options?.gas != null || options?.gasLimit != null) {
+      return { sendOptions: options, estimated: false };
+    }
 
     const accountStore = useAccountStore();
     try {
@@ -101,10 +134,13 @@ export class CustomContract extends Contract<any> {
         from: accountStore.activeAccountAddress,
         ...options,
       });
-      return { ...options, gas: (BigInt(estimate) * 120n) / 100n };
+      return {
+        sendOptions: { ...options, gas: (BigInt(estimate) * 120n) / 100n },
+        estimated: true,
+      };
     } catch (error: any) {
       console.warn(`Gas estimate for ${methodName} failed, leaving it to the wallet`, error);
-      return options;
+      return { sendOptions: options, estimated: false };
     }
   }
 
