@@ -6,6 +6,7 @@ import ledgerModule from "@web3-onboard/ledger"
 import { init } from "@web3-onboard/vue"
 import walletConnectModule from "@web3-onboard/walletconnect"
 import logoSVG from "@/assets/images/logo_mobile.svg"
+import { networksMap } from "~/store/web3/networksMap"
 import { ChainId } from "~/types/enums/chain_id"
 
 export default defineNuxtPlugin(() => {
@@ -15,10 +16,10 @@ export default defineNuxtPlugin(() => {
 
   // Wallets
   const safe = safeModule({
-   whitelistedDomains: [
-     /^https:\/\/app\.safe\.global$/,
-     /^https:\/\/safe\.global$/,
-  new RegExp(baseDomain),
+    whitelistedDomains: [
+      /^https:\/\/app\.safe\.global$/,
+      /^https:\/\/safe\.global$/,
+      new RegExp(baseDomain),
     ],
   })
   const walletConnect = walletConnectModule({
@@ -55,36 +56,39 @@ export default defineNuxtPlugin(() => {
 
   init({
     wallets: [injected, safe, walletConnect, ledger, enkryptModule],
+    // rpcUrl is what wallets are registered with and what WalletConnect and
+    // Ledger sessions read through; it lives in networksMap so the hint shown
+    // when a wallet's own node fails names the same URL.
     chains: [
       {
         id: ChainId.POLYGON,
         token: "POL",
         label: "Polygon",
-        rpcUrl: "https://polygon-rpc.com",
+        rpcUrl: networksMap[ChainId.POLYGON].walletRpcUrl,
       },
       {
         id: ChainId.ARBITRUM,
         token: "ETH",
         label: "Arbitrum One",
-        rpcUrl: "https://arb1.arbitrum.io/rpc",
+        rpcUrl: networksMap[ChainId.ARBITRUM].walletRpcUrl,
       },
       {
         id: ChainId.ETHEREUM,
         token: "ETH",
         label: "Ethereum",
-        rpcUrl: "https://eth.drpc.org",
+        rpcUrl: networksMap[ChainId.ETHEREUM].walletRpcUrl,
       },
       {
         id: ChainId.BASE,
         token: "ETH",
         label: "BASE",
-        rpcUrl: "https://mainnet.base.org",
+        rpcUrl: networksMap[ChainId.BASE].walletRpcUrl,
       },
       {
         id: ChainId.HYPEREVM,
         token: "HYPE",
         label: "HyperEVM",
-        rpcUrl: "https://rpc.hyperliquid.xyz/evm",
+        rpcUrl: networksMap[ChainId.HYPEREVM].walletRpcUrl,
       },
     ],
     theme: "dark",

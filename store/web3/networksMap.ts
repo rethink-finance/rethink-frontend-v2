@@ -30,6 +30,11 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       "https://polygon-pokt.nodies.app",
       "https://polygon.rpc.blxrbdn.com",
     ],
+    // Not polygon-rpc.com: MetaMask's old default for Polygon, and what this
+    // app handed wallets until 2026-10-12. It answers HTTP 401 ("API key
+    // disabled, tenant disabled") since 2026-08, which failed every send from
+    // a wallet still carrying it while the page itself kept working.
+    walletRpcUrl: "https://polygon-bor-rpc.publicnode.com",
     blockExplorerUrls: ["https://polygonscan.com"],
   },
   [ChainId.ARBITRUM]: {
@@ -53,6 +58,7 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       "https://1rpc.io/arb", // Max 1k blocks
       "https://arb-pokt.nodies.app", // Pruned Node / Light node, no logs...
     ],
+    walletRpcUrl: "https://arb1.arbitrum.io/rpc",
     blockExplorerUrls: ["https://arbiscan.io"],
   },
   // [ChainId.FRAXTAL]: {
@@ -98,6 +104,7 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       // "https://eth-mainnet.g.alchemy.com/v2/aejbVoMPkKiAxRxDfXKwIO2roAoZndIW", // Luka T. — FREE TIER
       // "https://eth-mainnet.g.alchemy.com/v2/lXg6ZSnL3CTLUdmws68KNkKm2JnHVxhw", // Rok
     ],
+    walletRpcUrl: "https://eth.drpc.org",
     blockExplorerUrls: ["https://etherscan.io"],
   },
   [ChainId.BASE]: {
@@ -123,6 +130,7 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       // "https://base.meowrpc.com",
       // "https://base.rpc.subquery.network/public",
     ],
+    walletRpcUrl: "https://mainnet.base.org",
     blockExplorerUrls: ["https://basescan.org"],
   },
   [ChainId.HYPEREVM]: {
@@ -157,6 +165,7 @@ export const baseNetworksMap: Record<BaseChainId, INetwork> = {
       "https://rpc.hypurrscan.io",
       "https://rpc.hyperliquid.xyz/evm",
     ],
+    walletRpcUrl: "https://rpc.hyperliquid.xyz/evm",
     blockExplorerUrls: ["https://hyperevmscan.io"],
   },
 };
@@ -172,6 +181,7 @@ const localhostNetwork: INetwork = {
   },
   icon: getChainIcon("local"),
   rpcUrls: ["http://127.0.0.1:8545"],
+  walletRpcUrl: "http://127.0.0.1:8545",
   blockExplorerUrls: [],
 };
 
