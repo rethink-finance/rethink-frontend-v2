@@ -2,13 +2,18 @@ import { ERC20 } from "assets/contracts/ERC20";
 import { RethinkFundGovernor } from "assets/contracts/RethinkFundGovernor";
 import { isZeroAddress } from "~/composables/addressUtils";
 import { formatQuorumPercentage } from "~/composables/formatters";
+import { fromVoteUnits, isSelfGoverned } from "~/composables/fund/governanceVoteUnits";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { type ChainId } from "~/types/enums/chain_id";
 import type IFundInitCache from "~/types/fund_init_cache";
 
 
-const fetchGovernorData = async (fundChainId: ChainId, governorAddress?: string) => {
+const fetchGovernorData = async (
+  fundChainId: ChainId,
+  governorAddress: string | undefined,
+  voteDecimals: number,
+) => {
   /*
     Data to fetch:
     "quorum"
@@ -73,7 +78,9 @@ const fetchGovernorData = async (fundChainId: ChainId, governorAddress?: string)
     quorum: formatQuorumPercentage(quorumNumerator, quorumDenominator),
     votingDelay: Number(votingDelay),
     votingPeriod: Number(votingPeriod),
-    proposalThreshold: Number(proposalThreshold),
+    // The form holds tokens; the governor holds raw vote units.
+    proposalThreshold: fromVoteUnits(proposalThreshold as bigint, voteDecimals),
+    proposalThresholdUnits: String(proposalThreshold),
     lateQuorum: Number(lateQuorum),
   };
 }
@@ -129,7 +136,7 @@ export const fetchFundInitCacheAction = async (
   let fundFactoryContractV2Used = true;
   console.debug("fetch fundInitCache", fundChainId, "deployer:", deployerAddress)
 
-    // Some chains (e.g. Polygon) have no V1.5 factory deployed, so
+  // Some chains (e.g. Polygon) have no V1.5 factory deployed, so
   // fundFactoryContractV2 is null. Skip the V2 lookup instead of throwing on null.
   let fundInitCache: IFundInitCache = {} as IFundInitCache;
 
@@ -144,7 +151,7 @@ export const fetchFundInitCacheAction = async (
       [205, undefined, -32000],
     ) || {};
   }
-  
+
   if (!fundInitCache?.fundSettings?.baseToken || fundInitCache?.fundSettings?.baseToken === "0x0000000000000000000000000000000000000000") {
     console.warn("fetch fundInitCache NORMAL v1", fundChainId, "deployer:", deployerAddress)
     fundFactoryContractV2Used = false;
@@ -165,8 +172,28 @@ export const fetchFundInitCacheAction = async (
     return undefined;
   }
 
+  // Fetch fund base token decimals
+  const [baseDecimals, baseSymbol] = await fetchBaseTokenDetails(
+    fundChainId,
+    fundInitCache.fundSettings.baseToken,
+  );
+  console.debug("BASE DECIMALS & SYMBOL", baseDecimals, baseSymbol)
+
+  // The governor's threshold comes back in raw vote units; the form shows it
+  // in tokens, at the scale of whatever carries the votes.
+  const governanceToken = fundInitCache?.fundSettings?.governanceToken;
+  const voteDecimals = Number(
+    isSelfGoverned(governanceToken, fundInitCache.fundContractAddr)
+      ? baseDecimals
+      : (await fetchBaseTokenDetails(fundChainId, String(governanceToken)))[0],
+  );
+
   // Parse Metadata JSON string
-  fundInitCache.governorData = await fetchGovernorData(fundChainId, fundInitCache?.fundSettings?.governor);
+  fundInitCache.governorData = await fetchGovernorData(
+    fundChainId,
+    fundInitCache?.fundSettings?.governor,
+    voteDecimals,
+  );
   fundInitCache.fundMetadata = JSON.parse(fundInitCache._fundMetadata || "{}");
   fundInitCache.fundMetadata.chainId = fundChainId;
   console.debug("governor fetch done", fundInitCache.governorData)
@@ -175,15 +202,6 @@ export const fetchFundInitCacheAction = async (
   const fundSettings = fundInitCache?.fundSettings || {};
   const feeCollectors = fundSettings?.feeCollectors || [];
   const whitelistedAddresses = fundInitCache.fundSettings?.allowedDepositAddrs?.join("\n") || [];
-  console.debug("governor fetch fetchBaseTokenDetails")
-
-  // Fetch fund base token decimals
-  const [baseDecimals, baseSymbol] = await fetchBaseTokenDetails(
-    fundChainId,
-    fundInitCache.fundSettings.baseToken,
-  );
-  console.debug("BASE DECIMALS & SYMBOL", baseDecimals, baseSymbol)
-
   fundInitCache.fundSettings = {
     ...fundInitCache.fundSettings,
     chainId: fundChainId,

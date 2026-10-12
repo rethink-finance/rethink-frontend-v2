@@ -7,6 +7,10 @@ import type INAVUpdate from "~/types/nav_update";
 import defaultAvatar from "@/assets/images/default_avatar.webp?inline";
 import { ERC20 } from "assets/contracts/ERC20";
 import { formatQuorumPercentage } from "~/composables/formatters";
+import {
+  formatProposalThreshold,
+  governanceVoteDecimals,
+} from "~/composables/fund/governanceVoteUnits";
 import { parseClockMode } from "~/composables/fund/parseClockMode";
 import { parseBigintsToString } from "~/composables/fund/parseBigintsToString";
 import {
@@ -81,6 +85,16 @@ export const fetchFundMetaDataAction = async (
 
     const parsedFundSettings: IFundSettings = parseBigintsToString(fundSettings);
     console.log("parsedFundSettings: ", parsedFundSettings);
+
+    // Raw governor numbers (threshold, quorum, votes) are formatted at this
+    // scale everywhere: a vault governed by its own shares reads at its base
+    // token's decimals, an external governance token at its own.
+    const voteDecimals = governanceVoteDecimals({
+      governanceToken: parsedFundSettings.governanceToken,
+      fundAddress: parsedFundSettings.fundAddress,
+      baseTokenDecimals: fundBaseTokenDecimals,
+      governanceTokenDecimals: fundGovernanceTokenDecimals,
+    });
 
     // After Roles v2 activation settings.governor is the Safe, so the reader
     // aimed its governance staticcalls at a Safe and handed back a zeroed
@@ -199,7 +213,7 @@ export const fetchFundMetaDataAction = async (
       governanceToken: {
         symbol: fundGovernanceTokenSymbol ?? "",
         address: parsedFundSettings.governanceToken,
-        decimals: Number(fundGovernanceTokenDecimals) ?? 18,
+        decimals: voteDecimals,
       } as IToken,
       totalDepositBalance: totalDepositBal || BigInt("0"),
       governanceTokenTotalSupply: fundGovernanceTokenSupplyFixed,
@@ -218,15 +232,18 @@ export const fetchFundMetaDataAction = async (
       // Governance
       votingDelay: getVoteTimeValue(votingDelay, averageBlockTime, parsedClockMode.mode),
       votingPeriod: getVoteTimeValue(votingPeriod, averageBlockTime, parsedClockMode.mode),
+      // Raw vote units on chain, printed in governance tokens so it reads
+      // against "your power" and the quorum beside it.
       proposalThreshold:
         !proposalThreshold && proposalThreshold !== 0n
           ? "N/A"
-          : `${commify(proposalThreshold)} ${fundGovernanceTokenSymbol || "votes"}`,
+          : formatProposalThreshold(
+            proposalThreshold,
+            voteDecimals,
+            fundGovernanceTokenSymbol,
+          ),
       quorumVotes,
-      quorumVotesFormatted: formatTokenValue(
-        quorumVotes,
-        fundGovernanceTokenDecimals,
-      ),
+      quorumVotesFormatted: formatTokenValue(quorumVotes, voteDecimals),
       quorumNumerator,
       quorumDenominator,
       quorumPercentage: formatQuorumPercentage(quorumNumerator, quorumDenominator),

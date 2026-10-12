@@ -108,7 +108,7 @@ const governanceSettings = computed(() => {
     { label: "Governed by", value: governedBy },
     { label: "Voting delay", value: fund?.votingDelay || "N/A" },
     { label: "Voting period", value: fund?.votingPeriod || "N/A" },
-    // Arrives already carrying the token symbol ("150,000 veSHN").
+    // Arrives in governance tokens with the symbol ("1,000 tSHN").
     { label: "Proposal threshold", value: fund?.proposalThreshold || "N/A" },
     { label: "Quorum", value: fund?.quorumPercentage || "N/A" },
     { label: "Late quorum", value: fund?.lateQuorum || "N/A" },

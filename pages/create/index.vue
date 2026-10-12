@@ -283,6 +283,7 @@ import {
   fromBpsToPercentage,
 } from "~/composables/formatters";
 import { useAccountStore } from "~/store/account/account.store";
+import { isSelfGoverned, toVoteUnits } from "~/composables/fund/governanceVoteUnits";
 import { fetchBaseTokenDetails } from "~/store/create-fund/actions/fetchFundInitCache.action";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -955,7 +956,7 @@ const primaryAction = computed(() => {
           loading: isInitializeLoading.value,
           run: () => {
             isInitializeDialogOpen.value = true;
-            loadReviewBaseTokenSymbol();
+            loadReviewTokens();
           },
         };
       }
@@ -1113,20 +1114,48 @@ const getFieldByStepAndFieldKey =(
  */
 const reviewBaseTokenSymbol = ref("");
 
-const loadReviewBaseTokenSymbol = async () => {
+/**
+ * Whatever carries the votes, as the review prints it: the custom governance
+ * token read on chain, or the vault's own symbol at the base token's decimals
+ * when the shares govern (one share per base unit). The proposal threshold is
+ * scaled by these decimals when initializing, so the dialog shows the same.
+ */
+const reviewVoteToken = ref<{ symbol: string; decimals: number } | null>(null);
+
+const loadReviewTokens = async () => {
   reviewBaseTokenSymbol.value = "";
+  reviewVoteToken.value = null;
   const address = String(
     getFieldByStepAndFieldKey(OnboardingStep.Basics, "baseToken") ?? "",
   );
   if (!ethers.isAddress(address)) return;
 
   try {
-    const [, symbol] = await fetchBaseTokenDetails(selectedChainId.value, address);
+    const [decimals, symbol] = await fetchBaseTokenDetails(selectedChainId.value, address);
     reviewBaseTokenSymbol.value = String(symbol ?? "");
+
+    const governanceToken = String(
+      getFieldByStepAndFieldKey(OnboardingStep.Governance, "governanceToken") ?? "",
+    );
+    if (isSelfGoverned(governanceToken)) {
+      reviewVoteToken.value = {
+        symbol: String(getFieldByStepAndFieldKey(OnboardingStep.Basics, "fundSymbol") ?? ""),
+        decimals: Number(decimals),
+      };
+    } else {
+      const [voteDecimals, voteSymbol] = await fetchBaseTokenDetails(
+        selectedChainId.value,
+        governanceToken,
+      );
+      reviewVoteToken.value = {
+        symbol: String(voteSymbol ?? ""),
+        decimals: Number(voteDecimals),
+      };
+    }
   } catch (error) {
     // The address is still printed in full; a missing ticker only costs the
     // curator the friendlier half of the line.
-    console.error("Failed reading denomination asset symbol for review", error);
+    console.error("Failed reading token details for review", error);
   }
 };
 
@@ -1206,8 +1235,14 @@ const immutableSummary = computed(() => {
         },
         {
           label: "Proposal threshold",
-          value: `${Number(governance("proposalThreshold") ?? 0).toLocaleString("en-US")} tokens`,
-          note: "",
+          value: `${Number(governance("proposalThreshold") ?? 0).toLocaleString("en-US")} ${
+            reviewVoteToken.value?.symbol || "tokens"
+          }`,
+          note: !Number(governance("proposalThreshold") ?? 0)
+            ? "No minimum: any vote holder can propose."
+            : reviewVoteToken.value
+              ? `Scaled by 10^${reviewVoteToken.value.decimals} on chain`
+              : "",
         },
         {
           label: "Voting period",
@@ -1313,7 +1348,7 @@ const formatFeeCollectors = () => {
   ]
 };
 
-const formatInitializeData = () => {
+const formatInitializeData = (proposalThresholdUnits: bigint) => {
   const output = [
     [
       getFeeValue("depositFee"),// depositFee
@@ -1339,7 +1374,7 @@ const formatInitializeData = () => {
       parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "lateQuorum") as string),
       parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "votingDelay") as string),
       parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "votingPeriod") as string),
-      parseInt(getFieldByStepAndFieldKey(OnboardingStep.Governance, "proposalThreshold") as string),
+      proposalThresholdUnits, // raw vote units, see resolveProposalThresholdUnits
     ],
     JSON.stringify(formatFundMetaData()),
     0, // feePerformancePeriod, default to 0
@@ -1404,6 +1439,31 @@ const toastInitializeFailed = (chainId: ChainId) => {
 const isRevertError = (error: any) =>
   /revert/i.test(String(error?.message ?? ""));
 
+/**
+ * The governor compares proposalThreshold against getVotes() in raw units, so
+ * the tokens typed on the Governance step are scaled by the decimals of
+ * whatever carries the votes: the custom governance token, or the base token
+ * when the vault's own shares govern (one share per base unit, see
+ * governanceVoteDecimals). Read on chain here rather than taken from a step's
+ * state, because the number cannot be changed once the vault exists: sent
+ * unscaled, "150000" is 150000 wei, which is how ShineDAO Treasury ended up
+ * open to anyone holding dust.
+ */
+const resolveProposalThresholdUnits = async (): Promise<bigint> => {
+  const governanceToken = String(
+    getFieldByStepAndFieldKey(OnboardingStep.Governance, "governanceToken") ?? "",
+  );
+  const voteToken = isSelfGoverned(governanceToken)
+    ? String(getFieldByStepAndFieldKey(OnboardingStep.Basics, "baseToken") ?? "")
+    : governanceToken;
+  // Despite its name this reads decimals and symbol off any ERC20.
+  const [decimals] = await fetchBaseTokenDetails(selectedChainId.value, voteToken);
+  return toVoteUnits(
+    getFieldByStepAndFieldKey(OnboardingStep.Governance, "proposalThreshold") as string,
+    Number(decimals),
+  );
+};
+
 const initializeFund = async() => {
   const fundChainId = selectedChainId.value;
 
@@ -1431,6 +1491,19 @@ const initializeFund = async() => {
       );
     }
 
+    // Scaled before anything is written: the threshold is fixed for the life
+    // of the governor, and a guess here would be a permanent one.
+    let proposalThresholdUnits: bigint;
+    try {
+      proposalThresholdUnits = await resolveProposalThresholdUnits();
+    } catch (error: any) {
+      console.error("Failed scaling the proposal threshold", error);
+      return toastStore.errorToast(
+        `Could not scale the proposal threshold: ${error?.message || "the governance token's decimals did not load"}. ` +
+        "Check the governance token address and try again.",
+      );
+    }
+
     // Aborts on failure rather than carrying on: the metadata is written once
     // and cannot be edited afterwards, so a data URL that slipped through would
     // be a permanent, unfixable blob in the vault's on-chain record.
@@ -1444,7 +1517,7 @@ const initializeFund = async() => {
       );
     }
 
-    const formattedData = formatInitializeData();
+    const formattedData = formatInitializeData(proposalThresholdUnits);
     const gasLimit = INIT_CREATE_FUND_GAS[fundChainId];
 
     await fundFactoryContract

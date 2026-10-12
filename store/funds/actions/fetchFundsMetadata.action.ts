@@ -1,4 +1,5 @@
 import defaultAvatar from "@/assets/images/default_avatar.webp?inline";
+import { governanceVoteDecimals } from "~/composables/fund/governanceVoteUnits";
 import { fundMetaDataHardcoded } from "~/store/funds/config/fundMetadata.config";
 import { networksMap } from "~/store/web3/networksMap";
 import { useWeb3Store } from "~/store/web3/web3.store";
@@ -88,8 +89,13 @@ export async function fetchFundsMetaDataAction(
           governanceToken: {
             symbol: fundMetaData.fundGovernanceTokenSymbol,
             address: fundMetaData.fundSettings?.governanceToken || "",
-            decimals: Number(fundMetaData.fundGovernanceTokenDecimals),
-          } as IToken, // Not important here, for now.
+            decimals: governanceVoteDecimals({
+              governanceToken: fundMetaData.fundSettings?.governanceToken,
+              fundAddress: address,
+              baseTokenDecimals,
+              governanceTokenDecimals: fundMetaData.fundGovernanceTokenDecimals,
+            }),
+          } as IToken,
           governanceTokenTotalSupply: fundMetaData.fundGovernanceTokenSupply || 0n,
           totalDepositBalance,
           cumulativeReturnPercent: undefined,
