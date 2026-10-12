@@ -283,10 +283,14 @@ const GOVERNANCE_FIELD_OVERRIDES: Record<string, Partial<IField>> = {
   proposalThreshold: {
     label: "Proposal threshold",
     tag: FieldTag.Fixed,
-    tooltip: "Minimum vault tokens required to create a proposal.",
+    tooltip:
+      "Minimum voting power, in governance tokens, needed to create a proposal. " +
+      "Converted to the token's smallest units when the vault is deployed. " +
+      "0 lets any vote holder propose.",
     placeholder: "0",
     defaultValue: "0",
     usesDefaultWhenEmpty: true,
+    rules: [formRules.isNonNegativeNumber],
     cols: 6,
   },
   votingPeriod: {
