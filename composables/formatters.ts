@@ -222,6 +222,25 @@ export const formatTokenValue = (
   }
 };
 
+/**
+ * A token amount for a table cell, in the app's usual style (commify: two
+ * decimals from 1 up, three significant digits below 1), except that dust
+ * below `floorFractionDigits` decimals reads "< 0.000001" instead of twenty
+ * digits that run into the next column. Exact values belong in a tooltip.
+ */
+export const formatDisplayAmount = (
+  value: bigint,
+  decimals: number,
+  floorFractionDigits = 6,
+): string => {
+  if (value === 0n) return "0";
+  const abs = value < 0n ? -value : value;
+  if (decimals > floorFractionDigits && abs < 10n ** BigInt(decimals - floorFractionDigits)) {
+    return `${value < 0n ? "> -" : "< "}0.${"0".repeat(floorFractionDigits - 1)}1`;
+  }
+  return commify(ethers.formatUnits(value, decimals));
+};
+
 export const roundToSignificantDecimals = (
   value: number | string,
   fractionalSigDigits: number = 3,
