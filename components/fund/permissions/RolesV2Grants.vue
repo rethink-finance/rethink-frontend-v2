@@ -41,62 +41,179 @@
         any contract.
       </p>
 
-      <section
-        v-for="role in roles"
-        :key="role.keyBytes"
-        class="grants__role"
+      <!-- One role on screen at a time, as on the create flow's Permissions
+           step: the tabs are the map of the vault's roles. -->
+      <div
+        v-if="roles.length"
+        class="grants__tabs"
+        role="tablist"
+        aria-label="Vault roles"
       >
+        <button
+          v-for="role in roles"
+          :key="role.keyBytes"
+          type="button"
+          role="tab"
+          class="grants__tab"
+          :class="{ 'grants__tab--active': !addingRole && role.keyBytes === current?.keyBytes }"
+          :aria-selected="!addingRole && role.keyBytes === current?.keyBytes"
+          @click="selectRole(role.keyBytes)"
+        >
+          <span class="grants__tab_number">Role {{ role.number }}</span>
+          <span class="grants__tab_name">{{ role.name }}</span>
+        </button>
+        <button
+          v-if="manage"
+          type="button"
+          class="grants__tab grants__tab--add"
+          :class="{ 'grants__tab--active': addingRole }"
+          :aria-expanded="addingRole"
+          @click="addingRole = !addingRole"
+        >
+          <Icon icon="material-symbols:add-rounded" width="1rem" height="1rem" />
+          <span class="grants__tab_name">Add role</span>
+        </button>
+      </div>
+
+      <slot v-if="manage && addingRole" name="add-role" :done="(key: string) => selectRole(key)" />
+
+      <section v-else-if="current" :key="current.keyBytes" class="grants__role">
         <header class="grants__role_head">
-          <span class="grants__role_number">Role {{ role.number }}</span>
-          <span class="grants__role_name">{{ role.name }}</span>
-          <code class="grants__role_key" :title="`Role key ${role.keyBytes}`">{{ role.label }}</code>
-          <span class="grants__role_counts">{{ countsText(role) }}</span>
+          <div class="grants__role_identity">
+            <span class="grants__role_name">{{ current.name }}</span>
+            <span class="grants__role_tagline">{{ taglineOf(current) }}</span>
+          </div>
+          <div class="grants__role_meta">
+            <code class="grants__role_key" :title="`Role key ${current.keyBytes}`">{{ current.label }}</code>
+            <span class="grants__role_counts">{{ countsText(current) }}</span>
+            <button
+              v-if="manage && isDraft(current)"
+              type="button"
+              class="grants__role_remove"
+              @click="emit('remove-role', current)"
+            >
+              Remove role
+            </button>
+          </div>
         </header>
 
-        <p v-if="role.members.length" class="grants__members">
-          <span class="grants__members_label">Held by</span>
-          <span
-            v-for="member in role.members"
-            :key="member"
-            class="grants__member"
-          >
-            <OnboardingExplorerAddress
-              :address="member"
-              :chain-id="chainId"
-              :label="addressLabel(member)"
-            />
-            <span v-if="isDisabled(role, member)" class="grants__member_flag">
-              module disabled: its calls are refused
+        <slot v-if="memberEditorKeys?.includes(current.keyBytes)" name="members" :role="current" />
+        <template v-else>
+          <p v-if="current.members.length" class="grants__members">
+            <span class="grants__members_label">Held by</span>
+            <span
+              v-for="member in current.members"
+              :key="member"
+              class="grants__member"
+            >
+              <OnboardingExplorerAddress
+                :address="member"
+                :chain-id="chainId"
+                :label="addressLabel(member)"
+              />
+              <span v-if="isDisabled(current, member)" class="grants__member_flag">
+                module disabled: its calls are refused
+              </span>
             </span>
-          </span>
-        </p>
-        <p v-if="!usableMembers(role)" class="grants__note grants__note--warn">
+          </p>
+        </template>
+        <p v-if="!usableMembers(current) && current.entries.length" class="grants__note grants__note--warn">
           {{
-            role.members.length
+            current.members.length
               ? "Every member's module is disabled on the modifier, so none of what this role is granted can be used until one is enabled again."
               : "Nobody holds this role, so none of what it is granted can be used until someone is added to it."
           }}
         </p>
 
+        <!-- The vault's own grants, as the create flow's switches made them. -->
+        <div v-if="split.grants.length" class="grants__section">
+          <button
+            type="button"
+            class="grants__section_head"
+            :class="{ 'grants__section_head--open': prepopulatedOpen }"
+            :aria-expanded="prepopulatedOpen"
+            @click="prepopulatedOpen = !prepopulatedOpen"
+          >
+            <Icon
+              class="grants__chevron"
+              :class="{ 'grants__chevron--open': prepopulatedOpen }"
+              icon="material-symbols:keyboard-arrow-down-rounded"
+              width="1.125rem"
+              height="1.125rem"
+            />
+            <span class="grants__section_title">Prepopulated permissions</span>
+            <span class="grants__section_summary">{{ grantedCount }} of {{ split.grants.length }} granted</span>
+            <span v-if="prepopulatedMarked" class="grants__section_flag">
+              {{ prepopulatedMarked }} marked for removal
+            </span>
+          </button>
+          <div
+            v-for="grant in prepopulatedOpen ? split.grants : []"
+            :key="grantKey(grant)"
+            class="grants__prepop"
+            :class="{
+              'grants__prepop--off': !grant.granted,
+              'grants__prepop--removed': isPrepopulatedRemoved(grant),
+            }"
+          >
+            <div class="grants__prepop_main">
+              <span class="grants__prepop_dot" />
+              <span class="grants__prepop_label">{{ grant.label }}</span>
+              <OnboardingInfoTip
+                v-if="grant.hint"
+                :text="grant.hint"
+                :label="`About “${grant.label}”`"
+                align="left"
+              />
+              <span class="grants__prepop_state">{{ prepopulatedState(grant) }}</span>
+              <button
+                v-if="manage && grant.granted"
+                type="button"
+                class="grants__prepop_action"
+                @click="emit('toggle-prepopulated', current, grant.scope)"
+              >
+                {{ isPrepopulatedRemoved(grant) ? "Undo" : "Remove" }}
+              </button>
+            </div>
+            <div v-if="grant.switches" class="grants__prepop_switches">
+              <span
+                v-for="option in grant.switches"
+                :key="option.label"
+                class="grants__switch"
+                :class="{ 'grants__switch--on': option.on }"
+              >{{ option.on ? "✓" : "–" }} {{ option.label }}</span>
+            </div>
+            <p v-if="grant.granted && prepopulatedInertNote(grant)" class="grants__prepop_note">
+              {{ prepopulatedInertNote(grant) }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Everything else the role stores: protocols, raw grants. -->
         <OnboardingRawPermissionsQueue
-          v-if="role.entries.length"
-          title="May call"
+          v-if="split.other.length"
+          :key="`other:${current.keyBytes}`"
+          :title="split.grants.length ? 'Other permissions' : 'Permissions'"
           collapsible
-          flag-text="has calls inert until activation"
-          :summary-text="queueSummary(role)"
-          :entries="role.entries"
-          :notes="inertNotes(role)"
-          :locked="role.entries.map((_, i) => i)"
-          :context-role="role.label"
+          action-label="Remove"
+          :flag-text="manage && removedIn(current).length ? 'has permissions marked for removal' : 'has calls inert until activation'"
+          :summary-text="queueSummary(split.other)"
+          :entries="split.other"
+          :notes="rowNotes(current, split.other)"
+          :locked="lockedIn(current, split.other)"
+          :context-role="current.label"
           :chain-id="chainId"
           :vault-address="fundAddress"
           :safe-address="safeAddress"
           :roles-mod-address="rolesModAddress"
           :base-token="baseToken"
+          @discard="(indices: number[]) => emit('remove', current!, split.other, indices)"
         />
-        <p v-else class="grants__status">
-          Nothing is granted to this role.
+        <p v-else-if="!split.grants.length" class="grants__status">
+          Nothing is granted to this role{{ manage ? " yet. Add permissions below." : "." }}
         </p>
+
+        <slot v-if="manage" name="additions" :role="current" />
       </section>
 
       <!-- Spending budgets the roles' limits draw on. They live on the
@@ -178,6 +295,16 @@ import {
   type IStoredRoleView,
 } from "~/composables/permissions/storedRoleGrants";
 import { useLiveAllowances } from "~/composables/permissions/useLiveAllowances";
+import {
+  orderRolesForDisplay,
+  removableIndices,
+  splitPrepopulated,
+  type IPrepopulatedGrant,
+} from "~/composables/permissions/managePermissions";
+import { toRoleKeyBytes32 } from "~/composables/nav/generateNAVPermission";
+import type { IRawPermissionCodeEntry } from "~/composables/permissions/parseRawPermissionCode";
+import type { IPermissionScope } from "~/composables/permissions/revokePermissions";
+import { VAULT_ROLES } from "~/composables/permissions/vaultRoles";
 import type { ChainId } from "~/types/enums/chain_id";
 
 /**
@@ -204,10 +331,30 @@ const props = defineProps<{
    * does, grants that need it pass the Roles check and then revert.
    */
   pendingActivation?: { modifier: boolean; settings: boolean };
+  /** Manage mode: stored grants offer Remove, and the additions slot shows. */
+  manage?: boolean;
+  /** Stored calls marked for removal, by role key (lowercase bytes32). */
+  removals?: Record<string, number[]>;
+  /** Roles (lowercase bytes32) whose members the page lists itself, through the members slot. */
+  memberEditorKeys?: string[];
+  /** Custom roles named on this page that the modifier does not know yet. */
+  draftRoles?: IStoredRoleView[];
+  /** The tab on screen (lowercase bytes32); the executor until one is picked. */
+  selectedKey?: string;
+  /** The executor's key as this vault spells it, for its prepopulated grants. */
+  executorRoleKey: string;
+  /** Prepopulated grants marked for removal, by role key, as "target:selector". */
+  prepopulatedRemovals?: Record<string, string[]>;
 }>();
 
 const emit = defineEmits<{
   (e: "refresh"): void;
+  /** Remove was pressed on these of the role's other permissions (manage mode). */
+  (e: "remove", role: IStoredRoleView, entries: IRawPermissionCodeEntry[], indices: number[]): void;
+  /** Remove (or Undo) on one of the role's prepopulated grants. */
+  (e: "toggle-prepopulated", role: IStoredRoleView, scope: IPermissionScope): void;
+  (e: "remove-role", role: IStoredRoleView): void;
+  (e: "update:selectedKey", key: string): void;
 }>();
 
 /* ---- The roles ------------------------------------------------------------ */
@@ -222,7 +369,79 @@ const layout = computed((): { views: IStoredRoleView[]; failed: boolean } => {
     return { views: [], failed: true };
   }
 });
-const roles = computed(() => layout.value.views);
+// By role number (admin, executor, then custom roles, stored or only named
+// so far). The executor's tab is the one that opens first.
+const roles = computed(() => {
+  const stored = orderRolesForDisplay(layout.value.views);
+  const known = new Set(stored.map((role) => role.keyBytes));
+  return [...stored, ...(props.draftRoles ?? []).filter((role) => !known.has(role.keyBytes))];
+});
+
+/* ---- Tabs ------------------------------------------------------------------ */
+
+const addingRole = ref(false);
+watch(() => props.manage, (manage) => { if (!manage) addingRole.value = false; });
+const selectRole = (key: string) => {
+  addingRole.value = false;
+  emit("update:selectedKey", key);
+};
+const executorKeyBytes = computed(() => toRoleKeyBytes32(props.executorRoleKey).toLowerCase());
+const current = computed(
+  () =>
+    roles.value.find((role) => role.keyBytes === props.selectedKey) ??
+    roles.value.find((role) => role.keyBytes === executorKeyBytes.value) ??
+    roles.value[0],
+);
+const isDraft = (role: IStoredRoleView) =>
+  (props.draftRoles ?? []).some((draft) => draft.keyBytes === role.keyBytes) &&
+  !layout.value.views.some((view) => view.keyBytes === role.keyBytes);
+
+const taglineOf = (role: IStoredRoleView) =>
+  role.kind === "admin"
+    ? VAULT_ROLES.admin.tagline
+    : role.kind === "executor"
+      ? VAULT_ROLES.executor.tagline
+      : "Custom role. It may do what is granted to it below.";
+
+/* ---- Prepopulated and other permissions ------------------------------------ */
+
+const contracts = computed(() => ({
+  fundAddress: props.fundAddress,
+  baseToken: props.baseToken ?? "",
+  rolesModifier: props.rolesModAddress,
+}));
+const split = computed(() =>
+  current.value
+    ? splitPrepopulated(current.value.entries, current.value.label, contracts.value, props.executorRoleKey)
+    : { grants: [], prepopulated: [], other: [] },
+);
+const grantedCount = computed(() => split.value.grants.filter((grant) => grant.granted).length);
+// Folded by default: the vault's built-in grants rarely change and the role's
+// other permissions are what is read most.
+const prepopulatedOpen = ref(false);
+const prepopulatedMarked = computed(
+  () => split.value.grants.filter((grant) => isPrepopulatedRemoved(grant)).length,
+);
+const grantKey = (grant: IPrepopulatedGrant) =>
+  `${grant.scope.target.toLowerCase()}:${grant.scope.selector.toLowerCase()}`;
+const isPrepopulatedRemoved = (grant: IPrepopulatedGrant) =>
+  !!current.value &&
+  (props.prepopulatedRemovals?.[current.value.keyBytes] ?? []).includes(grantKey(grant));
+const prepopulatedState = (grant: IPrepopulatedGrant) => {
+  if (!grant.granted) return "Not granted";
+  return isPrepopulatedRemoved(grant) ? "Marked for removal" : "Granted";
+};
+const prepopulatedInertNote = (grant: IPrepopulatedGrant): string => {
+  const pending = props.pendingActivation;
+  if (!pending) return "";
+  if (pending.settings && grant.scope.selector.toLowerCase() === UPDATE_SETTINGS_SELECTOR) {
+    return "Inert until governance hands settings authority to the vault's Safe (activation, above).";
+  }
+  if (pending.modifier && grant.scope.target.toLowerCase() === props.rolesModAddress.toLowerCase()) {
+    return "Inert until governance transfers the Roles modifier to the vault's Safe (activation, above).";
+  }
+  return "";
+};
 
 const lastEventBlock = computed(() =>
   (props.logs ?? []).reduce((max, log) => Math.max(max, log.blockNumber || 0), 0),
@@ -242,12 +461,37 @@ const countsText = (role: IStoredRoleView): string => {
 
 // The queue counts Roles calls; say what they allow instead. Functions are
 // only ever allowed on the contracts that are not open to any function.
-const queueSummary = (role: IStoredRoleView): string => {
-  const scoped = role.contracts - role.openContracts;
+const queueSummary = (entries: IRawPermissionCodeEntry[]): string => {
+  const calls = describeQueuedCalls(entries);
+  const functions = calls.filter((call) => ["allow-function", "scope-function"].includes(call.description.action)).length;
+  const open = calls.filter((call) => call.description.action === "allow-target").length;
+  const scoped = calls.filter((call) => call.description.action === "scope-target").length;
   const parts: string[] = [];
-  if (scoped) parts.push(`${plural(role.functions, "function")} on ${plural(scoped, "contract")}`);
-  if (role.openContracts) parts.push(`any function on ${plural(role.openContracts, "contract")}`);
+  if (functions) parts.push(`${plural(functions, "function")} on ${plural(scoped, "contract")}`);
+  if (open) parts.push(`any function on ${plural(open, "contract")}`);
   return parts.join(", ");
+};
+
+/* ---- Manage mode ----------------------------------------------------------- */
+
+const removedIn = (role: IStoredRoleView): number[] => props.removals?.[role.keyBytes] ?? [];
+
+/** Outside manage mode nothing offers an action; inside, only grants not yet marked do. */
+const lockedIn = (role: IStoredRoleView, entries: IRawPermissionCodeEntry[]): number[] => {
+  if (!props.manage) return entries.map((_, i) => i);
+  const removable = new Set(removableIndices(entries));
+  const removed = new Set(removedIn(role));
+  return entries.map((_, i) => i).filter((i) => !removable.has(i) || removed.has(i));
+};
+
+const REMOVED_NOTE = {
+  text: "Marked for removal: the permissions proposal below takes this away.",
+  tone: "warn" as const,
+};
+const rowNotes = (role: IStoredRoleView, entries: IRawPermissionCodeEntry[]) => {
+  const notes = { ...inertNotes(entries) };
+  if (props.manage) for (const index of removedIn(role)) notes[index] = REMOVED_NOTE;
+  return notes;
 };
 
 const isDisabled = (role: IStoredRoleView, member: string) =>
@@ -277,11 +521,11 @@ const SETTINGS_INERT_WILDCARD =
   "not affected.";
 
 /** Grants that pass the Roles check today but revert at their target. */
-const inertNotes = (role: IStoredRoleView) => {
+const inertNotes = (entries: IRawPermissionCodeEntry[]) => {
   const pending = props.pendingActivation;
   const notes: Record<number, { text: string; tone: "warn" }> = {};
   if (!pending?.modifier && !pending?.settings) return notes;
-  for (const { index, description } of describeQueuedCalls(role.entries)) {
+  for (const { index, description } of describeQueuedCalls(entries)) {
     if (!["allow-target", "allow-function", "scope-function"].includes(description.action)) {
       continue;
     }
@@ -483,17 +727,262 @@ const adapterFunctionName = (selector: string): string => {
     }
   }
 
+  /* The role tabs, as on the create flow's Permissions step. */
+  &__tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem 0.5rem 0.625rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: transparent;
+    color: $color-steel-blue;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color $default-transition-time ease,
+      border-color $default-transition-time ease,
+      background-color $default-transition-time ease;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      color: $color-white;
+      border-color: $color-line-3;
+    }
+
+    &--active,
+    &--active:hover,
+    &--active:focus-visible {
+      border-color: $color-accent-line;
+      background: $color-accent-soft;
+      color: $color-white;
+    }
+
+    &--add {
+      gap: 0.25rem;
+      padding-left: 0.5rem;
+      border-style: dashed;
+    }
+  }
+
+  &__tab_number {
+    font-family: $font-mono;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+
+  &__tab--active &__tab_number {
+    color: $color-cyan;
+  }
+
+  &__tab_name {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  /* The role on screen. */
   &__role {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding-top: 1.25rem;
-    border-top: 1px solid $color-line;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+  }
+
+  &__role_identity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  &__role_tagline {
+    font-size: 12.5px;
+    color: $color-steel-blue;
+  }
+
+  &__role_meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.875rem;
+    margin-left: auto;
+  }
+
+  &__role_remove {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $color-warning;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  /* Prepopulated permissions: one row per built-in grant. */
+  &__section {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+  }
+
+  &__section_head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 0.625rem;
+    text-align: left;
+    color: $color-steel-blue;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+
+      .grants__section_title {
+        color: $color-cyan;
+      }
+    }
+
+    &--open {
+      border-bottom: 1px solid $color-line;
+    }
+  }
+
+  &__chevron {
+    flex: none;
+    transition: transform $default-transition-time;
+
+    &--open {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__section_flag {
+    margin-left: auto;
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-warning;
+  }
+
+  &__section_title {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-white;
+  }
+
+  &__section_summary {
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-steel-blue;
+  }
+
+  &__prepop {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding: 0.75rem 1rem;
+
+    & + & {
+      border-top: 1px solid $color-line;
+    }
+  }
+
+  &__prepop_main {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 13px;
+    color: $color-white;
+  }
+
+  &__prepop_dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    flex: none;
+    background: $color-pos;
+  }
+
+  &__prepop--off &__prepop_dot {
+    background: $color-inactive;
+  }
+
+  &__prepop--off &__prepop_label {
+    color: $color-steel-blue;
+  }
+
+  &__prepop--removed &__prepop_dot {
+    background: $color-warning;
+  }
+
+  &__prepop_state {
+    margin-left: auto;
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-steel-blue;
+  }
+
+  &__prepop--removed &__prepop_state {
+    color: $color-warning;
+  }
+
+  &__prepop_action {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+
+    &:hover {
+      color: $color-white;
+    }
+  }
+
+  &__prepop_switches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    padding-left: 1.0625rem;
+  }
+
+  &__switch {
+    font-size: 12px;
+    color: $color-steel-blue;
+
+    &--on {
+      color: $color-white;
+    }
+  }
+
+  &__prepop_note {
+    margin: 0;
+    padding-left: 1.0625rem;
+    font-size: 12px;
+    color: $color-warning;
   }
 
   &__role_head {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     flex-wrap: wrap;
     gap: 0.25rem 0.75rem;
   }

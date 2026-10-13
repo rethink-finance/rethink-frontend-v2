@@ -5,25 +5,35 @@
       class="permissions__content brand_card"
     >
       <div class="v2_head">
-        <span class="v2_head__badge">Roles V2</span>
+        <div class="v2_head__title">
+          <span class="v2_head__badge">Roles V2</span>
+          <span v-if="isManaging" class="v2_head__mode">Managing</span>
+        </div>
         <div class="v2_head__buttons">
           <UiLinkExternalButton
-            title="View vault permissions"
+            title="View in Roles app"
             :href="gnosisRolesUrl"
           />
           <v-btn
+            v-if="!isManaging"
             color="primary"
-            variant="outlined"
-            @click="navigateToCreatePermissions"
+            @click="isManaging = true"
           >
-            Generate permissions proposal
+            Manage permissions
+          </v-btn>
+          <v-btn
+            v-else
+            variant="outlined"
+            @click="stopManaging"
+          >
+            {{ hasPendingChanges ? "Discard changes" : "Done" }}
           </v-btn>
         </div>
       </div>
-      <p class="v2_hint">
-        Permission changes (targets, functions, pinned parameters) go through
-        governance. Role membership below executes directly, through the
-        connected wallet's own role.
+      <p v-if="isManaging" class="v2_hint">
+        Member changes run from your wallet's own role. Removing or adding
+        permissions builds one governance proposal, sent from the bar at the
+        bottom.
       </p>
 
       <div v-if="needsActivation" class="activation_card mt-6">
@@ -69,10 +79,11 @@
         <FundGovernanceDelegationNotice />
       </div>
 
-      <!-- What every role may do right now, folded from the same modifier
-           log the activation and membership checks below read. -->
+      <!-- Each role in turn, the executor first: who holds it, then what it
+           may do. Read-only until Manage permissions is pressed. -->
       <FundPermissionsRolesV2Grants
         v-if="roleModAddress"
+        v-model:selected-key="selectedRoleKey"
         class="mt-8"
         :chain-id="fund.chainId"
         :fund-address="fund.address"
@@ -83,45 +94,135 @@
         :is-loading="isReadingScopeLogs"
         :error="scopeLogsError"
         :pending-activation="pendingActivation"
+        :executor-role-key="executorRoleKey"
+        :draft-roles="draftRoleViews"
+        :manage="isManaging"
+        :removals="removals"
+        :prepopulated-removals="prepopulatedRemovals"
+        :member-editor-keys="memberEditorKeys"
         @refresh="refreshScopes"
-      />
+        @remove="markRemoval"
+        @toggle-prepopulated="togglePrepopulatedRemoval"
+        @remove-role="dropCustomRole"
+      >
+        <template #members="{ role }">
+          <OnboardingRoleMembers
+            :key="`members:${role.keyBytes}`"
+            :ref="(el: any) => setMembersRef(role, el)"
+            :model-value="memberChangesOf(role)"
+            embedded
+            :readonly="!isManaging || (!isCustomRole(role) && !canEditMembers)"
+            :role-label="role.name"
+            :role-key="memberRoleKey(role)"
+            :recommend-multisig="role.kind === 'admin'"
+            :chain-id="fund.chainId"
+            :roles-mod-address="roleModAddress"
+            :empty-text="memberEmptyText(role)"
+            :leaves-empty-text="role.kind === 'admin' ? 'These changes leave the vault with no admin. Only governance could assign one afterwards.' : undefined"
+            @update:model-value="(changes: IAssignMemberChange[]) => setMemberChanges(role, changes)"
+          />
+          <p v-if="isManaging && isCustomRole(role)" class="manage_note manage_note--info">
+            Members of a custom role are changed by the permissions proposal: the
+            admin role may only change executor and admin members.
+          </p>
+          <p v-else-if="isManaging && !canEditMembers" class="manage_note">
+            {{ membersLockedReason }}
+          </p>
+        </template>
 
-      <!-- Membership: reads straight off the modifier, writes through the
-           connected wallet's own assignRoles permission. The admin card only
-           shows on a vault that has the admin role — one created before the
-           two-role split has nothing to hold it for. -->
-      <div class="members mt-6">
-        <OnboardingRoleMembers
-          v-if="hasAdminRole"
-          ref="adminMembersRef"
-          v-model="pendingAdminMemberChanges"
-          class="mb-4"
-          :role-label="`role ${VAULT_ROLES.admin.number} · admin`"
-          :role-key="ADMIN_ROLE_KEY_V2"
-          recommend-multisig
-          :chain-id="fund.chainId"
-          :roles-mod-address="roleModAddress"
-          empty-text="Nobody holds the admin role. Its permissions stay with governance until someone does."
-          leaves-empty-text="These changes leave the vault with no admin. Only governance could assign one afterwards."
-        />
-        <OnboardingRoleMembers
-          ref="roleMembersRef"
-          v-model="pendingMemberChanges"
-          :role-label="hasAdminRole ? `role ${VAULT_ROLES.executor.number} · executor` : undefined"
-          :role-key="executorRoleKey"
-          :chain-id="fund.chainId"
-          :roles-mod-address="roleModAddress"
-        />
+        <template #add-role="{ done }">
+          <OnboardingAddRole :add="(name: string) => addRole(name, done)" />
+        </template>
 
-        <div class="members__actions">
+        <template #additions="{ role }">
+          <div class="additions">
+            <div class="additions__title">
+              Add permissions to {{ role.name }}
+            </div>
+            <OnboardingProtocolPermissions
+              :key="role.keyBytes"
+              :model-value="additionsFor(role).selections"
+              :raw-entries="additionsFor(role).raw"
+              :chain-id="fund.chainId"
+              :roles-mod-address="roleModAddress"
+              :safe-address="fund.safeAddress"
+              :vault-address="fund.address"
+              :base-token="fund.baseToken?.address"
+              :context-role="role.label"
+              :role-key="role.keyBytes"
+              @update:model-value="(selections: IProtocolSelectionState[]) => (additionsFor(role).selections = selections)"
+              @update:raw-entries="(raw: IRawPermissionCodeEntry[]) => (additionsFor(role).raw = raw)"
+            />
+          </div>
+        </template>
+      </FundPermissionsRolesV2Grants>
+
+      <!-- Everything queued in manage mode, and the two ways it is sent:
+           member changes from the wallet, permissions as a proposal. -->
+      <div v-if="isManaging" class="pending">
+        <div class="pending__group">
+          <div class="pending__label">
+            Members
+          </div>
+          <div class="pending__text">
+            {{ memberSummary }}
+          </div>
           <v-btn
             color="primary"
-            :disabled="!queuedMemberChanges.length"
+            variant="outlined"
+            :disabled="!queuedMemberChanges.length || !canEditMembers"
             :loading="isExecutingMemberChanges"
             @click="executeMemberChanges"
           >
             Execute member changes
           </v-btn>
+        </div>
+
+        <div class="pending__group pending__group--wide">
+          <div class="pending__label">
+            Permissions
+          </div>
+          <div class="pending__text">
+            {{ permissionSummary }}
+            <button
+              v-if="removalCount"
+              type="button"
+              class="pending__undo"
+              @click="removals = {}; prepopulatedRemovals = {}"
+            >
+              Undo removals
+            </button>
+          </div>
+          <p v-for="issue in permissionIssues" :key="issue" class="pending__issue">
+            {{ issue }}
+          </p>
+          <div class="pending__propose">
+            <v-text-field
+              v-model="proposalTitle"
+              class="pending__title"
+              density="compact"
+              hide-details
+              placeholder="Proposal title"
+            />
+            <v-btn
+              color="primary"
+              :disabled="!permissionCalls.length || permissionIssues.length > 0 || !canCreateProposal"
+              :loading="isProposing"
+              @click="createPermissionsProposal"
+            >
+              Create proposal
+              <v-tooltip
+                v-if="!canCreateProposal"
+                activator="parent"
+                location="top"
+              >
+                {{ NO_DELEGATES_TITLE }}
+              </v-tooltip>
+            </v-btn>
+          </div>
+          <button type="button" class="pending__link" @click="navigateToCreatePermissions">
+            Or build a proposal call by call
+          </button>
         </div>
       </div>
     </UiMainCard>
@@ -178,6 +279,7 @@
 </template>
 
 <script setup lang="ts">
+import { ethers } from "ethers";
 import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund/fund.store";
 import { usePermissionsProposalStore } from "~/store/governance-proposals/permissions_proposal.store";
@@ -212,7 +314,6 @@ import {
   type IAssignMemberChange,
 } from "~/composables/nav/generateNAVPermission";
 import { listLiveRoleKeys } from "~/composables/permissions/roleScopeLogs";
-import { VAULT_ROLES } from "~/composables/permissions/vaultRoles";
 import { UPDATE_SETTINGS_SELECTOR } from "~/composables/permissions/rolesV2Permissions";
 import {
   fetchRoleScopeLogs,
@@ -228,6 +329,30 @@ import {
   useProposalPreflight,
 } from "~/composables/governance/useProposalPreflight";
 import { RolesVersion } from "~/types/enums/roles_version";
+import type { IRawPermissionCodeEntry } from "~/composables/permissions/parseRawPermissionCode";
+import {
+  buildProtocolPermissionEntries,
+  getRegistryProtocols,
+  hasEnabledProtocolSelections,
+  initProtocolSelections,
+  validateProtocolSelections,
+  type IProtocolSelectionState,
+} from "~/composables/permissions/protocolPermissions";
+import {
+  buildStoredRoleViews,
+  type IStoredRoleView,
+} from "~/composables/permissions/storedRoleGrants";
+import {
+  buildPrepopulatedRemovalCalls,
+  buildRemovalCalls,
+  canManageMembers,
+  expandRemoval,
+  rolesThatManageMembers,
+  splitPrepopulated,
+} from "~/composables/permissions/managePermissions";
+import type { IPermissionScope } from "~/composables/permissions/revokePermissions";
+import { useVaultCustomRoles } from "~/composables/permissions/useVaultCustomRoles";
+import { useRolesChangeProposal } from "~/composables/permissions/useRolesChangeProposal";
 
 const router = useRouter();
 const fundStore = useFundStore();
@@ -578,6 +703,320 @@ const executeMemberChanges = async () => {
   }
 };
 
+/* ---- Manage mode ------------------------------------------------------------
+ * Read-only until "Manage permissions" is pressed. Then each role offers its
+ * member editor (when the connected wallet may change members), Remove on
+ * every stored grant, and the protocol library with raw permissions. Member
+ * changes are sent from the wallet; permission changes become one proposal.
+ */
+const isManaging = ref(false);
+const { propose, isProposing } = useRolesChangeProposal();
+
+// The roles as the grants view lists them, for the checks below.
+const storedViews = computed((): IStoredRoleView[] => {
+  if (!scopeLogs.value) return [];
+  try {
+    return buildStoredRoleViews(scopeLogs.value);
+  } catch {
+    return [];
+  }
+});
+
+// The roles whose members the page lists through the editor: the admin, the
+// executor under the key this vault uses, and every custom role.
+const memberEditorKeys = computed(() => {
+  const executorKey = toRoleKeyBytes32(executorRoleKey.value).toLowerCase();
+  return [
+    ...storedViews.value
+      .filter((view) => view.kind === "admin" || view.keyBytes === executorKey)
+      .map((view) => view.keyBytes),
+    ...customRoles.value.map((role) => role.keyBytes),
+  ];
+});
+
+// Custom roles: stored ones read off the modifier, plus names added here.
+const { customRoles, addCustomRole, removeCustomRole } = useVaultCustomRoles(
+  computed(() => fund?.chainId),
+  roleModAddress,
+  scopeLogs,
+);
+const customKeys = computed(() => new Set(customRoles.value.map((role) => role.keyBytes)));
+const isCustomRole = (role: IStoredRoleView) => customKeys.value.has(role.keyBytes);
+// A named role nothing is stored for yet, shaped like a stored one.
+const draftRoleViews = computed((): IStoredRoleView[] =>
+  customRoles.value
+    .filter((role) => !role.stored)
+    .map((role) => ({
+      keyBytes: role.keyBytes,
+      label: role.roleKey,
+      kind: "custom",
+      number: role.number,
+      name: role.name,
+      members: [],
+      disabledMembers: [],
+      entries: [],
+      contracts: 0,
+      openContracts: 0,
+      emptyTargets: [],
+      functions: 0,
+      allowances: [],
+    })),
+);
+
+// The tab on screen; the executor until another one is picked.
+const selectedRoleKey = ref("");
+const addRole = (name: string, done: (key: string) => void): string => {
+  const error = addCustomRole(name);
+  if (!error) done(ethers.encodeBytes32String(name.trim()).toLowerCase());
+  return error;
+};
+const dropCustomRole = (role: IStoredRoleView) => {
+  const custom = customRoles.value.find((entry) => entry.keyBytes === role.keyBytes);
+  if (custom) removeCustomRole(custom);
+  delete customMemberChanges[role.keyBytes];
+  delete additions[role.keyBytes];
+  selectedRoleKey.value = "";
+};
+
+// Queued membership changes. The executor's and the admin's are sent from the
+// wallet; a custom role's go into the permissions proposal.
+const customMemberChanges = reactive<Record<string, IAssignMemberChange[]>>({});
+const memberChangesOf = (role: IStoredRoleView): IAssignMemberChange[] => {
+  if (role.kind === "admin") return pendingAdminMemberChanges.value;
+  if (isCustomRole(role)) return customMemberChanges[role.keyBytes] ?? [];
+  return pendingMemberChanges.value;
+};
+const setMemberChanges = (role: IStoredRoleView, changes: IAssignMemberChange[]) => {
+  if (role.kind === "admin") pendingAdminMemberChanges.value = changes;
+  else if (isCustomRole(role)) customMemberChanges[role.keyBytes] = changes;
+  else pendingMemberChanges.value = changes;
+};
+const memberRoleKey = (role: IStoredRoleView) => {
+  if (role.kind === "admin") return ADMIN_ROLE_KEY_V2;
+  if (isCustomRole(role)) return role.label;
+  return executorRoleKey.value;
+};
+const memberEmptyText = (role: IStoredRoleView) => {
+  if (role.kind === "admin") {
+    return "Nobody holds the admin role. Its permissions stay with governance until someone does.";
+  }
+  if (isCustomRole(role)) return "Nobody holds this role yet.";
+  return undefined;
+};
+const setMembersRef = (role: IStoredRoleView, el: any) => {
+  if (role.kind === "admin") adminMembersRef.value = el;
+  else if (!isCustomRole(role)) roleMembersRef.value = el;
+};
+
+const connectedAccount = computed(() => fundStore.activeAccountAddress || "");
+const canEditMembers = computed(() =>
+  canManageMembers(connectedAccount.value, {
+    safeAddress: fund?.safeAddress,
+    managers: rolesThatManageMembers(storedViews.value, roleModAddress.value),
+  }),
+);
+const membersLockedReason = computed(() =>
+  connectedAccount.value
+    ? "The connected wallet holds no role that may change members. Connect a member of the admin role, or the vault Safe."
+    : "Connect a member of the admin role, or the vault Safe, to change members.",
+);
+
+// The vault's own contracts, which the prepopulated grants point at.
+const vaultContracts = computed(() => ({
+  fundAddress: fund?.address ?? "",
+  baseToken: fund?.baseToken?.address ?? "",
+  rolesModifier: roleModAddress.value,
+}));
+/** A role's permissions beyond its prepopulated ones: what Remove indexes into. */
+const otherEntriesOf = (view: IStoredRoleView) =>
+  splitPrepopulated(view.entries, view.label, vaultContracts.value, executorRoleKey.value).other;
+
+// Other permissions marked for removal, by role key, as indices into
+// otherEntriesOf(role).
+const removals = ref<Record<string, number[]>>({});
+const markRemoval = (role: IStoredRoleView, entries: IRawPermissionCodeEntry[], indices: number[]) => {
+  const current = removals.value[role.keyBytes] ?? [];
+  removals.value = {
+    ...removals.value,
+    [role.keyBytes]: expandRemoval(entries, [...current, ...indices]),
+  };
+};
+
+// Prepopulated grants marked for removal, by role key, as "target:selector".
+const prepopulatedRemovals = ref<Record<string, string[]>>({});
+const togglePrepopulatedRemoval = (role: IStoredRoleView, scope: IPermissionScope) => {
+  const key = `${scope.target.toLowerCase()}:${scope.selector.toLowerCase()}`;
+  const current = prepopulatedRemovals.value[role.keyBytes] ?? [];
+  prepopulatedRemovals.value = {
+    ...prepopulatedRemovals.value,
+    [role.keyBytes]: current.includes(key)
+      ? current.filter((entry) => entry !== key)
+      : [...current, key],
+  };
+};
+
+const removalCount = computed(
+  () =>
+    Object.values(removals.value).reduce((sum, list) => sum + list.length, 0) +
+    Object.values(prepopulatedRemovals.value).reduce((sum, list) => sum + list.length, 0),
+);
+
+// What each role gets added: library selections and pasted raw calls.
+interface IRoleAdditions {
+  selections: IProtocolSelectionState[];
+  raw: IRawPermissionCodeEntry[];
+}
+const additions = reactive<Record<string, IRoleAdditions>>({});
+const freshSelections = (): IProtocolSelectionState[] => {
+  try {
+    return initProtocolSelections(getRegistryProtocols(fund.chainId));
+  } catch {
+    return [];
+  }
+};
+watch(
+  () => [...storedViews.value, ...draftRoleViews.value],
+  (views) => {
+    for (const view of views) {
+      if (!additions[view.keyBytes]) {
+        additions[view.keyBytes] = { selections: freshSelections(), raw: [] };
+      }
+    }
+  },
+  { immediate: true },
+);
+const NO_ADDITIONS: IRoleAdditions = { selections: [], raw: [] };
+const additionsFor = (role: IStoredRoleView) => additions[role.keyBytes] ?? NO_ADDITIONS;
+
+/** Every queued permission change as Roles calls: removals first, then grants. */
+const permissionChanges = computed(() => {
+  const removalCalls: string[] = [];
+  const grantCalls: string[] = [];
+  const issues: string[] = [];
+  const lines: string[] = [];
+  for (const view of storedViews.value) {
+    const prepopulated = (prepopulatedRemovals.value[view.keyBytes] ?? []).map((key) => {
+      const [target, selector] = key.split(":");
+      return { target, selector };
+    });
+    if (prepopulated.length) {
+      removalCalls.push(...buildPrepopulatedRemovalCalls(prepopulated, view.keyBytes));
+      const labels = splitPrepopulated(view.entries, view.label, vaultContracts.value, executorRoleKey.value).grants
+        .filter((grant) => prepopulated.some((scope) =>
+          scope.target === grant.scope.target.toLowerCase() &&
+          scope.selector === grant.scope.selector.toLowerCase()))
+        .map((grant) => grant.label);
+      for (const label of labels) lines.push(`${view.name}: remove ${label}`);
+    }
+    const gone = removals.value[view.keyBytes] ?? [];
+    if (!gone.length) continue;
+    const other = otherEntriesOf(view);
+    removalCalls.push(...buildRemovalCalls(other, gone, view.keyBytes));
+    for (const index of gone) lines.push(`${view.name}: remove ${other[index]?.label ?? "a grant"}`);
+  }
+  // Additions go to stored and newly named roles alike.
+  for (const view of [...storedViews.value, ...draftRoleViews.value]) {
+    const added = additions[view.keyBytes];
+    if (!added) continue;
+    if (hasEnabledProtocolSelections(added.selections)) {
+      const problems = validateProtocolSelections(fund.chainId, added.selections);
+      if (problems.length) {
+        issues.push(...problems.map((problem) => `${view.name}: ${problem.message}`));
+      } else {
+        try {
+          const build = buildProtocolPermissionEntries({
+            chainId: fund.chainId,
+            rolesModAddress: roleModAddress.value,
+            selections: added.selections,
+            roleKey: view.keyBytes,
+          });
+          grantCalls.push(...build.entries);
+          lines.push(...build.descriptions.map((text) => `${view.name}: ${text}`));
+        } catch (error: any) {
+          issues.push(`${view.name}: ${error?.message ?? String(error)}`);
+        }
+      }
+    }
+    for (const entry of added.raw) {
+      grantCalls.push(entry.data);
+      lines.push(`${view.name}: ${entry.label}`);
+    }
+  }
+  // A custom role's members, assigned by the proposal (as the Safe once the
+  // modifier is activated, by the governor before).
+  const memberCalls: string[] = [];
+  for (const role of customRoles.value) {
+    for (const change of customMemberChanges[role.keyBytes] ?? []) {
+      memberCalls.push(buildAssignRolesCalldata(change.address, change.action === "ADD", role.roleKey));
+      lines.push(`${role.name}: ${change.action === "ADD" ? "add" : "remove"} member ${change.address}`);
+    }
+  }
+  return {
+    calls: [...removalCalls, ...grantCalls, ...memberCalls],
+    removalCalls,
+    grantCalls,
+    memberCalls,
+    issues,
+    lines,
+  };
+});
+const permissionCalls = computed(() => permissionChanges.value.calls);
+const permissionIssues = computed(() => permissionChanges.value.issues);
+
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
+const memberSummary = computed(() => {
+  const count = queuedMemberChanges.value.length;
+  if (count) return `${plural(count, "change")} queued, each signed by your wallet.`;
+  return canEditMembers.value
+    ? "Nothing queued. Add or remove members under a role above."
+    : "Your wallet cannot change members.";
+});
+const permissionSummary = computed(() => {
+  const { grantCalls } = permissionChanges.value;
+  if (!permissionCalls.value.length) {
+    return "Nothing queued. Press Remove on a permission, or Add protocol under a role.";
+  }
+  const { memberCalls } = permissionChanges.value;
+  const parts: string[] = [];
+  if (removalCount.value) parts.push(`removes ${plural(removalCount.value, "permission")}`);
+  if (grantCalls.length) parts.push(`adds ${plural(grantCalls.length, "call")}`);
+  if (memberCalls.length) parts.push(`changes ${plural(memberCalls.length, "custom role member")}`);
+  return `One proposal that ${parts.join(" and ")} (${plural(permissionCalls.value.length, "Roles call")}).`;
+});
+
+const hasPendingChanges = computed(
+  () =>
+    queuedMemberChanges.value.length > 0 ||
+    permissionCalls.value.length > 0 ||
+    Object.values(additions).some((added) => hasEnabledProtocolSelections(added.selections)),
+);
+
+const resetPermissionChanges = () => {
+  removals.value = {};
+  prepopulatedRemovals.value = {};
+  for (const key of Object.keys(customMemberChanges)) delete customMemberChanges[key];
+  for (const key of Object.keys(additions)) {
+    additions[key] = { selections: freshSelections(), raw: [] };
+  }
+};
+
+const stopManaging = () => {
+  pendingMemberChanges.value = [];
+  pendingAdminMemberChanges.value = [];
+  resetPermissionChanges();
+  isManaging.value = false;
+};
+
+const proposalTitle = ref("Update vault permissions");
+const createPermissionsProposal = async () => {
+  const { calls, lines } = permissionChanges.value;
+  const proposed = await propose(calls, {
+    title: proposalTitle.value.trim() || "Update vault permissions",
+    description: lines.join("\n"),
+  });
+  if (proposed) resetPermissionChanges();
+};
+
 const fetchRolesAndPermissions = async () => {
   if (!fund?.address) {
     roles.value = [];
@@ -644,6 +1083,20 @@ watch(
   gap: 1rem;
   flex-wrap: wrap;
 
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__mode {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-warning;
+  }
+
   &__badge {
     font-family: $font-mono;
     font-size: 10.5px;
@@ -673,11 +1126,110 @@ watch(
   color: $color-steel-blue;
 }
 
-.members {
-  &__actions {
+.manage_note {
+  margin: 0.5rem 0 0;
+  font-size: 12.5px;
+  color: $color-warning;
+
+  &--info {
+    color: $color-steel-blue;
+  }
+}
+
+/* Manage mode: what gets added to one role. */
+.additions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 1rem;
+  border: 1px dashed $color-line-2;
+  border-radius: $default-border-radius;
+
+  &__title {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
+}
+
+/* Manage mode: everything queued, and the two ways it is sent. */
+.pending {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr);
+  gap: 1rem 2rem;
+  margin-top: 2rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid $color-accent-line;
+  border-radius: $default-border-radius;
+  background: $color-surface;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.25);
+
+  @media (max-width: 760px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  &__group {
     display: flex;
-    justify-content: flex-end;
-    margin-top: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  &__label {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-cyan;
+  }
+
+  &__text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: $color-white;
+  }
+
+  &__undo,
+  &__link {
+    padding: 0;
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: $color-steel-blue;
+    text-decoration: underline;
+
+    &:hover {
+      color: $color-white;
+    }
+  }
+
+  &__undo {
+    margin-left: 0.5rem;
+  }
+
+  &__issue {
+    margin: 0;
+    font-size: 12.5px;
+    color: $color-warning;
+  }
+
+  &__propose {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  &__title {
+    flex: 1;
+    min-width: 0;
   }
 }
 

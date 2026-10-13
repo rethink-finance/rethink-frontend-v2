@@ -1,5 +1,5 @@
 <template>
-  <div class="role_members" :class="{ 'role_members--embedded': embedded }">
+  <div class="role_members" :class="{ 'role_members--embedded': embedded, 'role_members--readonly': readonly }">
     <div class="role_members__head">
       <div class="role_members__title">
         <template v-if="embedded">
@@ -19,7 +19,7 @@
           {{ isLoadingMembers ? "Loading…" : "Refresh" }}
         </button>
       </div>
-      <div class="role_members__controls">
+      <div v-if="!readonly" class="role_members__controls">
         <input
           v-model="addressInput"
           class="role_members__input"
@@ -68,10 +68,12 @@
         >contract</span>
       </span>
       <span
+        v-if="!readonly"
         class="role_members__tag"
         :class="{ 'role_members__tag--muted': row.state === 'MEMBER' }"
       >{{ TAG_LABELS[row.state] }}</span>
       <button
+        v-if="!readonly"
         type="button"
         class="role_members__action"
         @click="act(row)"
@@ -153,6 +155,8 @@ const props = defineProps<{
    * is an everyday operating role and is fine on a plain wallet.
    */
   recommendMultisig?: boolean;
+  /** List the members only: no add field, no Remove buttons. */
+  readonly?: boolean;
   /** What to say when nobody holds the role and nothing is queued. */
   emptyText?: string;
   /** What to warn when the queued changes would leave the role empty. */
@@ -478,6 +482,10 @@ defineExpose({ reload: loadMembers });
     font-family: $font-mono;
     font-size: 11px;
     color: $color-neg;
+  }
+
+  &--readonly &__row {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   &__row {
