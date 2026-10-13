@@ -41,88 +41,6 @@
     </div>
 
     <!--
-      Where the vault stands and what every button would meet right now. The
-      whitelist is dry-run from the address that will use it, so the day the
-      vault is deployed this already says which permissions are live.
-    -->
-    <div class="brand_card crt_status">
-      <div class="crt_status__head">
-        <div class="crt_status__facts">
-          <span class="crt_tag">Roles v2</span>
-          <span class="crt_fact">
-            <span class="crt_dot" :class="vault ? (vault.finalized ? 'crt_dot--on' : 'crt_dot--warn') : 'crt_dot--idle'" />
-            {{ vault ? (vault.finalized ? "Vault finalized" : "Vault initialised · not finalized yet") : "Reading the vault…" }}
-          </span>
-          <span v-if="vault" class="crt_fact">
-            <span class="crt_dot" :class="vault.ownerKind === 'safe' ? 'crt_dot--on' : 'crt_dot--warn'" />
-            Modifier owned by the {{ ownerKindText }}
-          </span>
-          <span v-if="vault" class="crt_fact">
-            <span class="crt_dot" :class="vault.activated ? 'crt_dot--on' : 'crt_dot--warn'" />
-            {{ vault.activated ? "Activation done" : "Activation proposal pending" }}
-          </span>
-        </div>
-        <div class="crt_status__you">
-          <span class="crt_dot" :class="`crt_dot--${standing.tone}`" />
-          {{ standing.text }}
-        </div>
-      </div>
-
-      <div class="crt_ready">
-        <div v-for="group in readinessGroups" :key="group.role" class="crt_ready__group">
-          <div class="crt_label">
-            {{ group.title }}
-          </div>
-          <div v-if="!readiness" class="crt_card__sub">
-            checking the whitelist…
-          </div>
-          <div
-            v-for="r in group.rows"
-            :key="r.label"
-            class="crt_ready__row"
-            :title="r.detail"
-          >
-            <span class="crt_dot" :class="`crt_dot--${readyTone(r.state)}`" />
-            <span class="crt_ready__label">{{ r.label }}</span>
-            <span class="crt_mono_dim crt_ready__state">{{ readyText(r.state) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="missingRoles.length" class="crt_missing">
-        <div class="crt_card__sub">
-          Permissions still to store on the modifier. Until the vault is finalized the deployer wallet
-          <span class="crt_mono">{{ shortAddr(CRT_V2.ADDR.executor) }}</span> stores them from the create flow's Permissions step
-          (Protocol integrations → Add permission → Raw code, paste the array, Save); afterwards they need a governance proposal.
-        </div>
-        <div v-if="acrossFixMissing" class="crt_card__sub crt_bad_text">
-          The stored Across scope leaves outputAmount and the relayer open, so a deposit's value can go to the relayer
-          instead of the payout wallet. Store the one-call Across fix (it replaces that scope; ~2.1M gas, fits a standard block).
-        </div>
-        <div class="crt_missing__actions">
-          <v-btn
-            v-if="acrossFixMissing"
-            variant="outlined"
-            size="small"
-            color="error"
-            @click="copyRawPermissions('acrossFix')"
-          >
-            Copy Across fix · {{ rawPermissions.acrossFix.entries.length }} call
-          </v-btn>
-          <v-btn
-            v-for="role in missingRoles"
-            :key="role"
-            variant="outlined"
-            size="small"
-            @click="copyRawPermissions(role)"
-          >
-            Copy {{ role }} raw permissions · {{ rawPermissions[role].entries.length }} calls
-          </v-btn>
-        </div>
-      </div>
-    </div>
-
-    <!--
       What the last press is doing, the way the deposit dialog shows its own
       transactions: a rail of steps, the live one in front of you, and under
       it where each one landed (explorer, Safe{Wallet}) or why it stopped.
@@ -714,9 +632,9 @@ import { sendAsSafe } from "~/composables/permissions/useCuratorExecution";
 import UiSegmented from "~/components/global/ui/Segmented.vue";
 import {
   CRT_V2, crtV2Inner, crtV2Wrap, crtV2SafeBatch, crtV2Simulate, crtV2GetBalances, crtV2GetPayoutBalances, crtV2PlanAcrossPayout, crtV2DescribeAcrossSplit,
-  crtV2GetCore, crtV2GetAgents, crtV2AgentStatus, crtV2GetAdminSafe, crtV2GetVaultState, crtV2HoldsRole, crtV2Readiness,
-  crtV2RawPermissions, crtV2ValidUntil, crtV2FormatDate, crtV2DaysLeft, fmt6, shortAddr, usdc6,
-  type CrtV2AgentSlot, type CrtV2Readiness as ReadinessRow, type CrtV2SafeCall, type CrtV2VaultState, type CrtV2Wrapped,
+  crtV2GetCore, crtV2GetAgents, crtV2AgentStatus, crtV2GetAdminSafe, crtV2GetVaultState, crtV2HoldsRole,
+  crtV2ValidUntil, crtV2FormatDate, crtV2DaysLeft, fmt6, shortAddr, usdc6,
+  type CrtV2AgentSlot, type CrtV2SafeCall, type CrtV2VaultState, type CrtV2Wrapped,
 } from "~/composables/execution/crtV2Console";
 import type { CrtV2Role } from "~/composables/execution/crtV2Vault";
 import { buildSafeTx, fetchNextSafeNonce, fetchSafeTxStatus, proposeSafeTx, safeWalletUrl, signSafeTx } from "~/composables/safe/safeTransactionService";
@@ -734,7 +652,6 @@ const core = ref<any>(null);
 const payoutBal = ref<{ hyperEvm: bigint; arbitrum: bigint } | null>(null);
 const loadingBal = ref(false);
 const vault = ref<CrtV2VaultState | null>(null);
-const readiness = ref<ReadinessRow[] | null>(null);
 const adminSafe = ref<{ owners: string[]; threshold: number; nonce: number } | null>(null);
 const executorMembership = ref<boolean | null>(null);
 /** The action the last press started, with each step's state; the strip above the cards shows it. */
@@ -757,7 +674,6 @@ const agentDays = ref(String(CRT_V2.AGENT.defaultDays));
 const memberAddr = ref(""); const newAdminAddr = ref("");
 
 const validAmt = (v: string) => { const x = Number(v); return v !== "" && isFinite(x) && x > 0; };
-const rawPermissions = crtV2RawPermissions();
 
 // ─── Who is connected ────────────────────────────────────────────────────────
 
@@ -796,37 +712,11 @@ const proposeHint = computed(() => {
   }
 });
 const proposeDisabledReason = computed(() => (adminStanding.value === "none" ? (account.value ? "The connected wallet is not an owner of the admin Safe" : "Connect an owner of the admin Safe") : ""));
-const standing = computed(() => {
-  if (!account.value) return { tone: "idle", text: "No wallet connected" };
-  const parts: string[] = [];
-  if (isVaultSafe.value) parts.push("the vault Safe (Pilot session)");
-  if (connectedIsExecutor.value) parts.push("executor");
-  if (adminStanding.value === "safe") parts.push("the admin Safe");
-  if (adminStanding.value === "owner") parts.push("an owner of the admin Safe");
-  if (!parts.length) return { tone: connectedIsExecutor.value === null || adminStanding.value === "unknown" ? "idle" : "off", text: `${shortAddr(fundStore.activeAccountAddress)} · no role here` };
-  return { tone: "on", text: `${shortAddr(fundStore.activeAccountAddress)} · ${parts.join(" and ")}` };
-});
-const ownerKindText = computed(() => ({ factory: "factory (until the vault is finalized)", governor: "governor (activation proposal pending)", safe: "vault Safe (activated)", other: "an unexpected address" }[vault.value?.ownerKind ?? "other"]));
-
-// ─── Readiness ───────────────────────────────────────────────────────────────
-
-const readinessGroups = computed(() => (["executor", "admin"] as CrtV2Role[]).map((role) => ({
-  role,
-  title: role === "executor" ? "Executor whitelist" : "Admin whitelist",
-  rows: (readiness.value ?? []).filter((r) => r.role === role),
-})));
-const readyTone = (state: ReadinessRow["state"]) => ({ ready: "on", soft: "on", activation: "warn", missing: "off", unknown: "idle" }[state]);
-const readyText = (state: ReadinessRow["state"]) => ({ ready: "ready", soft: "whitelisted", activation: "after activation", missing: "missing", unknown: "unknown" }[state]);
-/** Roles with a whitelisted action missing, offered their raw permissions. */
-const missingRoles = computed(() => (["executor", "admin"] as CrtV2Role[]).filter((role) => (readiness.value ?? []).some((r) => r.role === role && r.state === "missing" && !r.fix)));
-/** The stored Across scope still lets a deposit's value go to the relayer. */
-const acrossFixMissing = computed(() => (readiness.value ?? []).some((r) => r.fix === "acrossFix" && r.state === "missing"));
 const acrossSplitText = computed(() => { try { return crtV2DescribeAcrossSplit(usdc6(payoutAmt.value)); } catch { return ""; } });
 
 const copyText = async (text: string, done: string) => {
   try { await navigator.clipboard.writeText(text); toastStore.successToast(done); } catch { toastStore.errorToast("Could not copy. Select the text instead."); }
 };
-const copyRawPermissions = (which: CrtV2Role | "acrossFix") => copyText(rawPermissions[which].json, `${rawPermissions[which].entries.length} ${which === "acrossFix" ? "Across fix" : which} call${rawPermissions[which].entries.length === 1 ? "" : "s"} copied. Paste into the Permissions step's Raw code input and Save.`);
 
 // ─── Reads ───────────────────────────────────────────────────────────────────
 
@@ -854,7 +744,6 @@ const refresh = async () => {
     crtV2GetCore().then((c) => (core.value = c)).catch(() => {}),
     crtV2GetPayoutBalances().then((b) => (payoutBal.value = b)).catch(() => {}),
     crtV2GetVaultState().then((v) => (vault.value = v)).catch(() => {}),
-    crtV2Readiness().then((r) => (readiness.value = r)).catch(() => {}),
     crtV2HoldsRole(CRT_V2.ADDR.executor, "executor").then((m) => (executorMembership.value = m)).catch(() => {}),
     loadAgents(),
   ]);
@@ -1483,89 +1372,6 @@ const exec = async (step: any): Promise<boolean> => {
   }
 }
 
-/* Where the vault stands and what each button would meet. */
-.crt_status {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-
-  &__head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.75rem 1.5rem;
-  }
-
-  &__facts {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 1.25rem;
-    font-size: 13px;
-    color: $color-white;
-  }
-
-  &__you {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-family: $font-mono;
-    font-size: 11.5px;
-    letter-spacing: 0.04em;
-    color: $color-steel-blue;
-  }
-}
-
-.crt_fact {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.crt_ready {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem 2rem;
-
-  &__group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  &__row {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    font-size: 13px;
-    color: $color-white;
-  }
-
-  &__label {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__state {
-    white-space: nowrap;
-  }
-}
-
-.crt_missing {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding-top: 0.875rem;
-  border-top: 1px solid $color-line;
-
-  &__actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-}
-
 .crt_section {
   margin-top: 0.75rem;
 
@@ -1922,10 +1728,6 @@ const exec = async (step: any): Promise<boolean> => {
     color: $color-cyan;
     text-decoration: underline;
   }
-}
-
-.crt_bad_text {
-  color: $color-neg;
 }
 
 .crt_bad {
