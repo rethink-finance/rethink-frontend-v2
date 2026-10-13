@@ -1962,4 +1962,27 @@ const copyText = (text: string, message: string) => {
     text-decoration: underline;
   }
 }
+
+/*
+ * Value first, its label under it: the order the NAV and Flows pages use, so a
+ * figure reads the same on every curator page. The hero's label is a caption
+ * there too, not an accent.
+ */
+.doc_summary__hero {
+  gap: 0.375rem;
+}
+
+.doc_summary__hero > .doc_label,
+.doc_summary .doc_stat > .doc_label {
+  order: 1;
+}
+
+.doc_summary .doc_stat__sub {
+  order: 2;
+}
+
+.doc_label--accent {
+  letter-spacing: 0.1em;
+  color: $color-steel-blue;
+}
 </style>

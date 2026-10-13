@@ -49,19 +49,6 @@
                 :field="field"
               />
             </div>
-            <div class="curator_profile__cell curator_profile__cell--12">
-              <OnboardingPeriodControl
-                v-model="settlementField.value"
-                :field="settlementField"
-                :chain-id="fund.chainId"
-                :disabled="true"
-                wide
-              />
-              <p class="curator_profile__governance_note">
-                The planned settlement period is upgradable through governance,
-                not from curator mode.
-              </p>
-            </div>
           </div>
         </section>
 
@@ -106,7 +93,6 @@ import {
 } from "~/composables/permissions/useCuratorExecution";
 import { fetchActivationState } from "~/composables/permissions/activationProposal";
 import { uploadVaultImage } from "~/composables/vaultImage";
-import { FieldTag } from "~/types/enums/stepper_onboarding";
 import { InputType, type IField } from "~/types/enums/input_type";
 import type IFund from "~/types/fund";
 
@@ -136,8 +122,8 @@ const savedMetadata = ref<Record<string, any>>({});
 const hasChainMetadata = ref(false);
 
 // The metadata keys curator mode may write. plannedSettlementPeriod lives in
-// the same JSON but is governance-tagged in the create flow, so it renders
-// read-only below and never enters this list.
+// the same JSON but only governance can change it, so it is neither shown nor
+// written here (the merge in saveChanges carries it through untouched).
 const EDITABLE_KEYS = [
   "description",
   "strategistName",
@@ -151,7 +137,6 @@ const photoField = reactive<IField>({
   type: InputType.Image,
   placeholder: "",
   rules: [formRules.required],
-  tag: FieldTag.UpgradableCurator,
   value: "",
 });
 
@@ -163,7 +148,6 @@ const editableFields = reactive<IField[]>([
     placeholder: "E.g. Description",
     charLimit: 5000,
     rules: [formRules.required, formRules.charLimit(5000)],
-    tag: FieldTag.UpgradableCurator,
     cols: 12,
     value: "",
   },
@@ -174,7 +158,6 @@ const editableFields = reactive<IField[]>([
     placeholder: "E.g. rethink.finance",
     tooltip: "Displayed next to the vault name.",
     rules: [formRules.required],
-    tag: FieldTag.UpgradableCurator,
     cols: 6,
     value: "",
   },
@@ -185,7 +168,6 @@ const editableFields = reactive<IField[]>([
     placeholder: "E.g. https://rethink.finance",
     tooltip: "Strategist name becomes clickable and redirects here.",
     rules: [formRules.required],
-    tag: FieldTag.UpgradableCurator,
     cols: 6,
     value: "",
   },
@@ -195,22 +177,10 @@ const editableFields = reactive<IField[]>([
     type: InputType.Text,
     placeholder: "E.g. https://discord.com/channels/945238616408481833",
     rules: [],
-    tag: FieldTag.UpgradableCurator,
     cols: 12,
     value: "",
   },
 ]);
-
-const settlementField = reactive<IField>({
-  label: "Planned settlement period",
-  key: "plannedSettlementPeriod",
-  type: InputType.Period,
-  placeholder: "E.g. 0",
-  rules: [],
-  tag: FieldTag.UpgradableGovernance,
-  allowsInstant: true,
-  value: "",
-});
 
 const fieldByKey = (key: string): IField =>
   editableFields.find((field) => field.key === key) as IField;
@@ -238,7 +208,6 @@ const applyMetadata = (metadata: Record<string, any>) => {
   for (const key of EDITABLE_KEYS) {
     fieldByKey(key).value = metadata[key] ?? "";
   }
-  settlementField.value = String(metadata.plannedSettlementPeriod ?? "0");
 };
 
 const formSnapshot = () =>
@@ -263,7 +232,6 @@ const seedFromStore = () => {
     strategistName: fund?.strategistName,
     strategistUrl: fund?.strategistUrl,
     oivChatUrl: fund?.oivChatUrl,
-    plannedSettlementPeriod: fund?.plannedSettlementPeriod,
   });
   seededSnapshot = formSnapshot();
   isLoading.value = false;
@@ -409,10 +377,7 @@ watch(
 
   &__title {
     margin-bottom: 1.375rem;
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1.3;
-    color: $color-white;
+    @include card-title;
   }
 
   &__grid {
@@ -433,13 +398,6 @@ watch(
         grid-column: span 12;
       }
     }
-  }
-
-  &__governance_note {
-    margin-top: 0.375rem;
-    font-size: 12px;
-    line-height: 1.5;
-    color: $color-steel-blue;
   }
 
   &__actions {

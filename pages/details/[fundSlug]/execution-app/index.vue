@@ -1,35 +1,7 @@
 <template>
   <div class="execution-app">
-    <!--
-      Only the state that permits something. Why a wallet cannot execute is
-      not news at the top of a screen most people open to read: it belongs on
-      the button it disables, at the moment that button is reached for, and
-      every execute button on this screen carries it. The Scientific Vote
-      console names the executor itself, so it does not get the pill twice.
-    -->
-    <UiHeader v-if="canExecuteAsCurator && !isSciEthVault">
-      <div class="data_bar__item">
-        <div class="curator_status">
-          <Icon
-            :icon="executionMode === 'unverified' ? 'octicon:alert-16' : 'octicon:check-circle-fill-16'"
-            width="1rem"
-            height="1rem"
-            :color="executionMode === 'unverified' ? 'var(--color-warning)' : 'var(--color-success)'"
-          />
-          <div>
-            {{ executionLabel }}
-          </div>
-          <!-- What a press does in this mode, for managers used to Pilot
-               elsewhere: the pill names the session, the tooltip the route. -->
-          <v-tooltip activator="parent" location="bottom">
-            {{ executionHint }}
-          </v-tooltip>
-        </div>
-      </div>
-    </UiHeader>
-
-    <!-- The design puts the execution status first on this screen, so the
-         console follows it rather than sitting above the page's own header. -->
+    <!-- No "connected as" pill: being able to act is the default here, and
+         why a wallet cannot is said on the button it disables. -->
     <ExecutionCrtV2Console v-if="isCrtV2Vault" />
     <ExecutionCrtConsole v-else-if="isCrtVault" />
     <ExecutionDocConsole v-else-if="isDocVault" />
@@ -274,9 +246,6 @@ const toastStore = useToastStore();
 // it unwrapped, for Pilot to record.
 const {
   canExecute: canExecuteAsCurator,
-  executionMode,
-  executionLabel,
-  executionHint,
   disabledReason: curatorDisabledReason,
   sendAsCurator,
 } = useCuratorExecution();
@@ -640,20 +609,9 @@ watch(
 </script>
 
 <style scoped lang="scss">
-/* Design's status pill: mono caption with a state marker. */
-.curator_status {
-  align-items: center;
-  display: flex;
-  border: 1px solid $color-line-2;
-  padding: 0.5625rem 0.8125rem;
-  flex-direction: row;
-  border-radius: $default-border-radius;
-  font-family: $font-mono;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  font-weight: 400;
-  color: $color-text-irrelevant;
-  gap: 0.6rem;
+/* The generic tools' card titles take the card title every curator page uses. */
+.execution-app :deep(.main_header__title) {
+  @include card-title;
 }
 
 /* Same distance from its cards as the console's own group headings keep. */

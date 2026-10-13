@@ -1765,4 +1765,23 @@ const exec = async (step: any): Promise<boolean> => {
     flex: 0 0 auto;
   }
 }
+
+/*
+ * Value first, its label under it: the order the NAV and Flows pages use, so a
+ * figure reads the same on every curator page. The hero's label is a caption
+ * there too, not an accent.
+ */
+.crt_summary__hero {
+  gap: 0.375rem;
+}
+
+.crt_summary__hero > .crt_label,
+.crt_summary .crt_stat > .crt_label {
+  order: 1;
+}
+
+.crt_label--accent {
+  letter-spacing: 0.1em;
+  color: $color-steel-blue;
+}
 </style>

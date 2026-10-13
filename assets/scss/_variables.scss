@@ -254,6 +254,20 @@ $default-border-radius: 0.25rem;
 $default-border-properties: (
   "border": 1px solid $color-gray-transparent,
 );
+/*
+ * The one card title every curator page uses: the design system's card
+ * eyebrow (.brand_card__eyebrow), for titles that cannot take the class.
+ */
+@mixin card-title {
+  font-family: $font-mono;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: $color-title;
+}
+
 @mixin borderGray(
   $position: "border",
   $border-radius: true,
