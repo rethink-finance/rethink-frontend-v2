@@ -319,3 +319,27 @@ export const describeCoreWriterRule = (root: IConditionNode | undefined): Patter
   }
   return lines;
 };
+
+/**
+ * The CoreWriter actions a v2 rule on sendRawAction allows, by name
+ * ("usdClassTransfer", "addApiWallet"), or undefined when the rule does not
+ * fix which actions it is about.
+ */
+export const coreWriterActionNames = (root: IConditionNode | undefined): string[] | undefined => {
+  if (!root) return undefined;
+  const data = root.operator === RolesV2Operator.Matches ? root.children[0] : undefined;
+  if (!data) return undefined;
+  const patterns = patternsOf(data);
+  if (!patterns?.length) return undefined;
+  const names: string[] = [];
+  for (const pattern of patterns) {
+    const header = [0, 1, 2, 3].map((i) => pattern.get(i));
+    if (header.some((byte) => byte?.mask !== 0xff)) return undefined;
+    const [version, ...idBytes] = header.map((byte) => byte!.value);
+    if (version !== 1) return undefined;
+    const id = (idBytes[0] << 16) | (idBytes[1] << 8) | idBytes[2];
+    const name = ACTIONS[id]?.name ?? `action${id}`;
+    if (!names.includes(name)) names.push(name);
+  }
+  return names;
+};

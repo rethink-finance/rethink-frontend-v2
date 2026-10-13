@@ -5,12 +5,15 @@ import {
   ASSIGN_ROLES_SELECTOR,
   buildPrepopulatedRemovalCalls,
   buildRemovalCalls,
+  buildVaultOperationCalls,
   canManageMembers,
   expandRemoval,
+  groupByProtocol,
   orderRolesForDisplay,
   removableIndices,
   rolesThatManageMembers,
   splitPrepopulated,
+  vaultOperationSwitches,
 } from "../composables/permissions/managePermissions";
 import type { IStoredRoleView } from "../composables/permissions/storedRoleGrants";
 
@@ -252,5 +255,152 @@ describe("prepopulated permissions", () => {
       ethers.encodeBytes32String(EXECUTOR_KEY),
     );
     expect(decode(calls)).toEqual([["revokeFunction", FUND.toLowerCase(), "0xa61f5814"]]);
+  });
+});
+
+describe("vault operations as switches", () => {
+  const ADMIN_KEY = "adminRole";
+  const EXECUTOR_KEY = "defaultManagerRole";
+  const FUND = "0x4444444444444444444444444444444444444444";
+  const BASE = "0x1111111111111111111111111111111111111111";
+  const NAV_EXECUTOR = "0x49a2Ec2De6CbdB3282c5BdEc3b6ceb0157d84A47";
+  const FEE = "0x9999999999999999999999999999999999999999";
+  const RAW_SETTINGS = {
+    depositFee: "0",
+    withdrawFee: "0",
+    performanceFee: "2000",
+    managementFee: "0",
+    performaceHurdleRateBps: "0",
+    baseToken: BASE,
+    safe: SAFE,
+    isExternalGovTokenInUse: false,
+    isWhitelistedDeposits: false,
+    allowedDepositAddrs: [],
+    allowedManagers: [],
+    governanceToken: FUND,
+    fundAddress: FUND,
+    governor: SAFE,
+    fundName: "Fixture Fund",
+    fundSymbol: "FIX",
+    feeCollectors: [SAFE, SAFE, SAFE, SAFE],
+  };
+  const context = {
+    fundAddress: FUND,
+    baseToken: BASE,
+    rolesModifier: MODIFIER,
+    navExecutor: NAV_EXECUTOR,
+    poolPerformanceFee: FEE,
+    executorRoleKey: EXECUTOR_KEY,
+    rawSettings: RAW_SETTINGS,
+    fundMetadata: "{}",
+    feePerformancePeriod: "0",
+    feeManagePeriod: "0",
+  };
+  const ALL_EXECUTOR = { sendFunds: true, collectFees: true, updateNav: true, selfRevoke: true };
+  const ALL_ADMIN = {
+    manageExecutorMembers: true,
+    transferAdminRole: true,
+    manageWhitelist: true,
+    updateMetadata: true,
+    changeFeeDestinations: true,
+  };
+
+  it("sends nothing for switches left as they are", () => {
+    expect(buildVaultOperationCalls(EXECUTOR_KEY, ALL_EXECUTOR, ALL_EXECUTOR, context)).toEqual([]);
+    expect(buildVaultOperationCalls(ADMIN_KEY, ALL_ADMIN, ALL_ADMIN, context)).toEqual([]);
+  });
+
+  it("turns an executor operation off with one revokeFunction", () => {
+    const calls = buildVaultOperationCalls(EXECUTOR_KEY, ALL_EXECUTOR, { ...ALL_EXECUTOR, updateNav: false }, context);
+    expect(decode(calls)).toEqual([["revokeFunction", FUND.toLowerCase(), "0xa61f5814"]]);
+  });
+
+  it("turns an executor operation on with the create flow's own grant", async () => {
+    const { generateNAVPermissionRolesV2 } = await import("../composables/nav/generateNAVPermission");
+    const calls = buildVaultOperationCalls(EXECUTOR_KEY, { ...ALL_EXECUTOR, updateNav: false }, ALL_EXECUTOR, context);
+    expect(calls).toEqual(generateNAVPermissionRolesV2(FUND, NAV_EXECUTOR, EXECUTOR_KEY));
+  });
+
+  it("re-issues the admin's settings grant from the switches left on", async () => {
+    const { generateUpdateSettingsPermissionRolesV2, parseUpdateSettingsPinnedValues } = await import(
+      "../composables/permissions/rolesV2Permissions"
+    );
+    const calls = buildVaultOperationCalls(ADMIN_KEY, ALL_ADMIN, { ...ALL_ADMIN, manageWhitelist: false }, context);
+    expect(calls).toEqual(
+      generateUpdateSettingsPermissionRolesV2(
+        FUND,
+        parseUpdateSettingsPinnedValues(RAW_SETTINGS, "0", "0", "{}"),
+        ADMIN_KEY,
+        { metadata: true, whitelist: false, feeDestinations: true },
+      ),
+    );
+  });
+
+  it("revokes the admin's settings grant when every settings switch is off", () => {
+    const calls = buildVaultOperationCalls(
+      ADMIN_KEY,
+      ALL_ADMIN,
+      { ...ALL_ADMIN, manageWhitelist: false, updateMetadata: false, changeFeeDestinations: false },
+      context,
+    );
+    expect(decode(calls)).toEqual([["revokeFunction", FUND.toLowerCase(), "0xf6c87ad5"]]);
+  });
+
+  it("narrows the admin's membership grant to the roles left on", async () => {
+    const { generateAssignRolesPermissionRolesV2 } = await import("../composables/permissions/rolesV2Permissions");
+    const calls = buildVaultOperationCalls(ADMIN_KEY, ALL_ADMIN, { ...ALL_ADMIN, transferAdminRole: false }, context);
+    expect(calls).toEqual(generateAssignRolesPermissionRolesV2(MODIFIER, ADMIN_KEY, { roleKeys: [EXECUTOR_KEY] }));
+  });
+
+  it("reads the switches back from stored grants", async () => {
+    const { generateAssignRolesPermissionRolesV2 } = await import("../composables/permissions/rolesV2Permissions");
+    const entries = generateAssignRolesPermissionRolesV2(MODIFIER, ADMIN_KEY, { roleKeys: [EXECUTOR_KEY] }).map(
+      (data) => ({ data, label: "call" }),
+    );
+    const { grants } = splitPrepopulated(entries, ADMIN_KEY, { fundAddress: FUND, baseToken: BASE, rolesModifier: MODIFIER }, EXECUTOR_KEY);
+    expect(vaultOperationSwitches(grants, ADMIN_KEY).map((op) => [op.key, op.on])).toEqual([
+      ["manageExecutorMembers", true],
+      ["transferAdminRole", false],
+      ["manageWhitelist", false],
+      ["updateMetadata", false],
+      ["changeFeeDestinations", false],
+    ]);
+    expect(vaultOperationSwitches(grants, ADMIN_KEY)[0].hint).toContain("executor role");
+  });
+});
+
+describe("protocol access grouped by protocol", () => {
+  const CDW = "0x6B9E773128f453f5c2C60935Ee2DE2CBc5390A24";
+  const FELIX = "0x8A862fD6c12f9ad34C9c2ff45AB2b6712e8CEa27";
+  const CORE = "0x3333333333333333333333333333333333333333";
+  const USDC = "0xb88339CB7199b77E23DB6E890353E22632Ba630f";
+  const KEY = ethers.encodeBytes32String("defaultManagerRole");
+  const ENTRY = (name: string, args: unknown[]) => ({ data: roles.encodeFunctionData(name, args), label: name });
+  const entries = [
+    ENTRY("scopeTarget", [KEY, USDC]),
+    ENTRY("allowFunction", [KEY, USDC, "0x095ea7b3", 0]),
+    ENTRY("scopeTarget", [KEY, CDW]),
+    ENTRY("allowFunction", [KEY, CDW, "0xc23c545a", 0]),
+    ENTRY("scopeTarget", [KEY, CORE]),
+    ENTRY("allowFunction", [KEY, CORE, ethers.id("sendRawAction(bytes)").slice(0, 10), 0]),
+    ENTRY("scopeTarget", [KEY, FELIX]),
+    ENTRY("allowFunction", [KEY, FELIX, "0x6e553f65", 0]),
+    ENTRY("allowFunction", [KEY, FELIX, "0xb460af94", 0]),
+    ENTRY("allowFunction", [KEY, FELIX, "0xba087652", 0]),
+    ENTRY("allowTarget", [KEY, "0x7777777777777777777777777777777777777777", 0]),
+  ];
+
+  it("groups contracts under their protocol, with tags for what is allowed", async () => {
+    const { contractProtocol } = await import("../composables/contracts/contractNames");
+    const groups = groupByProtocol(entries, contractProtocol, () => "Some contract");
+    expect(groups.map((group) => [group.name, group.targets.length, group.tags])).toEqual([
+      ["USDC", 1, ["Approve"]],
+      ["HyperCore", 2, ["Deposit", "Any action"]],
+      ["Felix", 1, ["Supply", "Withdraw"]],
+      ["Some contract", 1, ["Any function"]],
+    ]);
+    expect(groups[1].indices).toEqual([2, 3, 4, 5]);
+    expect(groups[1].logo).toEqual({ protocol: "hyperliquid" });
+    expect(groups[0].logo).toEqual({ token: "USDC" });
   });
 });

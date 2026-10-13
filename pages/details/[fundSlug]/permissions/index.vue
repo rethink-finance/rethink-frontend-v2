@@ -6,10 +6,19 @@
     >
       <div class="v2_head">
         <div class="v2_head__title">
+          <span class="brand_card__eyebrow">Roles and permissions</span>
           <span class="v2_head__badge">Roles V2</span>
           <span v-if="isManaging" class="v2_head__mode">Managing</span>
         </div>
         <div class="v2_head__buttons">
+          <button
+            type="button"
+            class="v2_head__refresh"
+            :disabled="isReadingScopeLogs"
+            @click="refreshScopes"
+          >
+            {{ isReadingScopeLogs ? "Reading…" : "Refresh" }}
+          </button>
           <UiLinkExternalButton
             title="View in Roles app"
             :href="gnosisRolesUrl"
@@ -98,11 +107,12 @@
         :draft-roles="draftRoleViews"
         :manage="isManaging"
         :removals="removals"
-        :prepopulated-removals="prepopulatedRemovals"
+        :operation-edits="operationEdits"
         :member-editor-keys="memberEditorKeys"
+        :account="connectedAccount"
         @refresh="refreshScopes"
         @remove="markRemoval"
-        @toggle-prepopulated="togglePrepopulatedRemoval"
+        @toggle-operation="toggleOperation"
         @remove-role="dropCustomRole"
       >
         <template #members="{ role }">
@@ -185,12 +195,12 @@
           <div class="pending__text">
             {{ permissionSummary }}
             <button
-              v-if="removalCount"
+              v-if="removalCount || operationChangeCount"
               type="button"
               class="pending__undo"
-              @click="removals = {}; prepopulatedRemovals = {}"
+              @click="removals = {}; operationEdits = {}"
             >
-              Undo removals
+              Undo changes
             </button>
           </div>
           <p v-for="issue in permissionIssues" :key="issue" class="pending__issue">
@@ -343,14 +353,16 @@ import {
   type IStoredRoleView,
 } from "~/composables/permissions/storedRoleGrants";
 import {
-  buildPrepopulatedRemovalCalls,
+  buildVaultOperationCalls,
   buildRemovalCalls,
   canManageMembers,
   expandRemoval,
   rolesThatManageMembers,
   splitPrepopulated,
+  vaultOperationSwitches,
 } from "~/composables/permissions/managePermissions";
-import type { IPermissionScope } from "~/composables/permissions/revokePermissions";
+import { fetchVaultOperationContext } from "~/composables/permissions/vaultOperationContext";
+import type { IPrepopulatedPermissionsContext } from "~/composables/permissions/vaultRoles";
 import { useVaultCustomRoles } from "~/composables/permissions/useVaultCustomRoles";
 import { useRolesChangeProposal } from "~/composables/permissions/useRolesChangeProposal";
 
@@ -842,23 +854,56 @@ const markRemoval = (role: IStoredRoleView, entries: IRawPermissionCodeEntry[], 
   };
 };
 
-// Prepopulated grants marked for removal, by role key, as "target:selector".
-const prepopulatedRemovals = ref<Record<string, string[]>>({});
-const togglePrepopulatedRemoval = (role: IStoredRoleView, scope: IPermissionScope) => {
-  const key = `${scope.target.toLowerCase()}:${scope.selector.toLowerCase()}`;
-  const current = prepopulatedRemovals.value[role.keyBytes] ?? [];
-  prepopulatedRemovals.value = {
-    ...prepopulatedRemovals.value,
-    [role.keyBytes]: current.includes(key)
-      ? current.filter((entry) => entry !== key)
-      : [...current, key],
-  };
-};
+const removalCount = computed(() =>
+  Object.values(removals.value).reduce((sum, list) => sum + list.length, 0),
+);
 
-const removalCount = computed(
-  () =>
-    Object.values(removals.value).reduce((sum, list) => sum + list.length, 0) +
-    Object.values(prepopulatedRemovals.value).reduce((sum, list) => sum + list.length, 0),
+/* Vault operations (the create flow's switches), toggled chip by chip. */
+
+/** A role's operations as the chain has them. */
+const operationsOf = (view: IStoredRoleView) =>
+  vaultOperationSwitches(
+    splitPrepopulated(view.entries, view.label, vaultContracts.value, executorRoleKey.value).grants,
+    view.label,
+  );
+
+// Desired states, by role key then switch key; only what was clicked.
+const operationEdits = ref<Record<string, Record<string, boolean>>>({});
+const toggleOperation = (role: IStoredRoleView, key: string) => {
+  const stored = operationsOf(role).find((op) => op.key === key);
+  if (!stored) return;
+  const edits = { ...(operationEdits.value[role.keyBytes] ?? {}) };
+  const next = !(edits[key] ?? stored.on);
+  if (next === stored.on) delete edits[key];
+  else edits[key] = next;
+  operationEdits.value = { ...operationEdits.value, [role.keyBytes]: edits };
+};
+const operationChangeCount = computed(() =>
+  Object.values(operationEdits.value).reduce((sum, edits) => sum + Object.keys(edits).length, 0),
+);
+
+// What re-issuing a grant needs from the live vault, read once manage mode opens.
+const operationContext = ref<IPrepopulatedPermissionsContext | null>(null);
+const operationContextError = ref("");
+watch(
+  () => [isManaging.value, roleModAddress.value, executorRoleKey.value] as const,
+  async ([managing, modifier, executorKey]) => {
+    if (!managing || !modifier || !fund?.address) return;
+    operationContextError.value = "";
+    try {
+      operationContext.value = await fetchVaultOperationContext({
+        chainId: fund.chainId,
+        fundAddress: fund.address,
+        baseToken: fund.baseToken?.address ?? "",
+        rolesModifier: modifier,
+        executorRoleKey: executorKey,
+      });
+    } catch (error: any) {
+      console.error("Could not read the vault's settings", error);
+      operationContextError.value = "The vault's settings could not be read, so vault operations cannot be changed right now.";
+    }
+  },
+  { immediate: true },
 );
 
 // What each role gets added: library selections and pasted raw calls.
@@ -894,19 +939,25 @@ const permissionChanges = computed(() => {
   const grantCalls: string[] = [];
   const issues: string[] = [];
   const lines: string[] = [];
+  const operationCalls: string[] = [];
   for (const view of storedViews.value) {
-    const prepopulated = (prepopulatedRemovals.value[view.keyBytes] ?? []).map((key) => {
-      const [target, selector] = key.split(":");
-      return { target, selector };
-    });
-    if (prepopulated.length) {
-      removalCalls.push(...buildPrepopulatedRemovalCalls(prepopulated, view.keyBytes));
-      const labels = splitPrepopulated(view.entries, view.label, vaultContracts.value, executorRoleKey.value).grants
-        .filter((grant) => prepopulated.some((scope) =>
-          scope.target === grant.scope.target.toLowerCase() &&
-          scope.selector === grant.scope.selector.toLowerCase()))
-        .map((grant) => grant.label);
-      for (const label of labels) lines.push(`${view.name}: remove ${label}`);
+    const edits = operationEdits.value[view.keyBytes] ?? {};
+    if (Object.keys(edits).length) {
+      const stored = operationsOf(view);
+      const current = Object.fromEntries(stored.map((op) => [op.key, op.on]));
+      const desired = { ...current, ...edits };
+      for (const op of stored) {
+        if (op.key in edits) lines.push(`${view.name}: turn ${edits[op.key] ? "on" : "off"} ${op.label}`);
+      }
+      if (operationContext.value) {
+        try {
+          operationCalls.push(...buildVaultOperationCalls(view.label, current, desired, operationContext.value));
+        } catch (error: any) {
+          issues.push(`${view.name}: ${error?.message ?? String(error)}`);
+        }
+      } else {
+        issues.push(operationContextError.value || "Reading the vault's settings for the vault operation changes…");
+      }
     }
     const gone = removals.value[view.keyBytes] ?? [];
     if (!gone.length) continue;
@@ -952,8 +1003,9 @@ const permissionChanges = computed(() => {
     }
   }
   return {
-    calls: [...removalCalls, ...grantCalls, ...memberCalls],
+    calls: [...removalCalls, ...operationCalls, ...grantCalls, ...memberCalls],
     removalCalls,
+    operationCalls,
     grantCalls,
     memberCalls,
     issues,
@@ -973,11 +1025,12 @@ const memberSummary = computed(() => {
 });
 const permissionSummary = computed(() => {
   const { grantCalls } = permissionChanges.value;
-  if (!permissionCalls.value.length) {
-    return "Nothing queued. Press Remove on a permission, or Add protocol under a role.";
+  if (!permissionCalls.value.length && !operationChangeCount.value) {
+    return "Nothing queued. Click a vault operation, press Remove on a contract, or Add protocol under a role.";
   }
   const { memberCalls } = permissionChanges.value;
   const parts: string[] = [];
+  if (operationChangeCount.value) parts.push(`changes ${plural(operationChangeCount.value, "vault operation")}`);
   if (removalCount.value) parts.push(`removes ${plural(removalCount.value, "permission")}`);
   if (grantCalls.length) parts.push(`adds ${plural(grantCalls.length, "call")}`);
   if (memberCalls.length) parts.push(`changes ${plural(memberCalls.length, "custom role member")}`);
@@ -988,12 +1041,13 @@ const hasPendingChanges = computed(
   () =>
     queuedMemberChanges.value.length > 0 ||
     permissionCalls.value.length > 0 ||
+    operationChangeCount.value > 0 ||
     Object.values(additions).some((added) => hasEnabledProtocolSelections(added.selections)),
 );
 
 const resetPermissionChanges = () => {
   removals.value = {};
-  prepopulatedRemovals.value = {};
+  operationEdits.value = {};
   for (const key of Object.keys(customMemberChanges)) delete customMemberChanges[key];
   for (const key of Object.keys(additions)) {
     additions[key] = { selections: freshSelections(), raw: [] };
@@ -1095,6 +1149,27 @@ watch(
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: $color-warning;
+  }
+
+  &__refresh {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    color: $color-steel-blue;
+    transition: color $default-transition-time, border-color $default-transition-time;
+
+    &:hover:not(:disabled) {
+      color: $color-white;
+      border-color: $color-accent-line;
+    }
+
+    &:disabled {
+      opacity: 0.6;
+    }
   }
 
   &__badge {
