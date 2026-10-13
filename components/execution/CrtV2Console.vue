@@ -402,8 +402,9 @@
               <div class="crt_label">
                 Payout destination · pinned
               </div>
-              <div class="crt_stat__value">
+              <div class="crt_stat__value" :title="CRT_V2.ADDR.payout">
                 {{ shortAddr(CRT_V2.ADDR.payout) }}
+                <ExecutionCopyAddress :address="CRT_V2.ADDR.payout" what="the payout address" />
               </div>
               <div class="crt_card__sub">
                 The payout wallet. Every other address reverts, on both chains.
@@ -479,7 +480,10 @@
                 <div v-for="slot in liveSlots" :key="slot.key" class="crt_slot">
                   <span class="crt_dot crt_dot--on" />
                   <span class="crt_slot__kind">{{ slot.kind }}</span>
-                  <span class="crt_mono">{{ shortAddr(slot.address) }}</span>
+                  <span class="crt_mono" :title="slot.address">
+                    {{ shortAddr(slot.address) }}
+                    <ExecutionCopyAddress :address="slot.address" what="this trader's address" />
+                  </span>
                   <span class="crt_mono_dim">{{ slot.who }}</span>
                   <span class="crt_mono_dim crt_slot__until">{{ slot.until }}</span>
                   <v-btn
@@ -500,18 +504,19 @@
             </div>
 
             <div class="crt_presets">
-              <button
-                v-for="p in CRT_V2.AGENT.presets"
-                :key="p.addr"
-                type="button"
-                class="crt_preset"
-                :class="{ 'crt_preset--active': sameAddr(agentAddr, p.addr) }"
-                :title="p.desc"
-                @click="agentAddr = p.addr"
-              >
-                <span class="crt_dot" :class="`crt_dot--${agentState(p.addr).tone}`" />
-                {{ p.label }} <span class="crt_mono_dim">{{ shortAddr(p.addr) }} · {{ agentState(p.addr).text }}</span>
-              </button>
+              <div v-for="p in CRT_V2.AGENT.presets" :key="p.addr" class="crt_preset_pair">
+                <button
+                  type="button"
+                  class="crt_preset"
+                  :class="{ 'crt_preset--active': sameAddr(agentAddr, p.addr) }"
+                  :title="p.desc"
+                  @click="agentAddr = p.addr"
+                >
+                  <span class="crt_dot" :class="`crt_dot--${agentState(p.addr).tone}`" />
+                  {{ p.label }} <span class="crt_mono_dim">{{ shortAddr(p.addr) }} · {{ agentState(p.addr).text }}</span>
+                </button>
+                <ExecutionCopyAddress :address="p.addr" :what="`the ${p.label} address`" />
+              </div>
             </div>
             <div class="crt_row">
               <v-text-field
@@ -584,7 +589,8 @@
               </v-btn>
             </div>
             <div class="crt_card__sub">
-              Current executor: <span class="crt_mono">{{ shortAddr(CRT_V2.ADDR.executor) }}</span>
+              Current executor: <span class="crt_mono" :title="CRT_V2.ADDR.executor">{{ shortAddr(CRT_V2.ADDR.executor) }}</span>
+              <ExecutionCopyAddress :address="CRT_V2.ADDR.executor" what="the executor address" />
               <span class="crt_mono_dim">· {{ executorMembership === null ? "membership unread" : executorMembership ? "holds the executor role" : "does NOT hold the executor role" }}</span>
             </div>
             <div class="crt_row crt_row--top">
@@ -1669,6 +1675,11 @@ const exec = async (step: any): Promise<boolean> => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.crt_preset_pair {
+  display: inline-flex;
+  align-items: center;
 }
 
 .crt_preset {
