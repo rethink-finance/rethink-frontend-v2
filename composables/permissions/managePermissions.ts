@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import {
   ADMIN_ROLE_KEY_V2,
+  generateNAVPermissionRolesV2,
   isExecutorRoleKey,
   toRoleKeyBytes32,
 } from "~/composables/nav/generateNAVPermission";
@@ -14,14 +15,27 @@ import {
 import {
   ASSIGN_ROLES_SELECTOR,
   UPDATE_SETTINGS_SELECTOR,
+  generateAssignRolesPermissionRolesV2,
+  generateCollectFeesPermissionRolesV2,
+  generateSendFundsPermissionRolesV2,
+  generateUpdateSettingsPermissionRolesV2,
+  parseUpdateSettingsPinnedValues,
 } from "~/composables/permissions/rolesV2Permissions";
 import type { IStoredRoleView } from "~/composables/permissions/storedRoleGrants";
-import { prepopulatedScopeLabels, VAULT_ROLES } from "~/composables/permissions/vaultRoles";
+import {
+  executorPrepopulatedScopes,
+  prepopulatedScopeLabels,
+  VAULT_ROLES,
+  type IPrepopulatedPermissionsContext,
+} from "~/composables/permissions/vaultRoles";
 import { resolveKnownFunction } from "~/composables/proposal/decodeProposalCallData";
 import {
   describeConditionTree,
+  findExtraSignature,
   type IConditionNode,
 } from "~/composables/proposal/describeProposalActions";
+import { coreWriterActionNames } from "~/composables/permissions/coreWriterPatterns";
+import { CORE_WRITER, type IContractProtocol } from "~/composables/contracts/contractNames";
 
 /**
  * The Permissions tab's manage mode, in pure functions: which stored grants a
@@ -342,3 +356,258 @@ export const buildPrepopulatedRemovalCalls = (
   scopes: IPermissionScope[],
   roleKey: string,
 ): string[] => (scopes.length ? buildRevokeFunctionEntriesV2(scopes, roleKey) : []);
+
+/* ---- Vault operations as switches ------------------------------------------ */
+
+/** One of the create flow's switches, on or off as the stored grants say. */
+export interface IVaultOperationSwitch {
+  key: string;
+  label: string;
+  /** The create flow's explanation of the switch. */
+  hint: string;
+  on: boolean;
+}
+
+/**
+ * A built-in role's vault operations as the create flow's switches: the
+ * executor's four (one grant each) and the admin's five (two shared grants).
+ * A custom role has none.
+ */
+export const vaultOperationSwitches = (
+  grants: IPrepopulatedGrant[],
+  roleKey: string,
+): IVaultOperationSwitch[] => {
+  if (isExecutorRoleKey(roleKey)) {
+    return VAULT_ROLES.executor.permissions.map((option) => ({
+      key: option.key,
+      label: option.label,
+      hint: option.hint,
+      on: grants.some((grant) => grant.label === option.label && grant.granted),
+    }));
+  }
+  if (roleKey === ADMIN_ROLE_KEY_V2) {
+    const states = new Map(
+      grants.flatMap((grant) => (grant.switches ?? []).map((option) => [option.label, option.on])),
+    );
+    return VAULT_ROLES.admin.permissions.map((option) => ({
+      key: option.key,
+      label: option.label,
+      hint: option.hint,
+      on: !!states.get(option.label),
+    }));
+  }
+  return [];
+};
+
+const SETTINGS_SWITCHES = ["updateMetadata", "manageWhitelist", "changeFeeDestinations"];
+const MEMBERSHIP_SWITCHES = ["manageExecutorMembers", "transferAdminRole"];
+
+/**
+ * The Roles calls that take a role's vault operations from `current` to
+ * `desired`, and nothing else: an untouched operation is not re-sent. Each
+ * grant is written by the same generator the create flow uses, so a switch
+ * turned on here stores exactly what the create flow would have.
+ *
+ * The admin's settings switches share one updateSettings grant, and its
+ * membership switches one assignRoles grant: changing any switch of a group
+ * re-issues that group's grant from all of its desired switches (scopeFunction
+ * replaces the stored rule), or revokes it when none is left on. Settings are
+ * pinned to the vault's live values, which the caller reads.
+ */
+export const buildVaultOperationCalls = (
+  roleKey: string,
+  current: Record<string, boolean>,
+  desired: Record<string, boolean>,
+  context: IPrepopulatedPermissionsContext,
+): string[] => {
+  const changed = (key: string) => !!current[key] !== !!desired[key];
+  const calls: string[] = [];
+
+  if (isExecutorRoleKey(roleKey)) {
+    const scopes = executorPrepopulatedScopes(context);
+    for (const key of Object.keys(scopes) as (keyof typeof scopes)[]) {
+      if (!changed(key)) continue;
+      if (!desired[key]) {
+        calls.push(...buildRevokeFunctionEntriesV2([scopes[key]], roleKey));
+        continue;
+      }
+      if (key === "updateNav") {
+        if (!context.navExecutor) throw new Error("Update NAV needs the chain's NAV executor address.");
+        calls.push(...generateNAVPermissionRolesV2(context.fundAddress, context.navExecutor, roleKey));
+      } else if (key === "sendFunds") {
+        calls.push(...generateSendFundsPermissionRolesV2(context.baseToken, context.fundAddress, roleKey));
+      } else if (key === "collectFees") {
+        if (!context.poolPerformanceFee) throw new Error("Collect fee needs the chain's performance fee contract.");
+        calls.push(...generateCollectFeesPermissionRolesV2(context.fundAddress, context.poolPerformanceFee, roleKey));
+      } else if (key === "selfRevoke") {
+        calls.push(
+          ...generateAssignRolesPermissionRolesV2(context.rolesModifier, roleKey, {
+            roleKeys: [roleKey],
+            memberOf: false,
+          }),
+        );
+      }
+    }
+    return calls;
+  }
+
+  if (roleKey !== ADMIN_ROLE_KEY_V2) return calls;
+
+  if (SETTINGS_SWITCHES.some(changed)) {
+    const open = {
+      metadata: !!desired.updateMetadata,
+      whitelist: !!desired.manageWhitelist,
+      feeDestinations: !!desired.changeFeeDestinations,
+    };
+    if (open.metadata || open.whitelist || open.feeDestinations) {
+      const pinned = parseUpdateSettingsPinnedValues(
+        context.rawSettings,
+        context.feePerformancePeriod,
+        context.feeManagePeriod,
+        context.fundMetadata,
+      );
+      calls.push(...generateUpdateSettingsPermissionRolesV2(context.fundAddress, pinned, ADMIN_ROLE_KEY_V2, open));
+    } else {
+      calls.push(
+        ...buildRevokeFunctionEntriesV2(
+          [{ target: context.fundAddress, selector: UPDATE_SETTINGS_SELECTOR }],
+          ADMIN_ROLE_KEY_V2,
+        ),
+      );
+    }
+  }
+
+  if (MEMBERSHIP_SWITCHES.some(changed)) {
+    const roleKeys = [
+      ...(desired.manageExecutorMembers ? [context.executorRoleKey ?? ""] : []),
+      ...(desired.transferAdminRole ? [ADMIN_ROLE_KEY_V2] : []),
+    ].filter(Boolean);
+    if (roleKeys.length) {
+      calls.push(...generateAssignRolesPermissionRolesV2(context.rolesModifier, ADMIN_ROLE_KEY_V2, { roleKeys }));
+    } else {
+      calls.push(
+        ...buildRevokeFunctionEntriesV2(
+          [{ target: context.rolesModifier, selector: ASSIGN_ROLES_SELECTOR }],
+          ADMIN_ROLE_KEY_V2,
+        ),
+      );
+    }
+  }
+  return calls;
+};
+
+/* ---- Protocol access, grouped by protocol ------------------------------------ */
+
+// What a function does, as a tag on its protocol's row.
+const ACTION_TAGS: Record<string, string> = {
+  deposit: "Supply",
+  mint: "Supply",
+  supply: "Supply",
+  withdraw: "Withdraw",
+  redeem: "Withdraw",
+  borrow: "Borrow",
+  repay: "Repay",
+  approve: "Approve",
+  transfer: "Transfer",
+  transferFrom: "Transfer",
+  depositV3: "Bridge",
+  depositV3Now: "Bridge",
+  depositFor: "Deposit",
+  stake: "Stake",
+  unstake: "Unstake",
+  claim: "Claim",
+  claimRewards: "Claim",
+  swap: "Swap",
+  unoswap: "Swap",
+  unoswapTo: "Swap",
+  exactInput: "Swap",
+  exactInputSingle: "Swap",
+};
+
+// HyperCore's CoreWriter instructions, as tags.
+const CORE_ACTION_TAGS: Record<string, string> = {
+  usdClassTransfer: "Spot ↔ Perp",
+  sendAsset: "Send",
+  spotSend: "Send",
+  addApiWallet: "API agent",
+  limitOrder: "Trade",
+  cancelOrderByOid: "Trade",
+  cancelOrderByCloid: "Trade",
+  vaultTransfer: "Vault transfer",
+  tokenDelegate: "Stake",
+  stakingDeposit: "Stake",
+  stakingWithdraw: "Stake",
+  borrowLend: "Lend",
+  approveBuilderFee: "Builder fee",
+};
+
+const functionName = (selector?: string): string | undefined =>
+  resolveKnownFunction(selector ?? "")?.function.name ?? findExtraSignature(selector)?.name;
+
+const tagFor = (name: string) =>
+  ACTION_TAGS[name] ??
+  name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (first) => first.toUpperCase());
+
+export interface IProtocolGroup {
+  key: string;
+  name: string;
+  /** A DefiLlama protocol slug, a token symbol, or nothing (a plain contract). */
+  logo?: IContractProtocol["logo"];
+  /** The contracts of the protocol the role may call. */
+  targets: string[];
+  /** Indices into the entries this was built from. */
+  indices: number[];
+  /** What the role may do there, in a word each. */
+  tags: string[];
+}
+
+/**
+ * A role's permissions beyond its vault operations, one group per protocol:
+ * every contract the protocol is known by, the actions allowed there as
+ * tags, and which of the entries belong to it. A contract no protocol claims
+ * is a group of its own, under whatever name it is known by.
+ */
+export const groupByProtocol = (
+  entries: IRawPermissionCodeEntry[],
+  protocolOf: (address: string) => IContractProtocol | undefined,
+  nameOf: (address: string) => string,
+): IProtocolGroup[] => {
+  const groups = new Map<string, IProtocolGroup>();
+  for (const { index, description } of describeQueuedCalls(entries)) {
+    const target = description.target;
+    if (!target) continue;
+    const protocol = protocolOf(target);
+    const key = protocol?.key ?? `contract:${lower(target)}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        key,
+        name: protocol?.name ?? nameOf(target),
+        logo: protocol?.logo,
+        targets: [],
+        indices: [],
+        tags: [],
+      };
+      groups.set(key, group);
+    }
+    if (!group.targets.some((known) => lower(known) === lower(target))) group.targets.push(target);
+    group.indices.push(index);
+
+    const tags: string[] = [];
+    if (description.action === "allow-target") {
+      tags.push("Any function");
+    } else if (FUNCTION_ACTIONS.has(description.action)) {
+      const name = functionName(description.selector);
+      if (lower(target) === CORE_WRITER && name === "sendRawAction") {
+        const actions = description.action === "scope-function"
+          ? coreWriterActionNames(description.conditions)
+          : undefined;
+        tags.push(...(actions ? actions.map((action) => CORE_ACTION_TAGS[action] ?? tagFor(action)) : ["Any action"]));
+      } else {
+        tags.push(name ? tagFor(name) : "Other");
+      }
+    }
+    for (const tag of tags) if (!group.tags.includes(tag)) group.tags.push(tag);
+  }
+  return [...groups.values()];
+};

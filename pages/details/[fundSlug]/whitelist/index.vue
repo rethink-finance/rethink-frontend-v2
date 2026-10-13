@@ -32,6 +32,7 @@
           v-model:whitelist-enabled="isWhitelistedDeposits"
           :is-editable="true"
           :dim-when-disabled="false"
+          :show-tag="false"
         />
         <p class="curator_whitelist__hint">
           <template v-if="!chainWhitelistEnabled">
@@ -268,6 +269,12 @@ watch(
 </script>
 
 <style scoped lang="scss">
+/* The whitelist card is shared with the create flow; on the vault page its
+   title takes the card title every curator page uses. */
+.curator_whitelist :deep(.whitelist__title) {
+  @include card-title;
+}
+
 .curator_whitelist {
   &__unsupported {
     padding: 2rem;

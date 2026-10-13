@@ -628,9 +628,7 @@ const isFetchingDelegates = computed(() => {
   }
 
   &__title {
-    font-size: 16px;
-    font-weight: 700;
-    color: $color-white;
+    @include card-title;
   }
 
   &__caption {

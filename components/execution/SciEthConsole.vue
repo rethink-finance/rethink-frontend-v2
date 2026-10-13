@@ -2551,4 +2551,27 @@ const runStep = (step: SciStep) => {
     color: $color-white;
   }
 }
+
+/*
+ * Value first, its label under it: the order the NAV and Flows pages use, so a
+ * figure reads the same on every curator page. The hero's label is a caption
+ * there too, not an accent.
+ */
+.sci_summary__hero {
+  gap: 0.375rem;
+}
+
+.sci_summary__hero > .sci_label,
+.sci_summary .sci_stat > .sci_label {
+  order: 1;
+}
+
+.sci_summary__note {
+  order: 2;
+}
+
+.sci_label--accent {
+  letter-spacing: 0.1em;
+  color: $color-steel-blue;
+}
 </style>

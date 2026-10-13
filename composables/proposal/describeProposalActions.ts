@@ -54,6 +54,19 @@ export const EXTRA_SIGNATURES = [
   // the Across SpokePool. Named here so permissions on them read by argument.
   "function sendRawAction(bytes data)",
   "function depositV3Now(address depositor, address recipient, address inputToken, address outputToken, uint256 inputAmount, uint256 outputAmount, uint256 destinationChainId, address exclusiveRelayer, uint32 fillDeadlineOffset, uint32 exclusivityDeadline, bytes message)",
+  // ERC-4626 vaults (Felix) and Aave v3-style pools (HyperLend), the yield
+  // venues vault permissions scope most. Their proxies rarely verify on the
+  // explorer, so without these the Permissions tab shows a bare selector.
+  "function deposit(uint256 assets, address receiver)",
+  "function mint(uint256 shares, address receiver)",
+  "function withdraw(uint256 assets, address receiver, address owner)",
+  "function redeem(uint256 shares, address receiver, address owner)",
+  "function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode)",
+  "function withdraw(address asset, uint256 amount, address to)",
+  "function borrow(address asset, uint256 amount, uint256 interestRateMode, uint16 referralCode, address onBehalfOf)",
+  "function repay(address asset, uint256 amount, uint256 interestRateMode, address onBehalfOf)",
+  // HyperEVM's USDC deposit wallet: moves USDC onto HyperCore for a recipient.
+  "function depositFor(address recipient, uint256 amount, uint32 destinationDex)",
 ];
 
 const extraSignatureInterface = new ethers.Interface(EXTRA_SIGNATURES);

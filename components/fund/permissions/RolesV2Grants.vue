@@ -1,25 +1,5 @@
 <template>
   <section class="grants">
-    <header class="grants__head">
-      <div class="grants__intro">
-        <div class="brand_card__eyebrow">
-          Granted permissions
-        </div>
-        <p class="grants__lede">
-          What each role is allowed to call through the vault's Safe, rebuilt
-          from the Roles modifier's on-chain history<template v-if="lastEventBlock">
-            (its latest event is in block {{ lastEventBlock.toLocaleString("en-US") }})</template>.
-        </p>
-      </div>
-      <button
-        type="button"
-        class="grants__refresh"
-        :disabled="isLoading"
-        @click="emit('refresh')"
-      >
-        {{ isLoading ? "Reading…" : "Refresh" }}
-      </button>
-    </header>
 
     <p v-if="!logs && isLoading" class="grants__status">
       Reading the modifier's history…
@@ -78,140 +58,220 @@
       <slot v-if="manage && addingRole" name="add-role" :done="(key: string) => selectRole(key)" />
 
       <section v-else-if="current" :key="current.keyBytes" class="grants__role">
-        <header class="grants__role_head">
-          <div class="grants__role_identity">
-            <span class="grants__role_name">{{ current.name }}</span>
-            <span class="grants__role_tagline">{{ taglineOf(current) }}</span>
+        <!-- Who this role is, in a sentence, and what it adds up to. -->
+        <header class="hero">
+          <div class="hero__icon" :class="`hero__icon--${current.kind}`">
+            <Icon :icon="roleIcon(current)" width="1.5rem" height="1.5rem" />
           </div>
-          <div class="grants__role_meta">
-            <code class="grants__role_key" :title="`Role key ${current.keyBytes}`">{{ current.label }}</code>
-            <span class="grants__role_counts">{{ countsText(current) }}</span>
-            <button
-              v-if="manage && isDraft(current)"
-              type="button"
-              class="grants__role_remove"
-              @click="emit('remove-role', current)"
-            >
-              Remove role
-            </button>
+          <div class="hero__text">
+            <div class="hero__title">
+              <span class="hero__name">{{ current.name }}</span>
+              <span class="hero__number">Role {{ current.number }}</span>
+              <code class="hero__key" :title="`Role key ${current.keyBytes}`">{{ current.label }}</code>
+            </div>
           </div>
+          <button
+            v-if="manage && isDraft(current)"
+            type="button"
+            class="hero__remove"
+            @click="emit('remove-role', current)"
+          >
+            Remove role
+          </button>
         </header>
 
-        <slot v-if="memberEditorKeys?.includes(current.keyBytes)" name="members" :role="current" />
-        <template v-else>
-          <p v-if="current.members.length" class="grants__members">
-            <span class="grants__members_label">Held by</span>
-            <span
-              v-for="member in current.members"
-              :key="member"
-              class="grants__member"
-            >
-              <OnboardingExplorerAddress
-                :address="member"
-                :chain-id="chainId"
-                :label="addressLabel(member)"
-              />
-              <span v-if="isDisabled(current, member)" class="grants__member_flag">
-                module disabled: its calls are refused
-              </span>
-            </span>
-          </p>
-        </template>
-        <p v-if="!usableMembers(current) && current.entries.length" class="grants__note grants__note--warn">
-          {{
-            current.members.length
-              ? "Every member's module is disabled on the modifier, so none of what this role is granted can be used until one is enabled again."
-              : "Nobody holds this role, so none of what it is granted can be used until someone is added to it."
-          }}
-        </p>
-
-        <!-- The vault's own grants, as the create flow's switches made them. -->
-        <div v-if="split.grants.length" class="grants__section">
-          <button
-            type="button"
-            class="grants__section_head"
-            :class="{ 'grants__section_head--open': prepopulatedOpen }"
-            :aria-expanded="prepopulatedOpen"
-            @click="prepopulatedOpen = !prepopulatedOpen"
-          >
+        <!-- Members: the wallets that act as this role. -->
+        <div class="block">
+          <div class="block__head">
             <Icon
-              class="grants__chevron"
-              :class="{ 'grants__chevron--open': prepopulatedOpen }"
-              icon="material-symbols:keyboard-arrow-down-rounded"
-              width="1.125rem"
-              height="1.125rem"
+              class="block__icon"
+              icon="material-symbols:group-outline-rounded"
+              width="1.25rem"
+              height="1.25rem"
             />
-            <span class="grants__section_title">Prepopulated permissions</span>
-            <span class="grants__section_summary">{{ grantedCount }} of {{ split.grants.length }} granted</span>
-            <span v-if="prepopulatedMarked" class="grants__section_flag">
-              {{ prepopulatedMarked }} marked for removal
-            </span>
-          </button>
-          <div
-            v-for="grant in prepopulatedOpen ? split.grants : []"
-            :key="grantKey(grant)"
-            class="grants__prepop"
-            :class="{
-              'grants__prepop--off': !grant.granted,
-              'grants__prepop--removed': isPrepopulatedRemoved(grant),
-            }"
-          >
-            <div class="grants__prepop_main">
-              <span class="grants__prepop_dot" />
-              <span class="grants__prepop_label">{{ grant.label }}</span>
-              <OnboardingInfoTip
-                v-if="grant.hint"
-                :text="grant.hint"
-                :label="`About “${grant.label}”`"
-                align="left"
-              />
-              <span class="grants__prepop_state">{{ prepopulatedState(grant) }}</span>
-              <button
-                v-if="manage && grant.granted"
-                type="button"
-                class="grants__prepop_action"
-                @click="emit('toggle-prepopulated', current, grant.scope)"
-              >
-                {{ isPrepopulatedRemoved(grant) ? "Undo" : "Remove" }}
-              </button>
+            <div>
+              <div class="block__title">
+                Members
+              </div>
             </div>
-            <div v-if="grant.switches" class="grants__prepop_switches">
-              <span
-                v-for="option in grant.switches"
-                :key="option.label"
-                class="grants__switch"
-                :class="{ 'grants__switch--on': option.on }"
-              >{{ option.on ? "✓" : "–" }} {{ option.label }}</span>
-            </div>
-            <p v-if="grant.granted && prepopulatedInertNote(grant)" class="grants__prepop_note">
-              {{ prepopulatedInertNote(grant) }}
-            </p>
           </div>
+
+          <slot v-if="manage && memberEditorKeys?.includes(current.keyBytes)" name="members" :role="current" />
+          <template v-else>
+            <div v-if="current.members.length" class="members">
+              <div
+                v-for="member in current.members"
+                :key="member"
+                class="member"
+                :class="{ 'member--off': isDisabled(current, member) }"
+              >
+                <span class="member__avatar" :style="avatarStyle(member)" aria-hidden="true" />
+                <div class="member__text">
+                  <div class="member__address">
+                    <OnboardingExplorerAddress :address="member" :chain-id="chainId" />
+                    <ExecutionCopyAddress :address="member" what="this member's address" />
+                  </div>
+                  <div class="member__tags">
+                    <span v-if="isYou(member)" class="member__tag member__tag--you">You</span>
+                    <span v-if="addressLabel(member)" class="member__tag">{{ addressLabel(member) }}</span>
+                    <span v-if="isDisabled(current, member)" class="member__tag member__tag--warn">Module disabled</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p v-else class="block__empty">
+              Nobody holds this role yet{{ manage ? "." : ". Press Manage permissions to add someone." }}
+            </p>
+          </template>
+          <p v-if="!usableMembers(current) && current.entries.length && current.members.length" class="grants__note grants__note--warn">
+            Every member's module is disabled on the modifier, so none of what this role is granted can be used until one is enabled again.
+          </p>
         </div>
 
-        <!-- Everything else the role stores: protocols, raw grants. -->
-        <OnboardingRawPermissionsQueue
-          v-if="split.other.length"
-          :key="`other:${current.keyBytes}`"
-          :title="split.grants.length ? 'Other permissions' : 'Permissions'"
-          collapsible
-          action-label="Remove"
-          :flag-text="manage && removedIn(current).length ? 'has permissions marked for removal' : 'has calls inert until activation'"
-          :summary-text="queueSummary(split.other)"
-          :entries="split.other"
-          :notes="rowNotes(current, split.other)"
-          :locked="lockedIn(current, split.other)"
-          :context-role="current.label"
-          :chain-id="chainId"
-          :vault-address="fundAddress"
-          :safe-address="safeAddress"
-          :roles-mod-address="rolesModAddress"
-          :base-token="baseToken"
-          @discard="(indices: number[]) => emit('remove', current!, split.other, indices)"
-        />
-        <p v-else-if="!split.grants.length" class="grants__status">
-          Nothing is granted to this role{{ manage ? " yet. Add permissions below." : "." }}
-        </p>
+        <!-- Vault operations: the built-in grants every vault gives this role. -->
+        <div v-if="split.grants.length" class="block">
+          <div class="block__head">
+            <Icon
+              class="block__icon"
+              icon="material-symbols:tune-rounded"
+              width="1.25rem"
+              height="1.25rem"
+            />
+            <div>
+              <div class="block__title">
+                Vault operations
+              </div>
+            </div>
+          </div>
+          <!-- One chip per create-flow switch. Hover says what it does; in manage
+               mode a click turns it on or off. -->
+          <div class="ops">
+            <component
+              :is="manage ? 'button' : 'span'"
+              v-for="op in operations"
+              :key="op.key"
+              :type="manage ? 'button' : undefined"
+              class="op"
+              :class="[`op--${opState(op)}`, { 'op--clickable': manage }]"
+              @click="manage && emit('toggle-operation', current, op.key)"
+            >
+              <Icon :icon="OP_ICONS[opState(op)]" width="0.9375rem" height="0.9375rem" />
+              {{ op.label }}
+              <v-tooltip activator="parent" location="top" max-width="320">
+                <div class="op_tip">
+                  <div>{{ op.hint }}</div>
+                  <div v-if="opNote(op)" class="op_tip__note">
+                    {{ opNote(op) }}
+                  </div>
+                </div>
+              </v-tooltip>
+            </component>
+          </div>
+          <p v-if="manage" class="ops_hint">
+            Click an operation to turn it on or off.
+          </p>
+        </div>
+
+        <!-- Protocol access: every other contract the role may call. -->
+        <div class="block">
+          <div class="block__head">
+            <Icon
+              class="block__icon"
+              icon="material-symbols:hub-outline-rounded"
+              width="1.25rem"
+              height="1.25rem"
+            />
+            <div>
+              <div class="block__title">
+                Protocol access
+              </div>
+            </div>
+          </div>
+          <!-- One row per protocol: its mark, what the role may do there,
+               how many of its contracts. Open it for each contract's functions
+               and their exact limits. -->
+          <div v-if="protocolGroups.length" class="protocols">
+            <div
+              v-for="group in protocolGroups"
+              :key="group.key"
+              class="protocol"
+              :class="{ 'protocol--open': isProtocolOpen(group) }"
+            >
+              <div
+                class="protocol__head"
+                role="button"
+                tabindex="0"
+                :aria-expanded="isProtocolOpen(group)"
+                @click="toggleProtocol(group)"
+                @keydown.enter.prevent="toggleProtocol(group)"
+              >
+                <span class="protocol__logo">
+                  <OnboardingProtocolLogo
+                    v-if="group.logo && 'protocol' in group.logo"
+                    :protocol="group.logo.protocol"
+                    :label="group.name"
+                    :size="22"
+                  />
+                  <ExecutionTokenMark
+                    v-else-if="group.logo && 'token' in group.logo"
+                    :symbol="group.logo.token"
+                    size="22px"
+                  />
+                  <Icon
+                    v-else
+                    icon="material-symbols:description-outline-rounded"
+                    width="1.125rem"
+                    height="1.125rem"
+                  />
+                </span>
+                <span class="protocol__name">{{ group.name }}</span>
+                <span class="protocol__tags">
+                  <span v-for="tag in group.tags" :key="tag" class="protocol__tag">{{ tag }}</span>
+                </span>
+                <span v-if="isMarked(group)" class="protocol__flag">Marked for removal</span>
+                <span class="protocol__count">{{ plural(group.targets.length, "contract") }}</span>
+                <button
+                  v-if="manage && removableIn(group).length"
+                  type="button"
+                  class="protocol__remove"
+                  @click.stop="emit('remove', current!, split.other, removableIn(group))"
+                >
+                  Remove
+                </button>
+                <Icon
+                  class="protocol__chevron"
+                  :class="{ 'protocol__chevron--open': isProtocolOpen(group) }"
+                  icon="material-symbols:keyboard-arrow-down-rounded"
+                  width="1.25rem"
+                  height="1.25rem"
+                />
+              </div>
+              <OnboardingRawPermissionsQueue
+                v-if="isProtocolOpen(group)"
+                class="protocol__body"
+                title="Contracts"
+                collapsible
+                function-chips
+                action-label="Remove"
+                :flag-text="manage && isMarked(group) ? 'has permissions marked for removal' : 'has calls inert until activation'"
+                :summary-text="queueSummary(groupEntries(group))"
+                :entries="groupEntries(group)"
+                :notes="groupNotes(group)"
+                :locked="groupLocked(group)"
+                :context-role="current.label"
+                :chain-id="chainId"
+                :vault-address="fundAddress"
+                :safe-address="safeAddress"
+                :roles-mod-address="rolesModAddress"
+                :base-token="baseToken"
+                @discard="(indices: number[]) => emit('remove', current!, split.other, indices.map((i) => group.indices[i]))"
+              />
+            </div>
+          </div>
+          <p v-if="!protocolGroups.length" class="block__empty">
+            No protocol access{{ manage ? " yet. Add some below." : "." }}
+          </p>
+        </div>
 
         <slot v-if="manage" name="additions" :role="current" />
       </section>
@@ -299,12 +359,19 @@ import {
   orderRolesForDisplay,
   removableIndices,
   splitPrepopulated,
-  type IPrepopulatedGrant,
+  vaultOperationSwitches,
+  groupByProtocol,
+  type IProtocolGroup,
+  type IVaultOperationSwitch,
 } from "~/composables/permissions/managePermissions";
+import {
+  WELL_KNOWN_LABELS,
+  contractProtocol,
+  type IContractProtocol,
+} from "~/composables/contracts/contractNames";
+import { getRegistryProtocols } from "~/composables/permissions/protocolPermissions";
 import { toRoleKeyBytes32 } from "~/composables/nav/generateNAVPermission";
 import type { IRawPermissionCodeEntry } from "~/composables/permissions/parseRawPermissionCode";
-import type { IPermissionScope } from "~/composables/permissions/revokePermissions";
-import { VAULT_ROLES } from "~/composables/permissions/vaultRoles";
 import type { ChainId } from "~/types/enums/chain_id";
 
 /**
@@ -343,16 +410,18 @@ const props = defineProps<{
   selectedKey?: string;
   /** The executor's key as this vault spells it, for its prepopulated grants. */
   executorRoleKey: string;
-  /** Prepopulated grants marked for removal, by role key, as "target:selector". */
-  prepopulatedRemovals?: Record<string, string[]>;
+  /** Vault operations switched in manage mode, by role key: switch key → desired state. */
+  operationEdits?: Record<string, Record<string, boolean>>;
+  /** The connected wallet, marked "You" among the members. */
+  account?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "refresh"): void;
   /** Remove was pressed on these of the role's other permissions (manage mode). */
   (e: "remove", role: IStoredRoleView, entries: IRawPermissionCodeEntry[], indices: number[]): void;
-  /** Remove (or Undo) on one of the role's prepopulated grants. */
-  (e: "toggle-prepopulated", role: IStoredRoleView, scope: IPermissionScope): void;
+  /** A vault operation's chip was clicked in manage mode. */
+  (e: "toggle-operation", role: IStoredRoleView, key: string): void;
   (e: "remove-role", role: IStoredRoleView): void;
   (e: "update:selectedKey", key: string): void;
 }>();
@@ -396,13 +465,6 @@ const isDraft = (role: IStoredRoleView) =>
   (props.draftRoles ?? []).some((draft) => draft.keyBytes === role.keyBytes) &&
   !layout.value.views.some((view) => view.keyBytes === role.keyBytes);
 
-const taglineOf = (role: IStoredRoleView) =>
-  role.kind === "admin"
-    ? VAULT_ROLES.admin.tagline
-    : role.kind === "executor"
-      ? VAULT_ROLES.executor.tagline
-      : "Custom role. It may do what is granted to it below.";
-
 /* ---- Prepopulated and other permissions ------------------------------------ */
 
 const contracts = computed(() => ({
@@ -415,49 +477,128 @@ const split = computed(() =>
     ? splitPrepopulated(current.value.entries, current.value.label, contracts.value, props.executorRoleKey)
     : { grants: [], prepopulated: [], other: [] },
 );
-const grantedCount = computed(() => split.value.grants.filter((grant) => grant.granted).length);
-// Folded by default: the vault's built-in grants rarely change and the role's
-// other permissions are what is read most.
-const prepopulatedOpen = ref(false);
-const prepopulatedMarked = computed(
-  () => split.value.grants.filter((grant) => isPrepopulatedRemoved(grant)).length,
-);
-const grantKey = (grant: IPrepopulatedGrant) =>
-  `${grant.scope.target.toLowerCase()}:${grant.scope.selector.toLowerCase()}`;
-const isPrepopulatedRemoved = (grant: IPrepopulatedGrant) =>
-  !!current.value &&
-  (props.prepopulatedRemovals?.[current.value.keyBytes] ?? []).includes(grantKey(grant));
-const prepopulatedState = (grant: IPrepopulatedGrant) => {
-  if (!grant.granted) return "Not granted";
-  return isPrepopulatedRemoved(grant) ? "Marked for removal" : "Granted";
+/* ---- The role panel's words and marks ---------------------------------------- */
+
+const ROLE_ICONS = {
+  executor: "material-symbols:bolt-rounded",
+  admin: "material-symbols:shield-person-outline-rounded",
+  custom: "material-symbols:person-outline-rounded",
+} as const;
+const roleIcon = (role: IStoredRoleView) => ROLE_ICONS[role.kind];
+
+const isYou = (member: string) =>
+  !!props.account && member.toLowerCase() === props.account.toLowerCase();
+
+/** A two-tone mark derived from the address, so members are told apart at a glance. */
+const avatarStyle = (address: string) => {
+  const hex = address.toLowerCase().replace(/^0x/, "");
+  const hue = parseInt(hex.slice(0, 6), 16) % 360;
+  const second = (hue + 40 + (parseInt(hex.slice(6, 8), 16) % 80)) % 360;
+  return { background: `linear-gradient(135deg, hsl(${hue} 70% 55%), hsl(${second} 70% 40%))` };
 };
-const prepopulatedInertNote = (grant: IPrepopulatedGrant): string => {
+
+/* ---- Protocol access by protocol ----------------------------------------------- */
+
+// The permissions registry names its own protocols' contracts; the address
+// book names the rest; anything else is a contract of its own.
+const registryProtocols = computed((): Map<string, IContractProtocol> => {
+  const byAddress = new Map<string, IContractProtocol>();
+  try {
+    for (const protocol of getRegistryProtocols(props.chainId)) {
+      for (const address of Object.keys(protocol.addressLabels)) {
+        byAddress.set(address.toLowerCase(), {
+          key: protocol.protocol,
+          name: protocol.label,
+          logo: { protocol: protocol.protocol },
+        });
+      }
+    }
+  } catch {
+    // no registry for this chain
+  }
+  return byAddress;
+});
+const protocolOf = (address: string) =>
+  registryProtocols.value.get(address.toLowerCase()) ?? contractProtocol(address);
+const contractNameOf = (address: string) =>
+  addressLabel(address) ??
+  WELL_KNOWN_LABELS[address.toLowerCase()] ??
+  `${address.slice(0, 6)}…${address.slice(-4)}`;
+
+const protocolGroups = computed(() =>
+  groupByProtocol(split.value.other, protocolOf, contractNameOf),
+);
+
+const openProtocols = ref<string[]>([]);
+const protocolKey = (group: IProtocolGroup) => `${current.value?.keyBytes}:${group.key}`;
+const isProtocolOpen = (group: IProtocolGroup) => openProtocols.value.includes(protocolKey(group));
+const toggleProtocol = (group: IProtocolGroup) => {
+  const key = protocolKey(group);
+  openProtocols.value = openProtocols.value.includes(key)
+    ? openProtocols.value.filter((open) => open !== key)
+    : [...openProtocols.value, key];
+};
+
+const groupEntries = (group: IProtocolGroup) => group.indices.map((index) => split.value.other[index]);
+/** The role-level notes and locks, re-indexed for one protocol's rows. */
+const groupNotes = (group: IProtocolGroup) => {
+  if (!current.value) return {};
+  const notes = rowNotes(current.value, split.value.other);
+  return Object.fromEntries(
+    group.indices
+      .map((index, local) => [local, notes[index]] as const)
+      .filter(([, note]) => !!note),
+  );
+};
+const groupLocked = (group: IProtocolGroup) => {
+  if (!current.value) return [];
+  const locked = new Set(lockedIn(current.value, split.value.other));
+  return group.indices.map((index, local) => (locked.has(index) ? local : -1)).filter((local) => local >= 0);
+};
+const removableIn = (group: IProtocolGroup) => {
+  if (!current.value) return [];
+  const removable = new Set(removableIndices(split.value.other));
+  const removed = new Set(removedIn(current.value));
+  return group.indices.filter((index) => removable.has(index) && !removed.has(index));
+};
+const isMarked = (group: IProtocolGroup) =>
+  !!current.value && group.indices.some((index) => removedIn(current.value!).includes(index));
+
+/* ---- Vault operations ------------------------------------------------------- */
+
+const operations = computed(() =>
+  current.value ? vaultOperationSwitches(split.value.grants, current.value.label) : [],
+);
+type OpState = "on" | "off" | "adding" | "removing";
+const OP_ICONS: Record<OpState, string> = {
+  on: "material-symbols:check-circle-rounded",
+  off: "material-symbols:radio-button-unchecked",
+  adding: "material-symbols:add-circle-rounded",
+  removing: "material-symbols:do-not-disturb-on-rounded",
+};
+const opState = (op: IVaultOperationSwitch): OpState => {
+  const edit = current.value ? props.operationEdits?.[current.value.keyBytes]?.[op.key] : undefined;
+  if (edit === undefined || edit === op.on) return op.on ? "on" : "off";
+  return edit ? "adding" : "removing";
+};
+const SETTINGS_OPS = ["updateMetadata", "manageWhitelist", "changeFeeDestinations"];
+const MEMBER_OPS = ["manageExecutorMembers", "transferAdminRole", "selfRevoke"];
+/** What the chip's tooltip adds beyond the create flow's description. */
+const opNote = (op: IVaultOperationSwitch): string => {
+  const state = opState(op);
+  if (state === "adding") return "Turned on by the permissions proposal.";
+  if (state === "removing") return "Turned off by the permissions proposal.";
   const pending = props.pendingActivation;
-  if (!pending) return "";
-  if (pending.settings && grant.scope.selector.toLowerCase() === UPDATE_SETTINGS_SELECTOR) {
+  if (op.on && pending?.settings && SETTINGS_OPS.includes(op.key)) {
     return "Inert until governance hands settings authority to the vault's Safe (activation, above).";
   }
-  if (pending.modifier && grant.scope.target.toLowerCase() === props.rolesModAddress.toLowerCase()) {
+  if (op.on && pending?.modifier && MEMBER_OPS.includes(op.key)) {
     return "Inert until governance transfers the Roles modifier to the vault's Safe (activation, above).";
   }
-  return "";
+  return op.on ? "" : "Off for this role.";
 };
-
-const lastEventBlock = computed(() =>
-  (props.logs ?? []).reduce((max, log) => Math.max(max, log.blockNumber || 0), 0),
-);
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
-
-const countsText = (role: IStoredRoleView): string => {
-  const parts = [
-    plural(role.members.length, "member"),
-    plural(role.contracts, "contract"),
-    plural(role.functions, "function"),
-  ];
-  if (role.openContracts) parts.push(`${role.openContracts} open to any function`);
-  return parts.join(" · ");
-};
 
 // The queue counts Roles calls; say what they allow instead. Functions are
 // only ever allowed on the contracts that are not open to any function.
@@ -687,14 +828,6 @@ const adapterFunctionName = (selector: string): string => {
     min-width: 0;
   }
 
-  &__lede {
-    margin: 0;
-    max-width: 68ch;
-    font-size: 12.5px;
-    line-height: 1.55;
-    color: $color-steel-blue;
-  }
-
   &__refresh {
     font-family: $font-mono;
     font-size: 11px;
@@ -791,11 +924,12 @@ const adapterFunctionName = (selector: string): string => {
   }
 
   /* The role on screen. */
+
   &__role {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding: 1.25rem;
+    gap: 1.5rem;
+    padding: 1.5rem;
     border: 1px solid $color-line;
     border-radius: $default-border-radius;
     background: $color-card-background;
@@ -831,153 +965,6 @@ const adapterFunctionName = (selector: string): string => {
     &:hover {
       text-decoration: underline;
     }
-  }
-
-  /* Prepopulated permissions: one row per built-in grant. */
-  &__section {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid $color-line;
-    border-radius: $default-border-radius;
-  }
-
-  &__section_head {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: 100%;
-    padding: 0.75rem 1rem 0.75rem 0.625rem;
-    text-align: left;
-    color: $color-steel-blue;
-    cursor: pointer;
-
-    &:hover,
-    &:focus-visible {
-      outline: none;
-
-      .grants__section_title {
-        color: $color-cyan;
-      }
-    }
-
-    &--open {
-      border-bottom: 1px solid $color-line;
-    }
-  }
-
-  &__chevron {
-    flex: none;
-    transition: transform $default-transition-time;
-
-    &--open {
-      transform: rotate(180deg);
-    }
-  }
-
-  &__section_flag {
-    margin-left: auto;
-    font-family: $font-mono;
-    font-size: 11px;
-    color: $color-warning;
-  }
-
-  &__section_title {
-    font-family: $font-mono;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: $color-white;
-  }
-
-  &__section_summary {
-    font-family: $font-mono;
-    font-size: 11px;
-    color: $color-steel-blue;
-  }
-
-  &__prepop {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-    padding: 0.75rem 1rem;
-
-    & + & {
-      border-top: 1px solid $color-line;
-    }
-  }
-
-  &__prepop_main {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 13px;
-    color: $color-white;
-  }
-
-  &__prepop_dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 999px;
-    flex: none;
-    background: $color-pos;
-  }
-
-  &__prepop--off &__prepop_dot {
-    background: $color-inactive;
-  }
-
-  &__prepop--off &__prepop_label {
-    color: $color-steel-blue;
-  }
-
-  &__prepop--removed &__prepop_dot {
-    background: $color-warning;
-  }
-
-  &__prepop_state {
-    margin-left: auto;
-    font-family: $font-mono;
-    font-size: 11px;
-    color: $color-steel-blue;
-  }
-
-  &__prepop--removed &__prepop_state {
-    color: $color-warning;
-  }
-
-  &__prepop_action {
-    font-family: $font-mono;
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-
-    &:hover {
-      color: $color-white;
-    }
-  }
-
-  &__prepop_switches {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1rem;
-    padding-left: 1.0625rem;
-  }
-
-  &__switch {
-    font-size: 12px;
-    color: $color-steel-blue;
-
-    &--on {
-      color: $color-white;
-    }
-  }
-
-  &__prepop_note {
-    margin: 0;
-    padding-left: 1.0625rem;
-    font-size: 12px;
-    color: $color-warning;
   }
 
   &__role_head {
@@ -1092,6 +1079,428 @@ const adapterFunctionName = (selector: string): string => {
     margin: 0;
     font-size: 12.5px;
     color: $color-steel-blue;
+  }
+}
+
+/* ---- Role panel ---------------------------------------------------------- */
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+
+  &__icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 12px;
+    border: 1px solid $color-accent-line;
+    background: $color-accent-soft;
+    color: $color-cyan;
+
+    &--admin {
+      border-color: $color-line-2;
+      background: $color-card-background;
+      color: $color-white;
+    }
+
+    &--custom {
+      border-style: dashed;
+      border-color: $color-line-2;
+      background: transparent;
+      color: $color-steel-blue;
+    }
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__title {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+  }
+
+  &__name {
+    font-size: 20px;
+    font-weight: 700;
+    color: $color-white;
+  }
+
+  &__number {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-cyan;
+  }
+
+  &__key {
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-steel-blue;
+    background: none;
+    padding: 0;
+  }
+
+  &__about {
+    margin: 0;
+    max-width: 70ch;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: $color-steel-blue;
+  }
+
+  &__remove {
+    margin-left: auto;
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $color-warning;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+/* One section of the panel: an icon, a title, a line on what it is. */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+
+  &__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  &__icon {
+    flex: none;
+    margin-top: 0.0625rem;
+    color: $color-cyan;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 700;
+    color: $color-white;
+  }
+
+  &__help {
+    margin: 0.125rem 0 0;
+    max-width: 72ch;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: $color-steel-blue;
+  }
+
+  &__empty {
+    margin: 0;
+    padding: 0.875rem 1rem;
+    border: 1px dashed $color-line-2;
+    border-radius: $default-border-radius;
+    font-size: 13px;
+    color: $color-steel-blue;
+  }
+}
+
+/* Members as cards: a mark to tell them apart, the address, what it is. */
+.members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.member {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.625rem 0.375rem 0.4375rem;
+  border: 1px solid $color-line;
+  border-radius: 999px;
+  background: $color-card-background;
+
+  &--off {
+    opacity: 0.6;
+  }
+
+  &__avatar {
+    flex: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+  }
+
+  &__text {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__address {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 12.5px;
+
+    :deep(.explorer_address__hex) {
+      color: $color-white;
+      font-size: 12.5px;
+    }
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__tag {
+    font-family: $font-mono;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.0625rem 0.3125rem;
+    border-radius: 3px;
+    border: 1px solid $color-line-2;
+    color: $color-steel-blue;
+
+    &--you {
+      border-color: $color-accent-line;
+      background: $color-accent-soft;
+      color: $color-cyan;
+    }
+
+    &--warn {
+      border-color: currentColor;
+      color: $color-warning;
+    }
+  }
+}
+
+/* Vault operations: one chip per switch, its state in its mark. */
+.ops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.op {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4375rem 0.75rem 0.4375rem 0.5625rem;
+  border-radius: 999px;
+  border: 1px solid $color-line-2;
+  background: transparent;
+  font-size: 12.5px;
+  line-height: 1;
+  color: $color-white;
+  cursor: default;
+  transition: border-color $default-transition-time ease, background-color $default-transition-time ease;
+
+  &--on :deep(svg) {
+    color: $color-pos;
+  }
+
+  &--off {
+    color: $color-steel-blue;
+    border-style: dashed;
+
+    :deep(svg) {
+      color: $color-inactive;
+    }
+  }
+
+  &--adding {
+    border-color: $color-accent-line;
+    background: $color-accent-soft;
+
+    :deep(svg) {
+      color: $color-cyan;
+    }
+  }
+
+  &--removing {
+    border-color: $color-warning;
+    color: $color-warning;
+    text-decoration: line-through;
+
+    :deep(svg) {
+      color: $color-warning;
+    }
+  }
+
+  &--clickable {
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      border-color: $color-cyan;
+    }
+  }
+}
+
+/* Protocol access: one row per protocol, opening onto its contracts. */
+.protocols {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.protocol {
+  border: 1px solid $color-line;
+  border-radius: $default-border-radius;
+  background: $color-card-background;
+  transition: border-color $default-transition-time ease;
+
+  &--open {
+    border-color: $color-line-2;
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+
+      .protocol__name {
+        color: $color-cyan;
+      }
+    }
+  }
+
+  &__logo {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.375rem;
+    height: 1.375rem;
+    color: $color-steel-blue;
+  }
+
+  &__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: $color-white;
+    white-space: nowrap;
+    transition: color $default-transition-time ease;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    margin-left: auto;
+  }
+
+  &__tag {
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0.3125rem 0.5rem;
+    border-radius: 4px;
+    background: $color-accent-soft;
+    color: $color-white;
+    white-space: nowrap;
+  }
+
+  &__flag {
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-warning;
+    white-space: nowrap;
+  }
+
+  &__count {
+    min-width: 5.5rem;
+    text-align: right;
+    font-size: 12px;
+    color: $color-steel-blue;
+    white-space: nowrap;
+  }
+
+  &__remove {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+
+    &:hover {
+      color: $color-warning;
+    }
+  }
+
+  &__chevron {
+    flex: none;
+    color: $color-steel-blue;
+    transition: transform $default-transition-time;
+
+    &--open {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__body {
+    padding: 0 1rem 1rem;
+    border-top: 1px solid $color-line;
+    padding-top: 0.75rem;
+  }
+
+  @media (max-width: 640px) {
+    &__head {
+      flex-wrap: wrap;
+    }
+
+    &__tags {
+      order: 5;
+      width: 100%;
+      justify-content: flex-start;
+      margin-left: 0;
+    }
+  }
+}
+
+.ops_hint {
+  margin: 0;
+  font-family: $font-mono;
+  font-size: 11px;
+  color: $color-steel-blue;
+}
+
+.op_tip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: 12.5px;
+  line-height: 1.45;
+
+  &__note {
+    opacity: 0.8;
+    font-style: italic;
   }
 }
 </style>

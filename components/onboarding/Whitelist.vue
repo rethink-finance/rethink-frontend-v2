@@ -6,7 +6,7 @@
           <h2 class="whitelist__title">
             Whitelisted deposits
           </h2>
-          <OnboardingFieldChip :tag="FieldTag.UpgradableCurator" />
+          <OnboardingFieldChip v-if="showTag" :tag="FieldTag.UpgradableCurator" />
         </div>
         <p class="whitelist__sub">
           Only the addresses below can deposit into the vault. Leave off for a
@@ -191,6 +191,14 @@ const props = defineProps({
    * whitelist is switched on.
    */
   dimWhenDisabled: {
+    type: Boolean,
+    default: true,
+  },
+  /**
+   * The "Upgradable by curator" chip answers a create-flow question; on the
+   * curator page itself it says nothing new.
+   */
+  showTag: {
     type: Boolean,
     default: true,
   },

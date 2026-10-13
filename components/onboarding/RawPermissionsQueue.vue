@@ -58,8 +58,18 @@
             class="queue__role"
             :title="`Role key: ${role}`"
           >{{ queuedRoleName(role) }}</span>
+          <!-- Folded, a contract can name what it allows instead of counting it. -->
           <button
-            v-if="collapsible"
+            v-if="collapsible && functionChips && !isOpen(group) && chipsOf(group).length"
+            type="button"
+            class="queue__chips"
+            :aria-label="`Show what is allowed on this contract: ${chipsOf(group).join(', ')}`"
+            @click="toggle(group)"
+          >
+            <span v-for="chip in chipsOf(group)" :key="chip" class="queue__chip">{{ chip }}</span>
+          </button>
+          <button
+            v-else-if="collapsible"
             type="button"
             class="queue__group_summary"
             @click="toggle(group)"
@@ -326,6 +336,8 @@ const props = withDefaults(defineProps<{
   collapsible?: boolean;
   /** Replaces the head's call count, for a list whose surroundings count it better. */
   summaryText?: string;
+  /** Folded contracts list their functions by name, as chips, instead of a count. */
+  functionChips?: boolean;
   /** What a folded block says when one of its calls carries a "warn" note. */
   flagText?: string;
   chainId?: ChainId;
@@ -412,6 +424,20 @@ const groupSummary = (group: IQueueGroup): string => {
     return count ? `${count} function${count === 1 ? "" : "s"}` : "nothing allowed";
   }
   return `${group.calls.length} call${group.calls.length === 1 ? "" : "s"}`;
+};
+
+/** The functions a folded contract allows, by name. */
+const chipsOf = (group: IQueueGroup): string[] => {
+  if (group.calls.some((call) => call.description.action === "allow-target")) {
+    return ["any function"];
+  }
+  const names = group.calls
+    .filter((call) => ["allow-function", "scope-function"].includes(call.description.action))
+    .map((call) => {
+      if (isEmptyCalldata(call.description.selector)) return "send ETH";
+      return namedFunction(call)?.name || call.description.selector || "?";
+    });
+  return [...new Set(names)];
 };
 
 /** Does a pending save change anything in this group? */
@@ -860,6 +886,33 @@ const refillText = (call: IQueuedCall): string => {
     &--open {
       transform: rotate(180deg);
     }
+  }
+
+  &__chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.3125rem;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+
+  &__chip {
+    font-family: $font-mono;
+    font-size: 11px;
+    line-height: 1;
+    padding: 0.3125rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid $color-line-2;
+    color: $color-white;
+    background: $color-card-background;
+    transition: border-color $default-transition-time ease;
+  }
+
+  &__chips:hover &__chip,
+  &__chips:focus-visible &__chip {
+    border-color: $color-accent-line;
   }
 
   &__group_summary {

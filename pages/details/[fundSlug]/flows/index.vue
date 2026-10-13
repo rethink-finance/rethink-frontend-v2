@@ -830,11 +830,7 @@ onMounted(async () => {
 }
 
 .flows__admin_title {
-  font-family: $font-mono;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: $color-steel-blue;
+  @include card-title;
 }
 
 .flows__admin_stats {

@@ -145,9 +145,9 @@
                 width="2"
                 indeterminate
               />
-              <template v-else>
-                {{ row.pastNavValue ? fundStore.getFormattedBaseTokenValue(row.pastNavValue) : "-" }}
-              </template>
+              <span v-else :title="row.pastNavValue ? exactAmount(row.pastNavValue) : undefined">
+                {{ row.pastNavValue ? amountText(row.pastNavValue) : "-" }}
+              </span>
               <span v-if="row.pastNavValueError" class="nav_table__warn">
                 <Icon icon="octicon:question-16" width="0.875rem" />
                 <v-tooltip activator="parent" location="top">
@@ -167,9 +167,9 @@
                 width="2"
                 indeterminate
               />
-              <template v-else>
-                {{ row.simulatedNavFormatted ?? "-" }}
-              </template>
+              <span v-else :title="simulatedShowsAmount(row) ? exactAmount(row.simulatedNav) : undefined">
+                {{ simulatedShowsAmount(row) ? amountText(row.simulatedNav ?? 0n) : (row.simulatedNavFormatted ?? "-") }}
+              </span>
               <span v-if="row.isSimulatedNavError" class="nav_table__warn">
                 <Icon icon="octicon:question-16" width="0.875rem" />
                 <v-tooltip activator="parent" location="top">
@@ -453,6 +453,7 @@
 
 <script lang="ts">
 import { ethers } from "ethers";
+import { formatDisplayAmount } from "~/composables/formatters";
 import AddressLink from "~/components/common/AddressLink.vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
@@ -772,10 +773,10 @@ export default defineComponent({
         (BigInt(this.feeBalance) || 0n);
 
 
-      return this.fundStore.getFormattedBaseTokenValue(totalNAV, true, false, this.baseSymbol, this.baseDecimals);
+      return this.amountText(totalNAV);
     },
     formattedTotalLastNAV() {
-      return this.fundStore.getFormattedBaseTokenValue(this.navParts?.totalNAV || 0n, true, false, this.baseSymbol, this.baseDecimals);
+      return this.amountText(this.navParts?.totalNAV || 0n);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -789,13 +790,13 @@ export default defineComponent({
       )
     },
     formattedFundContractBaseTokenBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.fundContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
+      return this.amountText(BigInt(this.fundContractBaseTokenBalance));
     },
     formattedSafeContractBaseTokenBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.safeContractBaseTokenBalance), true, false, this.baseSymbol, this.baseDecimals);
+      return this.amountText(BigInt(this.safeContractBaseTokenBalance));
     },
     formattedFeeBalance() {
-      return this.fundStore.getFormattedBaseTokenValue(BigInt(this.feeBalance), true, false, this.baseSymbol, this.baseDecimals);
+      return this.amountText(BigInt(this.feeBalance));
     },
     simulatedNavErrorCount() {
       return this.methods?.filter((method: INAVMethod) => method.isSimulatedNavError)?.length || 0
@@ -889,15 +890,37 @@ export default defineComponent({
       const type = (method.displayPositionType || method.positionType) as PositionType;
       return getPositionType(type)?.name || "N/A";
     },
+    /** The base token as this table shows it: the props, else the selected vault's. */
+    baseToken(): { decimals: number; symbol: string } {
+      const fallback = this.fundStore.fund?.baseToken;
+      return {
+        decimals: this.baseDecimals > 0 ? this.baseDecimals : Number(fallback?.decimals ?? 18),
+        symbol: this.baseSymbol || fallback?.symbol || "",
+      };
+    },
+    /** An amount for a cell: the app's usual style, dust as "< 0.000001". */
+    amountText(value: bigint | string | number): string {
+      const { decimals, symbol } = this.baseToken();
+      return `${formatDisplayAmount(BigInt(value), decimals)} ${symbol}`.trim();
+    },
+    /** The exact amount, for the cell's tooltip. */
+    exactAmount(value?: bigint | string | number | null): string | undefined {
+      if (value === undefined || value === null || value === "") return undefined;
+      const { decimals, symbol } = this.baseToken();
+      return `${ethers.formatUnits(BigInt(value), decimals)} ${symbol}`.trim();
+    },
+    /** A simulated value that came back as an amount, not an error or "N/A". */
+    simulatedShowsAmount(row: any): boolean {
+      return (
+        row.simulatedNav !== undefined &&
+        row.simulatedNav !== null &&
+        !row.isSimulatedNavError &&
+        row.simulatedNavFormatted !== "N/A"
+      );
+    },
     formatLastValue(value?: bigint): string {
       if (!value) return "-";
-      return this.fundStore.getFormattedBaseTokenValue(
-        value,
-        true,
-        false,
-        this.baseSymbol || undefined,
-        this.baseDecimals > 0 ? this.baseDecimals : undefined,
-      );
+      return this.amountText(value);
     },
     /**
      * A row still waiting on its first simulated value. The action writes
@@ -1530,6 +1553,16 @@ export default defineComponent({
     align-items: center;
     justify-content: flex-end;
     gap: 0.375rem;
+    min-width: 0;
+
+    /* A long figure is cut, never run into the next column; the exact value
+       is in its tooltip. */
+    > span:first-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     font-family: $font-mono;
     font-size: 13px;
     text-align: right;

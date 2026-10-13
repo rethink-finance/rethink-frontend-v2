@@ -137,3 +137,51 @@ export const readableContractName = ({
   if (!contract || isProxy || PROXY_NAME.test(contract)) return undefined;
   return humanizeContractName(contract);
 };
+
+/* ---- Which protocol a contract belongs to ---------------------------------- */
+
+/** A protocol, or a token, as the Permissions tab groups contracts under it. */
+export interface IContractProtocol {
+  key: string;
+  name: string;
+  /** A DefiLlama protocol slug, or a token symbol for the design system's marks. */
+  logo: { protocol: string } | { token: string };
+}
+
+const PROTOCOLS: Record<string, IContractProtocol> = {
+  hypercore: { key: "hypercore", name: "HyperCore", logo: { protocol: "hyperliquid" } },
+  felix: { key: "felix", name: "Felix", logo: { protocol: "felix" } },
+  hyperlend: { key: "hyperlend", name: "HyperLend", logo: { protocol: "hyperlend" } },
+  across: { key: "across", name: "Across", logo: { protocol: "across" } },
+  oneinch: { key: "oneinch", name: "1inch", logo: { protocol: "1inch-network" } },
+};
+
+// Lowercased address → protocol key. The contracts vault permissions scope on
+// the chains this app serves, beyond what the permissions registry lists.
+const CONTRACT_PROTOCOLS: Record<string, keyof typeof PROTOCOLS> = {
+  [CORE_WRITER]: "hypercore",
+  "0x6b9e773128f453f5c2c60935ee2de2cbc5390a24": "hypercore",
+  "0x8a862fd6c12f9ad34c9c2ff45ab2b6712e8cea27": "felix",
+  "0x00a89d7a5a02160f20150ebea7a2b5e4879a1a8b": "hyperlend",
+  "0x744e4f26ee30213989216e1632d9be3547c4885b": "hyperlend",
+  "0x35e63ea3eb0fb7a3bc543c71fb66412e1f6b0e04": "across",
+  "0x111111125421ca6dc452d289314280a0f8842a65": "oneinch",
+  "0x1111111254eeb25477b68fb85ed929f73a960582": "oneinch",
+};
+
+// Lowercased token address → symbol, for grants on a token itself.
+const TOKEN_SYMBOLS: Record<string, string> = {
+  "0xaf88d065e77c8cc2239327c5edb3a432268e5831": "USDC",
+  "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": "USDC",
+  "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "USDC",
+  "0xb88339cb7199b77e23db6e890353e22632ba630f": "USDC",
+};
+
+/** The protocol (or token) a contract belongs to, where the app knows it. */
+export const contractProtocol = (address?: string): IContractProtocol | undefined => {
+  const key = (address ?? "").toLowerCase();
+  const protocol = CONTRACT_PROTOCOLS[key];
+  if (protocol) return PROTOCOLS[protocol];
+  const symbol = TOKEN_SYMBOLS[key];
+  return symbol ? { key: `token:${symbol}`, name: symbol, logo: { token: symbol } } : undefined;
+};
