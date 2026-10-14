@@ -403,4 +403,45 @@ describe("protocol access grouped by protocol", () => {
     expect(groups[1].logo).toEqual({ protocol: "hyperliquid" });
     expect(groups[0].logo).toEqual({ token: "USDC" });
   });
+
+  it("names sciETH's staking, Lido, CoW and payout grants by what they do", async () => {
+    const { contractProtocol } = await import("../composables/contracts/contractNames");
+    const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+    const STETH = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84";
+    const HUB = "0xA2A9C501D1D29fF696E7045c05DeEf1ed7511143";
+    const STAKING_VAULT = "0x51CDD86C08319283aFc8d9a797efaa0458DB6343";
+    const COW_SIGNER = "0x23dA9AdE38E4477b23770DeD512fD37b12381FAB";
+    const MULTISIG = "0xf0b31Db69b57023b2050eCa2A32932Dd0CEac9E9";
+    const STRANGER = "0x7777777777777777777777777777777777777777";
+    const SEND = "0x00000000";
+    const allow = (target: string, selector: string) =>
+      entry("allowFunction", [EXECUTOR, target, selector, 0]);
+    const entries = [
+      allow(WETH, "0xd0e30db0"), // deposit()
+      allow(WETH, "0x2e1a7d4d"), // withdraw(uint256)
+      allow(HUB, "0x9abbdf4b"), // createVault
+      allow(STAKING_VAULT, "0x1c1408f0"), // requestStakeQuota
+      allow(STAKING_VAULT, SEND),
+      allow(STAKING_VAULT, "0xe1f06f54"), // withdrawPrincipal
+      allow(STAKING_VAULT, "0x372500ab"), // claimRewards
+      allow(STETH, "0xa1903eab"), // submit
+      allow(STETH, APPROVE),
+      allow(COW_SIGNER, "0x569d3489"), // signOrder
+      allow(COW_SIGNER, "0x5a66c223"), // unsignOrder
+      allow(MULTISIG, SEND),
+      allow(STRANGER, SEND),
+    ];
+    const groups = groupByProtocol(entries, contractProtocol, () => "Some address");
+    expect(groups.map((group) => [group.name, group.targets.length, group.tags])).toEqual([
+      ["WETH", 1, ["Wrap", "Unwrap"]],
+      ["w3.labs staking", 2, ["Create vault", "Request quota", "Stake", "Withdraw principal", "Claim rewards"]],
+      ["Lido", 1, ["Stake ETH", "Approve"]],
+      ["CoW Swap", 1, ["Place order", "Cancel order"]],
+      ["Yield multisig", 1, ["Send yield"]],
+      ["Some address", 1, ["Send ETH"]],
+    ]);
+    expect(groups.find((group) => group.tags.includes("Other"))).toBeUndefined();
+    // A bare recipient reads as a wallet, not a contract.
+    expect(groups[5].logo).toEqual({ icon: "material-symbols:account-balance-wallet-outline-rounded" });
+  });
 });

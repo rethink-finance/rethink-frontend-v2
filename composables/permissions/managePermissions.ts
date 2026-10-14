@@ -541,11 +541,18 @@ const CORE_ACTION_TAGS: Record<string, string> = {
   approveBuilderFee: "Builder fee",
 };
 
+// A send with no calldata: the selector Roles stores for it is all zeros.
+const SEND_ETH = "send ETH";
+const isPlainSend = (selector?: string) => (selector ?? "").toLowerCase() === "0x00000000";
+
 const functionName = (selector?: string): string | undefined =>
-  resolveKnownFunction(selector ?? "")?.function.name ?? findExtraSignature(selector)?.name;
+  isPlainSend(selector)
+    ? SEND_ETH
+    : resolveKnownFunction(selector ?? "")?.function.name ?? findExtraSignature(selector)?.name;
 
 const tagFor = (name: string) =>
   ACTION_TAGS[name] ??
+  (name === SEND_ETH ? "Send ETH" : undefined) ??
   name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (first) => first.toUpperCase());
 
 export interface IProtocolGroup {
@@ -604,10 +611,16 @@ export const groupByProtocol = (
           : undefined;
         tags.push(...(actions ? actions.map((action) => CORE_ACTION_TAGS[action] ?? tagFor(action)) : ["Any action"]));
       } else {
-        tags.push(name ? tagFor(name) : "Other");
+        tags.push(name ? protocol?.actions?.[name] ?? tagFor(name) : "Other");
       }
     }
     for (const tag of tags) if (!group.tags.includes(tag)) group.tags.push(tag);
+  }
+  // An address the role only sends ETH to is a recipient, not a contract.
+  for (const group of groups.values()) {
+    if (!group.logo && group.tags.length === 1 && group.tags[0] === "Send ETH") {
+      group.logo = { icon: "material-symbols:account-balance-wallet-outline-rounded" };
+    }
   }
   return [...groups.values()];
 };

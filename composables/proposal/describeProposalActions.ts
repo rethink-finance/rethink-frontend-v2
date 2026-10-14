@@ -67,6 +67,16 @@ export const EXTRA_SIGNATURES = [
   "function repay(address asset, uint256 amount, uint256 interestRateMode, address onBehalfOf)",
   // HyperEVM's USDC deposit wallet: moves USDC onto HyperCore for a recipient.
   "function depositFor(address recipient, uint256 amount, uint32 destinationDex)",
+  // Ethereum staking venues: WETH unwrapping, Lido, the w3.labs staking hub
+  // and its per-staker vault, and CoW Protocol's pre-sign helper.
+  "function withdraw(uint256 amount)",
+  "function submit(address referral)",
+  "function createVault(uint256 initialStakeQuota)",
+  "function requestStakeQuota(uint256 amount)",
+  "function withdrawPrincipal()",
+  "function claimRewards()",
+  "function signOrder((address sellToken, address buyToken, address receiver, uint256 sellAmount, uint256 buyAmount, uint32 validTo, bytes32 appData, uint256 feeAmount, bytes32 kind, bool partiallyFillable, bytes32 sellTokenBalance, bytes32 buyTokenBalance) order, uint32 validDuration, uint256 feeAmountBP)",
+  "function unsignOrder((address sellToken, address buyToken, address receiver, uint256 sellAmount, uint256 buyAmount, uint32 validTo, bytes32 appData, uint256 feeAmount, bytes32 kind, bool partiallyFillable, bytes32 sellTokenBalance, bytes32 buyTokenBalance) order)",
 ];
 
 const extraSignatureInterface = new ethers.Interface(EXTRA_SIGNATURES);

@@ -201,7 +201,9 @@ describe("buildStoredRoleViews", () => {
     expect(executor.contracts).toBe(1);
     expect(executor.functions).toBe(2);
     expect(executor.emptyTargets).toEqual([]);
-    expect(executor.allowances).toEqual([{ key: TRADER.toLowerCase(), use: "amount" }]);
+    expect(executor.allowances).toEqual([
+      { key: TRADER.toLowerCase(), use: "amount", targets: [BASE_TOKEN.toLowerCase()] },
+    ]);
 
     expect(trader.members).toEqual([BOB]);
     expect(trader.keyBytes).toBe(TRADER.toLowerCase());

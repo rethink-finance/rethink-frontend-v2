@@ -144,8 +144,17 @@ export const readableContractName = ({
 export interface IContractProtocol {
   key: string;
   name: string;
-  /** A DefiLlama protocol slug, or a token symbol for the design system's marks. */
-  logo: { protocol: string } | { token: string };
+  /**
+   * A DefiLlama protocol slug, a token symbol for the design system's marks,
+   * or an Iconify icon where neither exists.
+   */
+  logo: { protocol: string } | { token: string } | { icon: string };
+  /**
+   * What a function does here in a word or two, where its name says it less
+   * clearly (WETH's deposit wraps, a staking vault's plain send stakes).
+   * "send ETH" names a send with no calldata.
+   */
+  actions?: Record<string, string>;
 }
 
 const PROTOCOLS: Record<string, IContractProtocol> = {
@@ -154,6 +163,38 @@ const PROTOCOLS: Record<string, IContractProtocol> = {
   hyperlend: { key: "hyperlend", name: "HyperLend", logo: { protocol: "hyperlend" } },
   across: { key: "across", name: "Across", logo: { protocol: "across" } },
   oneinch: { key: "oneinch", name: "1inch", logo: { protocol: "1inch-network" } },
+  lido: {
+    key: "lido",
+    name: "Lido",
+    logo: { protocol: "lido" },
+    actions: { submit: "Stake ETH" },
+  },
+  cow: {
+    key: "cow",
+    name: "CoW Swap",
+    logo: { protocol: "cowswap" },
+    actions: { signOrder: "Place order", unsignOrder: "Cancel order" },
+  },
+  // No DefiLlama listing, so no logo to fetch.
+  w3labs: {
+    key: "w3labs",
+    name: "w3.labs staking",
+    logo: { icon: "material-symbols:deployed-code-outline-rounded" },
+    actions: {
+      createVault: "Create vault",
+      requestStakeQuota: "Request quota",
+      "send ETH": "Stake",
+      withdrawPrincipal: "Withdraw principal",
+      claimRewards: "Claim rewards",
+    },
+  },
+  // sciETH's payout multisig: the role sends it the vault's yield.
+  scieth_multisig: {
+    key: "scieth_multisig",
+    name: "Yield multisig",
+    logo: { icon: "material-symbols:account-balance-wallet-outline-rounded" },
+    actions: { "send ETH": "Send yield" },
+  },
 };
 
 // Lowercased address → protocol key. The contracts vault permissions scope on
@@ -167,6 +208,14 @@ const CONTRACT_PROTOCOLS: Record<string, keyof typeof PROTOCOLS> = {
   "0x35e63ea3eb0fb7a3bc543c71fb66412e1f6b0e04": "across",
   "0x111111125421ca6dc452d289314280a0f8842a65": "oneinch",
   "0x1111111254eeb25477b68fb85ed929f73a960582": "oneinch",
+  // Ethereum
+  "0xae7ab96520de3a18e5e111b5eaab095312d7fe84": "lido", // stETH
+  "0x9008d19f58aabd9ed0d60971565aa8510560ab41": "cow", // settlement
+  "0xc92e8bdf79f0507f65a392b0ab4667716bfe0110": "cow", // vault relayer
+  "0x23da9ade38e4477b23770ded512fd37b12381fab": "cow", // order signer
+  "0xa2a9c501d1d29ff696e7045c05deef1ed7511143": "w3labs", // staking hub
+  "0x51cdd86c08319283afc8d9a797efaa0458db6343": "w3labs", // sciETH's staking vault
+  "0xf0b31db69b57023b2050eca2a32932dd0ceac9e9": "scieth_multisig",
 };
 
 // Lowercased token address → symbol, for grants on a token itself.
@@ -175,6 +224,13 @@ const TOKEN_SYMBOLS: Record<string, string> = {
   "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": "USDC",
   "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "USDC",
   "0xb88339cb7199b77e23db6e890353e22632ba630f": "USDC",
+  "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": "WETH",
+  "0x82af49447d8a07e3bd95bd0d56f35241523fbab1": "WETH",
+  "0x4200000000000000000000000000000000000006": "WETH",
+};
+
+const TOKEN_ACTIONS: Record<string, Record<string, string>> = {
+  WETH: { deposit: "Wrap", withdraw: "Unwrap" },
 };
 
 /** The protocol (or token) a contract belongs to, where the app knows it. */
@@ -183,5 +239,7 @@ export const contractProtocol = (address?: string): IContractProtocol | undefine
   const protocol = CONTRACT_PROTOCOLS[key];
   if (protocol) return PROTOCOLS[protocol];
   const symbol = TOKEN_SYMBOLS[key];
-  return symbol ? { key: `token:${symbol}`, name: symbol, logo: { token: symbol } } : undefined;
+  return symbol
+    ? { key: `token:${symbol}`, name: symbol, logo: { token: symbol }, actions: TOKEN_ACTIONS[symbol] }
+    : undefined;
 };
