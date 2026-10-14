@@ -786,6 +786,20 @@ export const sciBatch = (calls: IRoleCall[]): IRoleCall => ({
   operation: 1,
 });
 
+/** Who a step or position involves, for the mark shown beside it. */
+export type SciMarkKind = "eth" | "weth" | "lido" | "cow" | "staking" | "wallet" | "vault";
+
+/** The mark for one step of a plan, read off the step's own words. */
+export const sciStepMark = (part: string): SciMarkKind | undefined => {
+  const text = part.toLowerCase();
+  if (text.includes("lido")) return "lido";
+  if (text.includes("to the multisig")) return "wallet";
+  if (text.includes("update the nav") || text.includes("vault contract")) return "vault";
+  if (/^(un)?wrap /.test(text)) return "weth";
+  if (/^(stake|claim|withdraw) /.test(text)) return "staking";
+  return undefined;
+};
+
 export interface SciPlan {
   /** What goes to the wallet: the single call, or the batch. */
   call: IRoleCall;
