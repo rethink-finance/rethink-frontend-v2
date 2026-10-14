@@ -658,10 +658,6 @@ const rawExcludedFundAddresses = {
       alwaysExclude: true,
     }, // CarrotFunding Vault, vCFT (hidden 2026-10-14)
     {
-      address: "0xeD8f7E3ED5c37D508e8E4725d6970356B8FecE2A",
-      alwaysExclude: true,
-    }, // CarrotFunding Vault V2 (hidden 2026-10-14)
-    {
       address: "0x7ed95418063d5b61bDE7b40D65F93739c0CFdcf4",
       alwaysExclude: true,
     }, // Rethink test vault
