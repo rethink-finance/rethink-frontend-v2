@@ -45,7 +45,14 @@
         bottom.
       </p>
 
-      <div v-if="needsActivation" class="activation_card mt-6">
+      <FundPermissionsActivationLine
+        v-for="proposal in activationProposalsInFlight"
+        :key="proposal.proposalId"
+        class="mt-4"
+        :proposal="proposal"
+      />
+
+      <div v-if="needsActivation && activationProposalsChecked" class="activation_card mt-6">
         <strong>Role permissions pending activation</strong>
         <p v-if="proposesSettingsAuthority">
           The vault-settings permissions (whitelist, metadata, fee
@@ -53,7 +60,7 @@
           default configuration and hands settings authority to the Safe
           (one-time <code>governor&nbsp;→&nbsp;Safe</code> settings change).
         </p>
-        <p v-if="activationState?.needsOwnershipTransfer">
+        <p v-if="proposesOwnershipTransfer">
           The role-member permissions stay inert until governance
           transfers the Roles modifier's ownership to the Safe.
         </p>
@@ -339,6 +346,8 @@ import {
   useProposalPreflight,
 } from "~/composables/governance/useProposalPreflight";
 import { RolesVersion } from "~/types/enums/roles_version";
+import { useActivationProposals } from "~/composables/permissions/useActivationProposals";
+import type IGovernanceProposal from "~/types/governance_proposal";
 import type { IRawPermissionCodeEntry } from "~/composables/permissions/parseRawPermissionCode";
 import {
   buildProtocolPermissionEntries,
@@ -414,21 +423,68 @@ const settingsPermissionGranted = ref<boolean | null>(null);
  * permission that needs it. Role-member permissions need the modifier's
  * ownership alone.
  */
-const proposesSettingsAuthority = computed(
+const settingsAuthorityNeeded = computed(
   () =>
     !!activationState.value?.needsGovernorMigration &&
     settingsPermissionGranted.value !== false,
 );
+
+// Activation proposals already submitted and still live. Read off the
+// governance store (hydrated from cache, refreshed below), so a vault whose
+// activation is up for vote is not offered a second, conflicting proposal.
+const { proposals: activationProposals, refresh: refreshProposals } = useActivationProposals(() =>
+  activationState.value
+    ? {
+      chainId: fund.chainId,
+      fundAddress: fund.address,
+      rolesModifier: roleModAddress.value || null,
+      safe: activationState.value.safe,
+    }
+    : null,
+);
+// The parts of the activation no live proposal covers yet: only these are
+// offered, so a partly proposed activation never proposes a step twice.
+const proposesSettingsAuthority = computed(
+  () => settingsAuthorityNeeded.value && !activationProposals.value.settings,
+);
+const proposesOwnershipTransfer = computed(
+  () =>
+    !!activationState.value?.needsOwnershipTransfer &&
+    !activationProposals.value.ownership,
+);
+const activationProposalsInFlight = computed(() => {
+  const { ownership, settings } = activationProposals.value;
+  const inFlight: IGovernanceProposal[] = [];
+  if (activationState.value?.needsOwnershipTransfer && ownership) inFlight.push(ownership);
+  if (settingsAuthorityNeeded.value && settings && settings !== ownership) inFlight.push(settings);
+  return inFlight;
+});
 // What the granted-permissions view marks as inert until activation.
 const pendingActivation = computed(() => ({
   modifier: !!activationState.value?.needsOwnershipTransfer,
   settings: !!activationState.value?.needsGovernorMigration,
 }));
 const needsActivation = computed(
-  () =>
-    proposesSettingsAuthority.value ||
-    activationState.value?.needsOwnershipTransfer,
+  () => proposesSettingsAuthority.value || proposesOwnershipTransfer.value,
 );
+
+/**
+ * Only while something is left to activate: the full proposal history is a
+ * governance-page read, not worth paying for on an activated vault.
+ */
+// The create card waits for this: shown before the proposals are read, it
+// would offer a proposal for a vault whose activation is already up for vote.
+const activationProposalsChecked = ref(false);
+const refreshActivationProposals = async () => {
+  if (
+    !activationState.value?.needsOwnershipTransfer &&
+    !settingsAuthorityNeeded.value
+  ) {
+    return;
+  }
+  await refreshProposals();
+  activationProposalsChecked.value = true;
+};
 
 const refreshActivationState = async () => {
   if (!fund?.fundFactoryContractV2Used || !fund?.address) return;
@@ -441,6 +497,7 @@ const refreshActivationState = async () => {
   } catch (error) {
     console.error("Failed reading activation state", error);
   }
+  await refreshActivationProposals();
 };
 
 const createActivationProposal = async () => {
@@ -455,7 +512,10 @@ const createActivationProposal = async () => {
       fund.address,
       roleModAddress.value || null,
       fund.governorAddress,
-      { settingsAuthority: proposesSettingsAuthority.value },
+      {
+        settingsAuthority: proposesSettingsAuthority.value,
+        ownership: proposesOwnershipTransfer.value,
+      },
     );
     if (!actions.targets.length) {
       toastStore.addToast("Nothing left to activate.");
@@ -511,6 +571,7 @@ const createActivationProposal = async () => {
           toastStore.successToast(
             "Activation proposal created. You can now vote on it in the governance page.",
           );
+          refreshActivationProposals();
         } else {
           toastStore.errorToast(
             "The activation proposal transaction failed. Please contact the Rethink Finance support.",

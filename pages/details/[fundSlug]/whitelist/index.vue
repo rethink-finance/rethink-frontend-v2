@@ -10,20 +10,15 @@
     </div>
 
     <UiMainCard v-else class="brand_card">
-      <div v-if="needsActivation" class="activation_note">
-        <strong>Manager permissions pending activation</strong>
-        <p>
-          The "update vault settings" permission is granted but stays inert
-          until the one-time activation proposal has passed. Changes saved
-          here would revert on the vault until then.
-        </p>
-        <NuxtLink
-          class="activation_note__link"
-          :to="`/details/${selectedFundSlug}/permissions`"
-        >
-          Go to Permissions to create the activation proposal
-        </NuxtLink>
-      </div>
+      <FundPermissionsSettingsActivationLine
+        v-if="activationSafe"
+        :chain-id="fund.chainId"
+        :fund-address="fund.address"
+        :roles-modifier="roleModAddress"
+        :safe="activationSafe"
+        :needs-activation="needsActivation"
+        operation="Manage whitelist"
+      />
 
       <v-skeleton-loader v-if="isLoading" type="table-row@4" />
       <template v-else>
@@ -114,7 +109,6 @@ const appSettingsStore = useSettingsStore();
 const toastStore = useToastStore();
 
 const fund = useAttrs().fund as IFund;
-const { selectedFundSlug } = storeToRefs(fundStore);
 
 const isLoading = ref(true);
 const isSubmitting = ref(false);
@@ -126,6 +120,7 @@ const isWhitelistedDeposits = ref(false);
 const chainWhitelistEnabled = ref(false);
 const roleModAddress = ref("");
 const needsActivation = ref(false);
+const activationSafe = ref("");
 const liveState = ref<ILiveFundSettingsState | null>(null);
 
 const isToggleChanged = computed(
@@ -175,6 +170,7 @@ const refreshActivationState = async () => {
       roleModAddress.value || null,
     );
     needsActivation.value = state.needsGovernorMigration;
+    activationSafe.value = state.safe;
   } catch (error) {
     console.error("Failed reading activation state", error);
   }
@@ -307,25 +303,4 @@ watch(
   }
 }
 
-.activation_note {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.375rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid $color-line-2;
-  border-radius: $default-border-radius;
-  font-size: 13px;
-  line-height: 1.5;
-  color: $color-steel-blue;
-
-  strong {
-    color: $color-white;
-  }
-
-  &__link {
-    color: $color-primary;
-    text-decoration: underline;
-  }
-}
 </style>
