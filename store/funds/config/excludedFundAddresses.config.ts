@@ -84,6 +84,18 @@ const rawExcludedFundAddresses = {
   // Arbitrum One
   "0xa4b1": [
     {
+      address: "0x9920e3F7f5f9bF650f546185Cfd6a13602cB6C07",
+      alwaysExclude: true,
+    }, // Smart 10 (hidden 2026-10-14)
+    {
+      address: "0x202Cf222611B827B3Ae5a3Ee055e38Bae18256F5",
+      alwaysExclude: true,
+    }, // SmartBTC (hidden 2026-10-14)
+    {
+      address: "0x58BA86cF363De2Bdbe57ad885B47F1B985EA9F31",
+      alwaysExclude: true,
+    }, // carrotfunding.io gTrade (hidden 2026-10-14)
+    {
       address: "0x9fBCb2F71229dDF7F11459ce2F8E73DE3A60bb6d",
       alwaysExclude: false,
     },
@@ -583,6 +595,10 @@ const rawExcludedFundAddresses = {
   // Base
   "0x2105": [
     {
+      address: "0x533f164d91e3F8169a7043f7094f44af87Fb7CA4",
+      alwaysExclude: true,
+    }, // INDEFI (hidden 2026-10-14)
+    {
       address: "0x1D66EB6cC3b80c76B6fF08aC13f93a2DAEA4C855",
       alwaysExclude: false,
     },
@@ -633,6 +649,18 @@ const rawExcludedFundAddresses = {
   ],
   // Hyper EVM
   "0x3e7": [
+    {
+      address: "0x3ffDffEf7FC01483e39db170c80a8e1AF5EB8714",
+      alwaysExclude: true,
+    }, // OpenAlpha UBTC Canary (hidden 2026-10-14)
+    {
+      address: "0x7890e0fF3D76f71A3d33B17fb5b3F3866512485B",
+      alwaysExclude: true,
+    }, // CarrotFunding Vault, vCFT (hidden 2026-10-14)
+    {
+      address: "0xeD8f7E3ED5c37D508e8E4725d6970356B8FecE2A",
+      alwaysExclude: true,
+    }, // CarrotFunding Vault V2 (hidden 2026-10-14)
     {
       address: "0x7ed95418063d5b61bDE7b40D65F93739c0CFdcf4",
       alwaysExclude: true,
