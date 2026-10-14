@@ -17,10 +17,15 @@ export async function fetchFundsAction(): Promise<void> {
   // real data lands. Chains restored this way are tracked separately, so the
   // "already fetched, skip it" check further down does not mistake cached
   // rows for fresh ones and stop us revalidating.
+  // The cache predates any vault added to the exclusion list since, so it is
+  // filtered too; otherwise a hidden vault flashes in until revalidation.
   const cachedChainFunds = readCachedChainFunds();
   const chainsFromCache = new Set<string>();
   if (cachedChainFunds) {
-    for (const [chainId, funds] of Object.entries(cachedChainFunds)) {
+    for (const [chainId, cachedFunds] of Object.entries(cachedChainFunds)) {
+      const funds = cachedFunds?.filter(
+        (fund) => !excludedFundAddresses[chainId]?.includes(fund.address?.toLowerCase()),
+      );
       if (!funds?.length) continue;
       fundsStore.chainFunds[chainId] = funds;
       chainsFromCache.add(chainId);
