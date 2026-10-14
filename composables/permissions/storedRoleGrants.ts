@@ -60,8 +60,11 @@ export interface IStoredRoleView {
   emptyTargets: string[];
   /** Functions allowed one by one, with or without limits. */
   functions: number;
-  /** Allowances the role's limits draw on, by lowercase key. */
-  allowances: { key: string; use: AllowanceUse }[];
+  /**
+   * Allowances the role's limits draw on, by lowercase key, with the
+   * contracts (lowercase) whose functions draw on each.
+   */
+  allowances: { key: string; use: AllowanceUse; targets: string[] }[];
 }
 
 const ALLOWANCE_USES: Partial<Record<RolesV2Operator, AllowanceUse>> = {
@@ -73,17 +76,21 @@ const ALLOWANCE_USES: Partial<Record<RolesV2Operator, AllowanceUse>> = {
 /** The allowances a condition tree draws on. */
 const allowancesIn = (
   node: IConditionNode | undefined,
-  found: { key: string; use: AllowanceUse }[],
+  found: IStoredRoleView["allowances"],
+  target: string,
 ) => {
   if (!node) return;
   const use = ALLOWANCE_USES[node.operator as RolesV2Operator];
   if (use) {
     const key = String(node.compValue).toLowerCase();
-    if (!found.some((entry) => entry.key === key && entry.use === use)) {
-      found.push({ key, use });
+    let entry = found.find((known) => known.key === key && known.use === use);
+    if (!entry) {
+      entry = { key, use, targets: [] };
+      found.push(entry);
     }
+    if (target && !entry.targets.includes(target)) entry.targets.push(target);
   }
-  node.children.forEach((child) => allowancesIn(child, found));
+  node.children.forEach((child) => allowancesIn(child, found, target));
 };
 
 const buildView = (
@@ -118,7 +125,7 @@ const buildView = (
         functions++;
         const scoped = scopedTargets.get(target.toLowerCase());
         if (scoped) scoped.functions++;
-        allowancesIn(description.conditions, allowances);
+        allowancesIn(description.conditions, allowances, target.toLowerCase());
         break;
       }
     }

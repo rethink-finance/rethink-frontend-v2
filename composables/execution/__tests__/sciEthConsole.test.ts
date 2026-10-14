@@ -902,3 +902,26 @@ describe("moves that would leave the NAV wrong are refused", () => {
     expect(sciPlans.lidoDeposit(s, eth(2)).problem).toBe("");
   });
 });
+
+describe("sciStepMark", () => {
+  it("marks every step a plan can show with who it involves", async () => {
+    const { sciStepMark } = await import("../sciEthConsole");
+    const marks = [
+      "unwrap 0.5 WETH of yield",
+      "unwrap 32 WETH",
+      "wrap 32 ETH into WETH",
+      "stake 32 ETH",
+      "claim 0.1 ETH of rewards",
+      "withdraw 32 ETH of principal",
+      "deposit 1 ETH into Lido",
+      "send 0.1 ETH to the multisig",
+      "send 2 WETH to the vault contract",
+      "update the NAV",
+    ].map(sciStepMark);
+    expect(marks).toEqual([
+      "weth", "weth", "weth",
+      "staking", "staking", "staking",
+      "lido", "wallet", "vault", "vault",
+    ]);
+  });
+});

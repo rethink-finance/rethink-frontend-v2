@@ -172,8 +172,9 @@
           </p>
         </div>
 
-        <!-- Protocol access: every other contract the role may call. -->
-        <div class="block">
+        <!-- Protocol access: every other contract the role may call. Left out
+             when there is none, unless managing (where access is added). -->
+        <div v-if="protocolGroups.length || manage" class="block">
           <div class="block__head">
             <Icon
               class="block__icon"
@@ -218,13 +219,31 @@
                     size="22px"
                   />
                   <Icon
+                    v-else-if="group.logo && 'icon' in group.logo"
+                    :icon="group.logo.icon"
+                    width="1.125rem"
+                    height="1.125rem"
+                  />
+                  <Icon
                     v-else
                     icon="material-symbols:description-outline-rounded"
                     width="1.125rem"
                     height="1.125rem"
                   />
                 </span>
-                <span class="protocol__name">{{ group.name }}</span>
+                <span class="protocol__titles">
+                  <span class="protocol__name">{{ group.name }}</span>
+                  <span
+                    v-for="allowance in groupAllowances(group)"
+                    :key="allowance.key"
+                    class="protocol__budget"
+                    :class="{ 'protocol__budget--warn': balance(allowance).warn }"
+                    :title="`Allowance ${allowance.name}. ${refillText(allowance)}`"
+                  >
+                    <Icon icon="material-symbols:speed-outline-rounded" width="0.875rem" height="0.875rem" />
+                    {{ budgetText(allowance) }}
+                  </span>
+                </span>
                 <span class="protocol__tags">
                   <span v-for="tag in group.tags" :key="tag" class="protocol__tag">{{ tag }}</span>
                 </span>
@@ -278,13 +297,14 @@
 
       <!-- Spending budgets the roles' limits draw on. They live on the
            modifier, not on a role, and their balance moves with every use,
-           so it is read live rather than replayed. -->
-      <section v-if="allowances.length" class="grants__extra">
+           so it is read live rather than replayed. Shown under the roles
+           that draw on them. -->
+      <section v-if="looseAllowances.length" class="grants__extra">
         <div class="grants__extra_title">
           Allowances
         </div>
         <div
-          v-for="allowance in allowances"
+          v-for="allowance in looseAllowances"
           :key="allowance.key"
           class="grants__extra_row"
         >
@@ -302,8 +322,9 @@
       </section>
 
       <!-- Batch unwrapping applies to every role: a batch sent through the
-           modifier is split, and each call inside is checked on its own. -->
-      <section v-if="adapters.length" class="grants__extra">
+           modifier is split, and each call inside is checked on its own.
+           Shown where it matters: under roles with protocol calls to batch. -->
+      <section v-if="adapters.length && protocolGroups.length" class="grants__extra">
         <div class="grants__extra_title">
           Batches
         </div>
@@ -518,15 +539,24 @@ const registryProtocols = computed((): Map<string, IContractProtocol> => {
   }
   return byAddress;
 });
-const protocolOf = (address: string) =>
-  registryProtocols.value.get(address.toLowerCase()) ?? contractProtocol(address);
+// A token is its own row: the registry lists WETH among Compound's addresses
+// because Compound takes it, but a grant on WETH itself is not Compound.
+const protocolOf = (address: string) => {
+  const own = contractProtocol(address);
+  if (own && "token" in own.logo) return own;
+  return registryProtocols.value.get(address.toLowerCase()) ?? own;
+};
 const contractNameOf = (address: string) =>
   addressLabel(address) ??
   WELL_KNOWN_LABELS[address.toLowerCase()] ??
   `${address.slice(0, 6)}…${address.slice(-4)}`;
 
+// A contract scoped with no function left allows nothing (the leftover of a
+// revoked grant, like sciETH's admin on its own vault), so it is not access.
 const protocolGroups = computed(() =>
-  groupByProtocol(split.value.other, protocolOf, contractNameOf),
+  groupByProtocol(split.value.other, protocolOf, contractNameOf).filter(
+    (group) => group.tags.length > 0,
+  ),
 );
 
 const openProtocols = ref<string[]>([]);
@@ -690,7 +720,7 @@ interface IAllowanceRow {
   key: string;
   name: string;
   /** How the roles that name it draw it down, and which roles those are. */
-  uses: { use: AllowanceUse; role: string }[];
+  uses: { use: AllowanceUse; role: string; roleKey: string; targets: string[] }[];
   /** The stored allowance: undefined while reading, null when the read failed. */
   live?: IRolesAllowance | null;
 }
@@ -722,10 +752,44 @@ const allowances = computed((): IAllowanceRow[] =>
     uses: roles.value.flatMap((role) =>
       role.allowances
         .filter((allowance) => allowance.key === key)
-        .map(({ use }) => ({ use, role: `Role ${role.number} · ${role.name}` })),
+        .map(({ use, targets }) => ({
+          use,
+          role: `Role ${role.number} · ${role.name}`,
+          roleKey: role.keyBytes,
+          targets,
+        })),
     ),
     live: liveAllowance(key),
   })),
+);
+
+// The open role's allowances. One no role draws on yet is shown with the
+// executor, the role whose limits would.
+const roleAllowances = computed((): IAllowanceRow[] => {
+  const key = current.value?.keyBytes.toLowerCase();
+  if (!key) return [];
+  return allowances.value.filter((row) =>
+    row.uses.length
+      ? row.uses.some((use) => use.roleKey.toLowerCase() === key)
+      : key === executorKeyBytes.value,
+  );
+});
+
+// An allowance the open role draws on from a protocol row's contracts is
+// shown on that row, as the budget its calls spend; the rest get a section.
+const groupAllowances = (group: IProtocolGroup): IAllowanceRow[] => {
+  const key = current.value?.keyBytes.toLowerCase();
+  const targets = new Set(group.targets.map((target) => target.toLowerCase()));
+  return roleAllowances.value.filter((row) =>
+    row.uses.some(
+      (use) => use.roleKey.toLowerCase() === key && use.targets.some((target) => targets.has(target)),
+    ),
+  );
+};
+const looseAllowances = computed(() =>
+  roleAllowances.value.filter(
+    (row) => !protocolGroups.value.some((group) => groupAllowances(group).includes(row)),
+  ),
 );
 
 /** An amount in the units the allowance is drawn down in. */
@@ -765,6 +829,14 @@ const refillText = (row: IAllowanceRow): string => {
     `Refills by ${amountText(live.refill, row)} every ${period}` +
     (live.maxRefill >= UINT128_MAX ? "." : `, up to ${amountText(live.maxRefill, row)}.`)
   );
+};
+
+/** The budget in one line, for a protocol row: what is left, and its refill. */
+const budgetText = (row: IAllowanceRow): string => {
+  const left = balance(row);
+  const live = row.live;
+  if (left.warn || !live || live.refill === 0n || live.period === 0n) return left.text;
+  return `${left.text} · refills ${amountText(live.refill, row)} every ${formatAllowancePeriod(String(live.period))}`;
 };
 
 const usedByText = (row: IAllowanceRow): string => {
@@ -1400,12 +1472,32 @@ const adapterFunctionName = (selector: string): string => {
     color: $color-steel-blue;
   }
 
+  &__titles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1875rem;
+    min-width: 0;
+  }
+
   &__name {
     font-size: 14px;
     font-weight: 600;
     color: $color-white;
     white-space: nowrap;
     transition: color $default-transition-time ease;
+  }
+
+  &__budget {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 12px;
+    color: $color-steel-blue;
+    white-space: nowrap;
+
+    &--warn {
+      color: $color-error;
+    }
   }
 
   &__tags {

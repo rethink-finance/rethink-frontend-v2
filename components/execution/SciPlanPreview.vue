@@ -10,6 +10,7 @@
           <span v-if="index > 0" class="sci_plan__arrow">→</span>
           <span class="sci_plan__part">
             <span class="sci_plan__n">{{ index + 1 }}</span>
+            <ExecutionSciMark v-if="sciStepMark(part)" :kind="sciStepMark(part)!" :size="14" />
             {{ sentence(part) }}
           </span>
         </span>
@@ -22,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import type { SciPlan } from "~/composables/execution/sciEthConsole";
+import { sciStepMark, type SciPlan } from "~/composables/execution/sciEthConsole";
 
 /**
  * What one press will do, call by call, in the order the calls run. A plan

@@ -76,6 +76,7 @@
         <div class="sci_rows">
           <div v-for="row in positions" :key="row.key" class="sci_row">
             <span class="sci_row__swatch" :style="{ opacity: row.shade }" />
+            <ExecutionSciMark class="sci_row__mark" :kind="row.mark" :size="20" />
             <div class="sci_row__names">
               <div class="sci_row__name">
                 {{ row.label }}
@@ -112,6 +113,7 @@
 
         <div class="sci_rows">
           <div v-for="row in yieldRows" :key="row.key" class="sci_row sci_row--plain">
+            <ExecutionSciMark class="sci_row__mark" :kind="row.mark" :size="20" />
             <div class="sci_row__names">
               <div class="sci_row__name">
                 {{ row.label }}
@@ -248,6 +250,7 @@
           :aria-selected="actionTab === tab.key"
           @click="actionTab = tab.key"
         >
+          <ExecutionSciMark :kind="tab.mark" :size="16" />
           {{ tab.label }}
           <span v-if="tabAttention[tab.key]" class="sci_tabs__dot" />
         </button>
@@ -477,6 +480,7 @@
                 :class="{ 'sci_toggle__btn--on': lidoMode === mode }"
                 @click="lidoMode = mode"
               >
+                <ExecutionSciMark :kind="mode === 'deposit' ? 'lido' : 'cow'" :size="14" />
                 {{ mode === "deposit" ? "WETH to stETH" : "stETH to WETH" }}
               </button>
             </span>
@@ -813,6 +817,7 @@ import {
   type CowOrder,
   type CowQuote,
   type CowStatus,
+  type SciMarkKind,
   type SciPlan,
   type SciState,
   type SciStep,
@@ -960,11 +965,11 @@ const positions = computed(() => {
   const s = state.value;
   const zero = 0n;
   return [
-    { key: "safeWeth", label: "WETH in the Safe", note: s && !s.vault.finalized ? "Counted as soon as the vault opens" : "Liquid principal", amount: s?.safeWeth ?? zero, unit: "WETH", shade: 1 },
-    { key: "staked", label: "Staked in validators", note: s && !s.staking.exists ? "The staking vault is not created yet" : "Through the staking vault", amount: s?.staking.staked ?? zero, unit: "ETH", shade: 0.72 },
-    { key: "steth", label: "stETH in the Safe", note: "Counted 1 stETH = 1 ETH", amount: s?.safeSteth ?? zero, unit: "stETH", shade: 0.5 },
-    { key: "unbonded", label: "Unbonded, in the staking vault", note: "Principal back from validators, not withdrawn yet", amount: s?.staking.withdrawable ?? zero, unit: "ETH", shade: 0.34 },
-    { key: "fundWeth", label: "WETH in the vault contract", note: "What redemptions are paid from", amount: s?.fundWeth ?? zero, unit: "WETH", shade: 0.2 },
+    { key: "safeWeth", mark: "weth" as SciMarkKind, label: "WETH in the Safe", note: s && !s.vault.finalized ? "Counted as soon as the vault opens" : "Liquid principal", amount: s?.safeWeth ?? zero, unit: "WETH", shade: 1 },
+    { key: "staked", mark: "staking" as SciMarkKind, label: "Staked in validators", note: s && !s.staking.exists ? "The staking vault is not created yet" : "Through the staking vault", amount: s?.staking.staked ?? zero, unit: "ETH", shade: 0.72 },
+    { key: "steth", mark: "lido" as SciMarkKind, label: "stETH in the Safe", note: "Counted 1 stETH = 1 ETH", amount: s?.safeSteth ?? zero, unit: "stETH", shade: 0.5 },
+    { key: "unbonded", mark: "staking" as SciMarkKind, label: "Unbonded, in the staking vault", note: "Principal back from validators, not withdrawn yet", amount: s?.staking.withdrawable ?? zero, unit: "ETH", shade: 0.34 },
+    { key: "fundWeth", mark: "vault" as SciMarkKind, label: "WETH in the vault contract", note: "What redemptions are paid from", amount: s?.fundWeth ?? zero, unit: "WETH", shade: 0.2 },
   ];
 });
 
@@ -1000,6 +1005,7 @@ const yieldRows = computed(() => {
   return [
     {
       key: "safeEth",
+      mark: "eth" as SciMarkKind,
       label: "Plain ETH in the Safe",
       note: held > 0n
         ? `Not counted in the NAV. ${fmtEth(held)} ETH more is there but is depositors' principal and stays`
@@ -1008,12 +1014,14 @@ const yieldRows = computed(() => {
     },
     {
       key: "rewards",
+      mark: "staking" as SciMarkKind,
       label: "Unclaimed staking rewards",
       note: "In the staking vault, after the operator's 10% fee",
       amount: s?.staking.claimableRewards ?? 0n,
     },
     {
       key: "surplus",
+      mark: "weth" as SciMarkKind,
       label: "Counted in the NAV for now",
       note: s && !s.vault.finalized
         ? "Your test money in WETH or stETH. Clear it out before the vault opens"
@@ -1029,10 +1037,10 @@ const amounts = reactive({ quota: "", stake: "", lido: "", sell: "" });
 const lidoMode = ref<"deposit" | "sell">("deposit");
 
 type ActionTab = "staking" | "lido" | "yield";
-const ACTION_TABS: { key: ActionTab; label: string }[] = [
-  { key: "staking", label: "Validator staking" },
-  { key: "lido", label: "Lido" },
-  { key: "yield", label: "Transfer Yield to Multisig" },
+const ACTION_TABS: { key: ActionTab; label: string; mark: SciMarkKind }[] = [
+  { key: "staking", label: "Validator staking", mark: "staking" },
+  { key: "lido", label: "Lido", mark: "lido" },
+  { key: "yield", label: "Transfer Yield to Multisig", mark: "wallet" },
 ];
 const actionTab = ref<ActionTab>("staking");
 
@@ -2213,7 +2221,7 @@ const runStep = (step: SciStep) => {
 
 .sci_row {
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto 44px;
+  grid-template-columns: 10px 20px minmax(0, 1fr) auto 44px;
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 0;
@@ -2225,7 +2233,7 @@ const runStep = (step: SciStep) => {
   }
 
   &--plain {
-    grid-template-columns: minmax(0, 1fr) auto 44px;
+    grid-template-columns: 20px minmax(0, 1fr) auto 44px;
   }
 
   &__swatch {
@@ -2422,6 +2430,9 @@ const runStep = (step: SciStep) => {
   overflow: hidden;
 
   &__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
     padding: 0.25rem 0.625rem;
     background: transparent;
     font-family: $font-mono;

@@ -129,6 +129,13 @@ export const buildActivationProposalActions = async (
      * permissions need the modifier's ownership alone. Defaults to true.
      */
     settingsAuthority?: boolean;
+    /**
+     * Whether to transfer the modifier's ownership. False while another live
+     * proposal already does: a second transferOwnership would revert once the
+     * first executes, taking the rest of its proposal down with it. Defaults
+     * to true.
+     */
+    ownership?: boolean;
   } = {},
 ): Promise<{ actions: IProposalActions; state: IActivationState }> => {
   const web3Store = useWeb3Store();
@@ -204,7 +211,7 @@ export const buildActivationProposalActions = async (
     );
   }
 
-  if (state.needsOwnershipTransfer && rolesModifierAddress) {
+  if (state.needsOwnershipTransfer && rolesModifierAddress && options.ownership !== false) {
     // Only the current owner can transfer. The proposal executes as the
     // RethinkFundGovernor, so an owner that is neither the safe nor that
     // governor means this proposal could never execute — fail loudly
