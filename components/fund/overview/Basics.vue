@@ -53,6 +53,7 @@ import type IFund from "~/types/fund";
 import { useFundStore } from "~/store/fund/fund.store";
 import AddressLink from "~/components/common/AddressLink.vue";
 import UiLinkExternalButton from "~/components/global/ui/LinkExternalButton.vue";
+import { getZodiacRolesUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
 const fundStore = useFundStore();
 
 const props = defineProps({
@@ -66,7 +67,7 @@ const roleModAddress = ref("");
 
 const gnosisRolesUrl = computed(() => {
   if (!props.fund?.chainShort || !roleModAddress.value) return "";
-  return `https://roles.gnosisguild.org/${props.fund.chainShort}:${roleModAddress.value}`;
+  return getZodiacRolesUrl(props.fund.chainShort, roleModAddress.value);
 });
 
 watch(
