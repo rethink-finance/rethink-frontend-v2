@@ -309,6 +309,7 @@ import RoleSelectRole from "~/components/role/SelectRole.vue";
 import { ActionState } from "~/types/enums/action_state";
 import { useActionStateStore } from "~/store/actionState.store";
 import UiLinkExternalButton from "~/components/global/ui/LinkExternalButton.vue";
+import { getZodiacRolesUrl } from "~/composables/permissions/getGnosisPermissionsUrl";
 import {
   buildActivationProposalActions,
   fetchActivationState,
@@ -404,7 +405,7 @@ const roleModAddress = ref("");
 
 const gnosisRolesUrl = computed(() => {
   if (!fund?.chainShort || !roleModAddress.value) return "";
-  return `https://roles.gnosisguild.org/${fund.chainShort}:${roleModAddress.value}`;
+  return getZodiacRolesUrl(fund.chainShort, roleModAddress.value);
 });
 
 // One-time governance activation of the roles' vault-settings /
