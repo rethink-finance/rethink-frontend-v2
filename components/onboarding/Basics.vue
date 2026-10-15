@@ -263,12 +263,20 @@ const assetOptions = computed(() => [
 ]);
 
 /**
+ * Set when the curator picks "Custom address". Picking it clears the address so
+ * there is something to type into, and an empty address alone cannot tell
+ * "custom, not typed yet" from "nothing picked", so the choice is held here.
+ */
+const isCustomPicked = ref(false);
+
+/**
  * Which row the picker shows. An address that is not one of the listed assets
  * — a loaded draft, or an initialized vault — resolves to "Custom address", so
  * the address input stays open on the value it already holds.
  */
 const assetChoice = computed<string>({
   get: () => {
+    if (isCustomPicked.value) return CUSTOM_ASSET;
     const address = String(baseTokenField.value?.value ?? "");
     if (!address) return "";
     const match = knownAssets.value.find(
@@ -278,8 +286,9 @@ const assetChoice = computed<string>({
   },
   set: (choice: string) => {
     if (!baseTokenField.value) return;
-    // Custom keeps whatever is already typed; picking a listed asset writes
-    // its address and lets the on-chain read fill in symbol and decimals.
+    isCustomPicked.value = choice === CUSTOM_ASSET;
+    // Custom opens an empty address input; picking a listed asset writes its
+    // address and lets the on-chain read fill in symbol and decimals.
     baseTokenField.value.value = choice === CUSTOM_ASSET ? "" : choice;
   },
 });
