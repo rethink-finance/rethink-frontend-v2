@@ -13,6 +13,10 @@ const rawExcludedFundAddresses = {
   // Polygon
   "0x89": [
     {
+      address: "0x3588cF6F90ac879e4ABE7CA3F3A17abeC107b328",
+      alwaysExclude: true,
+    }, // 1Inch (hidden 2026-10-15)
+    {
       address: "0xf48E3fa13cb2390e472cf1CA64F941eB7BD27475",
       alwaysExclude: true,
     }, // bug
