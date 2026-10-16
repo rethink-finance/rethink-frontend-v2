@@ -1240,9 +1240,7 @@ const immutableSummary = computed(() => {
           }`,
           note: !Number(governance("proposalThreshold") ?? 0)
             ? "No minimum: any vote holder can propose."
-            : reviewVoteToken.value
-              ? `Scaled by 10^${reviewVoteToken.value.decimals} on chain`
-              : "",
+            : "",
         },
         {
           label: "Voting period",
