@@ -7,6 +7,7 @@
     <ExecutionDocConsole v-else-if="isDocVault" />
     <ExecutionSciEthConsole v-else-if="isSciEthVault" />
     <ExecutionIndefiConsole v-else-if="isIndefiVault" />
+    <ExecutionSycConsole v-else-if="isSycVault" />
 
     <!-- The raw transfer / raw-calldata / performance-fee tools. A vault with
          a console of its own does not get them: everything they reach is
@@ -235,6 +236,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useContractAddresses } from "~/composables/useContractAddresses";
 import { CRT_V2_ADDR } from "~/composables/execution/crtV2Vault";
+import { SYC } from "~/composables/execution/sycConsole";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
@@ -291,7 +293,16 @@ const isIndefiVault = computed(
     (fundStore.fund?.address || "").toLowerCase() === INDEFI_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x2105",
 );
-const hasGuidedConsole = computed(() => isCrtV2Vault.value || isCrtVault.value || isDocVault.value || isSciEthVault.value || isIndefiVault.value);
+// The SNI Yield Claim Vault (Polygon, Roles v2) may swap WETH/USDC/SNI
+// through two pinned Uniswap V3 pools and manage USDC/SNI positions, with
+// the Uniswap and 1inch web apps deliberately locked out (no multicall).
+// Its console builds exactly the calls the grants accept.
+const isSycVault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === SYC.ADDR.fund.toLowerCase() &&
+    fundStore.selectedFundChain === SYC.CHAIN,
+);
+const hasGuidedConsole = computed(() => isCrtV2Vault.value || isCrtVault.value || isDocVault.value || isSciEthVault.value || isIndefiVault.value || isSycVault.value);
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
