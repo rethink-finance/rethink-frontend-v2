@@ -29,10 +29,8 @@
         <StakingBuybacks />
       </div>
       <aside
-        ref="aside"
         class="staking__right"
         aria-label="Deposit and your position"
-        :style="{ top: `${stickyTop}px` }"
       >
         <StakingStakeCard
           ref="stakeCard"
@@ -70,32 +68,6 @@ const isCalculatorOpen = ref(false);
 /** One asset is in focus across the page: the deposit card picks it. */
 const selectedAsset = ref<StakeSymbol>("ETH");
 const stakeCard = ref<{ prefill: (symbol: StakeSymbol, amount: number) => void; $el: HTMLElement }>();
-
-/**
- * Sticky offset for the deposit column. It pins under the navbar when it
- * fits the window; when it is taller, the offset goes negative so it scrolls
- * until its bottom is in view and pins there. Nothing is ever cut off and the
- * column never scrolls on its own.
- */
-const NAVBAR_PX = 64;
-const STICKY_GAP_PX = 24;
-const aside = ref<HTMLElement>();
-const stickyTop = ref(NAVBAR_PX + STICKY_GAP_PX);
-const updateStickyTop = () => {
-  const height = aside.value?.offsetHeight ?? 0;
-  stickyTop.value = Math.min(NAVBAR_PX + STICKY_GAP_PX, window.innerHeight - height - STICKY_GAP_PX);
-};
-let asideObserver: ResizeObserver | undefined;
-onMounted(() => {
-  updateStickyTop();
-  asideObserver = new ResizeObserver(updateStickyTop);
-  if (aside.value) asideObserver.observe(aside.value);
-  window.addEventListener("resize", updateStickyTop);
-});
-onUnmounted(() => {
-  asideObserver?.disconnect();
-  window.removeEventListener("resize", updateStickyTop);
-});
 
 const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
   if (!stakeCard.value) return;
@@ -189,10 +161,11 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     min-width: 0;
   }
 
-  // The deposit stays in view while the left column scrolls; the offset
-  // comes from updateStickyTop.
+  // The deposit stays in view while the left column scrolls, always pinned
+  // by its top so the Deposit header never slides under the navbar.
   &__right {
     position: sticky;
+    top: calc(#{$navbar-height} + 1rem);
     gap: 1.25rem;
 
     :deep(.brand_card) {
@@ -201,6 +174,43 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
 
     @media (max-width: $screen-lg) {
       position: static;
+    }
+
+    // Short windows: tighten both cards so the whole column still fits.
+    @media (max-height: 820px) and (min-width: $screen-lg) {
+      gap: 0.75rem;
+
+      :deep(.brand_card) {
+        padding: 1rem 1.25rem;
+      }
+
+      :deep(.stake) {
+        gap: 0.625rem;
+      }
+
+      :deep(.stake__deposit) {
+        padding: 0.625rem 0.875rem;
+      }
+
+      :deep(.stake__amount) {
+        font-size: 1.75rem;
+      }
+
+      :deep(.stake__row) {
+        padding: 0.4375rem 0;
+      }
+
+      :deep(.position) {
+        gap: 0.625rem;
+      }
+
+      :deep(.position__refi) {
+        font-size: 1.625rem;
+      }
+
+      :deep(.position__row) {
+        padding: 0.375rem 0;
+      }
     }
   }
 
