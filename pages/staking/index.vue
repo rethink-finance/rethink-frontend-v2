@@ -17,26 +17,16 @@
             Staking
           </h1>
           <p class="staking__lede">
-            Your principal stays preserved. Its yield is reinvested in the Rethink
-            Finance ecosystem, and you earn points in return.
+            The earlier you stake, the more points you earn.
           </p>
         </div>
 
-        <button type="button" class="staking__calc" @click="isCalculatorOpen = true">
-          <span class="staking__calc-icon">
-            <Icon icon="mdi:calculator-variant-outline" width="1.75rem" />
-          </span>
-          <span class="staking__calc-text">
-            <span class="staking__calc-title">Calculator</span>
-            <span class="staking__calc-sub">See what your stake could earn</span>
-          </span>
-        </button>
+        <StakingHowItWorks
+          class="staking__how"
+          :multiplier="currentTier.baseMultiplier"
+          :tier-name="currentTier.name"
+        />
       </div>
-
-      <StakingHowItWorks
-        :multiplier="currentTier.baseMultiplier"
-        :tier-name="currentTier.name"
-      />
     </section>
 
     <StakingProgramStats :program="program" />
@@ -44,16 +34,17 @@
     <section class="staking__main">
       <div class="staking__left">
         <StakingTrancheCard :fills="fills" :counted-by-asset="program.countedByAsset" />
+        <StakingYieldSources :holdings="program.holdings" />
         <StakingEmissionChart :current-month="program.currentMonth" />
       </div>
-      <div class="staking__right">
+      <aside class="staking__right" aria-label="Deposit and your position">
         <StakingStakeCard
           ref="stakeCard"
           :multiplier="currentTier.baseMultiplier"
           @calculate="isCalculatorOpen = true"
         />
         <StakingPositionCard :position="position" :is-connected="accountStore.isConnected" />
-      </div>
+      </aside>
     </section>
 
     <StakingCalculatorDialog
@@ -124,15 +115,18 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
   }
 
   &__top {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 2rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+    align-items: end;
+    gap: 2rem 3rem;
 
-    @media (max-width: $screen-md) {
-      flex-direction: column;
-      align-items: stretch;
+    @media (max-width: $screen-lg) {
+      grid-template-columns: minmax(0, 1fr);
     }
+  }
+
+  &__how {
+    padding-bottom: 0.25rem;
   }
 
   &__intro {
@@ -181,59 +175,6 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     color: $color-subtitle;
   }
 
-  &__calc {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-shrink: 0;
-    padding: 0.875rem 1.5rem 0.875rem 0.875rem;
-    border: 1px solid $color-cyan-line;
-    border-radius: $default-border-radius;
-    background: $color-surface;
-    text-align: left;
-    box-shadow: var(--shadow-card);
-    transition: border-color $default-transition-time, background $default-transition-time;
-
-    &:hover {
-      border-color: $color-cyan;
-      background:
-        linear-gradient($color-cyan-tint, $color-cyan-tint),
-        $color-surface;
-    }
-
-    &:focus-visible {
-      outline: 2px solid $color-cyan;
-      outline-offset: 2px;
-    }
-  }
-
-  &__calc-icon {
-    display: grid;
-    place-items: center;
-    width: 3.25rem;
-    height: 3.25rem;
-    border-radius: $default-border-radius;
-    background: $color-cyan-tint;
-    color: $color-cyan;
-  }
-
-  &__calc-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-  }
-
-  &__calc-title {
-    font-size: $text-md;
-    font-weight: 600;
-    color: $color-title;
-  }
-
-  &__calc-sub {
-    font-size: $text-sm;
-    color: $color-subtitle;
-  }
-
   &__main {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
@@ -251,6 +192,27 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     flex-direction: column;
     gap: 2rem;
     min-width: 0;
+  }
+
+  // The deposit stays in view while the left column scrolls. On a short
+  // window the column scrolls inside itself rather than losing its bottom.
+  &__right {
+    position: sticky;
+    top: calc(#{$navbar-height} + 1.5rem);
+    gap: 1.25rem;
+    max-height: calc(100vh - #{$navbar-height} - 3rem);
+    overflow-y: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    @media (max-width: $screen-lg) {
+      position: static;
+      max-height: none;
+      overflow: visible;
+    }
   }
 
   // On one column the deposit comes first: it is what the page is for.

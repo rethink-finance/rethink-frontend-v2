@@ -84,7 +84,7 @@ const formatShare = (share: number) =>
 .position {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 
   &__head {
     display: flex;
@@ -107,7 +107,7 @@ const formatShare = (share: number) =>
 
   &__refi {
     font-family: $font-mono;
-    font-size: clamp(2rem, 4vw, 2.5rem);
+    font-size: clamp(1.75rem, 3vw, 2.125rem);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.02em;
@@ -136,7 +136,7 @@ const formatShare = (share: number) =>
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    padding: 0.75rem 0;
+    padding: 0.625rem 0;
     border-top: 1px solid $color-line;
     font-size: $text-sm;
 

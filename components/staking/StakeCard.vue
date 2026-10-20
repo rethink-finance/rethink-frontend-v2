@@ -1,5 +1,19 @@
 <template>
-  <section class="stake brand_card" aria-label="Stake">
+  <section class="stake brand_card" aria-labelledby="stake-title">
+    <div class="stake__head">
+      <span id="stake-title" class="brand_card__eyebrow">Deposit</span>
+      <button
+        type="button"
+        class="stake__calc"
+        aria-label="Open the calculator"
+        title="See what your stake could earn"
+        @click="emit('calculate')"
+      >
+        <Icon icon="mdi:calculator-variant-outline" width="1.25rem" />
+        Calculator
+      </button>
+    </div>
+
     <div class="stake__tokens" role="tablist" aria-label="Deposit token">
       <button
         v-for="option in tokens"
@@ -65,11 +79,6 @@
       <Icon icon="mdi:arrow-right" width="1.1rem" class="ms-2" />
     </v-btn>
 
-    <button type="button" class="stake__calc" @click="emit('calculate')">
-      <Icon icon="mdi:calculator-variant-outline" width="1.125rem" />
-      Estimate what you would earn
-    </button>
-
     <p class="stake__note">
       Non-custodial. Your deposit sits in a Rethink vault on a Safe smart
       account and you hold the share token.
@@ -126,7 +135,7 @@ defineExpose({ prefill });
 .stake {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
 
   &__tokens {
     display: grid;
@@ -227,7 +236,7 @@ defineExpose({ prefill });
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    padding: 0.875rem 0;
+    padding: 0.6875rem 0;
     border-top: 1px solid $color-line;
     font-size: $text-sm;
 
@@ -256,22 +265,32 @@ defineExpose({ prefill });
     font-weight: 600;
   }
 
+  &__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
   &__calc {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: 0.5rem;
-    margin-top: -0.25rem;
+    padding: 0.4375rem 0.75rem 0.4375rem 0.5rem;
+    border: 1px solid $color-cyan-line;
+    border-radius: $default-border-radius;
+    background: $color-cyan-tint;
     font-size: $text-sm;
     font-weight: 600;
     color: $color-cyan;
+    transition: border-color $default-transition-time;
 
     &:hover {
-      text-decoration: underline;
+      border-color: $color-cyan;
     }
 
     &:focus-visible {
-      outline: 1px solid var(--accent-line);
+      outline: 2px solid $color-cyan;
       outline-offset: 2px;
     }
   }

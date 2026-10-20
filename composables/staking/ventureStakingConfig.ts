@@ -18,6 +18,19 @@ export interface VentureAsset {
   displayDecimals: number;
 }
 
+export interface VentureYieldSource {
+  name: string;
+  /** What the deposit becomes there, e.g. "stETH" or "USDC market". */
+  detail: string;
+}
+
+/** Where an asset's yield comes from. Shown on the staking page. */
+export interface VentureYieldStrategy {
+  label: string;
+  summary: string;
+  sources: VentureYieldSource[];
+}
+
 export interface VentureTier {
   name: string;
   /**
@@ -116,6 +129,42 @@ export const VENTURE_STAKING_ASSETS: VentureAsset[] = [
  * staking vault is deployed; the calculator then falls back to the assumed
  * launch pool.
  */
+/**
+ * The yield strategy per asset: the most conservative source for each, no
+ * leverage, no bridges, no restaking.
+ * TODO: confirm venues and weights with the strategy owner before launch.
+ */
+export const VENTURE_STAKING_YIELD_STRATEGIES: Record<VentureAsset["symbol"], VentureYieldStrategy> = {
+  ETH: {
+    label: "Liquid staking",
+    summary: "Staked with Ethereum validators through the most established liquid staking providers.",
+    sources: [
+      { name: "Lido", detail: "stETH" },
+      { name: "Rocket Pool", detail: "rETH" },
+      { name: "Coinbase", detail: "cbETH" },
+      { name: "Own validators", detail: "native" },
+    ],
+  },
+  WBTC: {
+    label: "Blue-chip lending",
+    summary: "Lent on the deepest over-collateralized markets. No bridges, no restaking.",
+    sources: [
+      { name: "Aave v3", detail: "WBTC market" },
+      { name: "SparkLend", detail: "WBTC market" },
+    ],
+  },
+  USDC: {
+    label: "Money market",
+    summary: "Spread across the safest stablecoin savings and lending vaults.",
+    sources: [
+      { name: "Spark", detail: "Savings rate" },
+      { name: "Aave v3", detail: "USDC market" },
+      { name: "Morpho", detail: "Curated vaults" },
+      { name: "Compound v3", detail: "USDC market" },
+    ],
+  },
+};
+
 export const VENTURE_STAKING_VAULT = {
   chainId: ChainId.ETHEREUM,
   // TODO: set once the venture staking vault is deployed.

@@ -1,26 +1,21 @@
 <template>
   <ol class="how" aria-label="How staking works">
     <li class="how__step">
-      <span class="how__icon"><Icon icon="mdi:shield-lock-outline" width="1.375rem" /></span>
-      <span class="how__title">You deposit</span>
-      <span class="how__text">ETH, WBTC or USDC. Your principal stays preserved.</span>
-    </li>
-    <li class="how__arrow" aria-hidden="true">
-      <Icon icon="mdi:arrow-right" width="1.25rem" />
+      <span class="how__icon"><Icon icon="mdi:shield-lock-outline" width="1rem" /></span>
+      <span class="how__text">
+        <strong>You deposit</strong> ETH, WBTC or USDC. Your principal stays preserved.
+      </span>
     </li>
     <li class="how__step">
-      <span class="how__icon"><Icon icon="mdi:sprout-outline" width="1.375rem" /></span>
-      <span class="how__title">The yield is reinvested</span>
-      <span class="how__text">Into growing the Rethink Finance ecosystem.</span>
-    </li>
-    <li class="how__arrow" aria-hidden="true">
-      <Icon icon="mdi:arrow-right" width="1.25rem" />
+      <span class="how__icon"><Icon icon="mdi:sprout-outline" width="1rem" /></span>
+      <span class="how__text">
+        <strong>The yield is reinvested</strong> in growing the Rethink Finance ecosystem.
+      </span>
     </li>
     <li class="how__step how__step--accent">
-      <span class="how__icon"><Icon icon="mdi:star-four-points-outline" width="1.375rem" /></span>
-      <span class="how__title">You earn points</span>
+      <span class="how__icon"><Icon icon="mdi:star-four-points-outline" width="1rem" /></span>
       <span class="how__text">
-        <strong>{{ multiplier }}x</strong> right now in the {{ tierName }} tier.
+        <strong>You earn points:</strong> <em>{{ multiplier }}x</em> right now in the {{ tierName }} tier.
       </span>
     </li>
   </ol>
@@ -35,45 +30,42 @@ defineProps<{
 
 <style scoped lang="scss">
 .how {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: stretch;
-  gap: 0.75rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   margin: 0;
   padding: 0;
   list-style: none;
 
-  @media (max-width: $screen-md) {
-    grid-template-columns: minmax(0, 1fr);
+  // A thin rail joins the three steps.
+  &::before {
+    content: "";
+    position: absolute;
+    top: 1rem;
+    bottom: 1rem;
+    left: calc(1rem - 0.5px);
+    width: 1px;
+    background: $color-line-2;
   }
 
   &__step {
+    position: relative;
     display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-    padding: 1.25rem 1.375rem;
-    border: 1px solid $color-line;
-    border-radius: $default-border-radius;
-    background: $color-surface;
-    box-shadow: var(--shadow-card);
-
-    &--accent {
-      border-color: $color-cyan-line;
-      background:
-        linear-gradient($color-cyan-tint, $color-cyan-tint),
-        $color-surface;
-    }
+    align-items: center;
+    gap: 0.875rem;
   }
 
   &__icon {
     display: grid;
+    flex-shrink: 0;
     place-items: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    margin-bottom: 0.5rem;
+    width: 2rem;
+    height: 2rem;
     border: 1px solid $color-line-2;
-    border-radius: $default-border-radius;
-    color: $color-title;
+    border-radius: 50%;
+    background: var(--bg);
+    color: $color-subtitle;
   }
 
   &__step--accent &__icon {
@@ -81,32 +73,21 @@ defineProps<{
     color: $color-cyan;
   }
 
-  &__title {
-    font-size: $text-md;
-    font-weight: 600;
-    color: $color-title;
-  }
-
   &__text {
     font-size: $text-sm;
-    line-height: 1.5;
+    line-height: 1.45;
     color: $color-subtitle;
 
     strong {
-      font-family: $font-mono;
-      color: $color-cyan;
+      font-weight: 600;
+      color: $color-title;
     }
-  }
 
-  &__arrow {
-    display: grid;
-    place-items: center;
-    color: $color-subtitle;
-
-    @media (max-width: $screen-md) {
-      transform: rotate(90deg);
-      padding: 0;
-      height: 1.25rem;
+    em {
+      font-family: $font-mono;
+      font-style: normal;
+      font-weight: 600;
+      color: $color-cyan;
     }
   }
 }
