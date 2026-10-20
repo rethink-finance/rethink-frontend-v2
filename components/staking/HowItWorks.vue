@@ -1,19 +1,28 @@
 <template>
   <ol class="how" aria-label="How staking works">
     <li class="how__step">
-      <span class="how__num">01</span>
-      <span class="how__title">Deposit</span>
-      <span class="how__text">ETH, WBTC or USDC. Your principal stays yours.</span>
+      <span class="how__icon" aria-hidden="true"><Icon icon="mdi:shield-lock-outline" width="1.125rem" /></span>
+      <span class="how__body">
+        <span class="how__num">01</span>
+        <span class="how__title">Deposit</span>
+        <span class="how__text">ETH, WBTC or USDC. Your principal stays yours.</span>
+      </span>
     </li>
     <li class="how__step">
-      <span class="how__num">02</span>
-      <span class="how__title">Yield is reinvested</span>
-      <span class="how__text">Into growing the Rethink ecosystem.</span>
+      <span class="how__icon" aria-hidden="true"><Icon icon="mdi:sprout-outline" width="1.125rem" /></span>
+      <span class="how__body">
+        <span class="how__num">02</span>
+        <span class="how__title">Yield is reinvested</span>
+        <span class="how__text">Into growing the Rethink ecosystem.</span>
+      </span>
     </li>
     <li class="how__step how__step--accent">
-      <span class="how__num">03</span>
-      <span class="how__title">Earn <em>{{ multiplier }}x</em> points</span>
-      <span class="how__text">Converted to <StakingRefiMark :size="14" /> REFI at TGE.</span>
+      <span class="how__icon" aria-hidden="true"><Icon icon="mdi:star-four-points-outline" width="1.125rem" /></span>
+      <span class="how__body">
+        <span class="how__num">03</span>
+        <span class="how__title">Earn <em>{{ multiplier }}x</em> points</span>
+        <span class="how__text">Converted to <StakingRefiMark :size="14" /> REFI at TGE.</span>
+      </span>
     </li>
   </ol>
 </template>
@@ -44,8 +53,8 @@ defineProps<{
   &__step {
     position: relative;
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    align-items: flex-start;
+    gap: 0.875rem;
     min-width: 0;
     padding: 1rem 1.375rem 1rem 1.5rem;
 
@@ -75,11 +84,12 @@ defineProps<{
         border-left: 0;
         border-top: 1px solid $color-line-2;
 
+        // Centred on the seam, clear of the step icons on the left.
         &::before {
           top: 0;
-          left: 1.5rem;
+          left: 50%;
           content: "\2193";
-          transform: translate(0, -50%);
+          transform: translate(-50%, -50%);
         }
       }
     }
@@ -92,6 +102,30 @@ defineProps<{
         border-radius: 0 0 $default-border-radius $default-border-radius;
       }
     }
+  }
+
+  &__icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid $color-line-2;
+    border-radius: 50%;
+    background: var(--bg);
+    color: $color-subtitle;
+  }
+
+  &__step--accent &__icon {
+    border-color: $color-cyan-line;
+    color: $color-cyan;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
   }
 
   &__num {
