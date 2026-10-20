@@ -43,9 +43,9 @@ describe("venture staking tiers", () => {
   it("fills tiers in deposit order", () => {
     expect(tierAt(0).name).toBe("Founding");
     expect(tierAt(5_999_999).name).toBe("Founding");
-    expect(tierAt(6_000_000).name).toBe("Second");
-    expect(tierAt(14_999_999).name).toBe("Second");
-    expect(tierAt(15_000_000).name).toBe("Third");
+    expect(tierAt(6_000_000).name).toBe("Seed");
+    expect(tierAt(14_999_999).name).toBe("Seed");
+    expect(tierAt(15_000_000).name).toBe("Growth");
     expect(tierAt(30_000_000).name).toBe("Open");
   });
 
@@ -107,18 +107,18 @@ describe("projectVentureStaking", () => {
     expect(Math.round(p.multipleVsYield)).toBe(21);
   });
 
-  it("10 ETH into a 2,400 ETH pool lands in Second", () => {
+  it("10 ETH into a 2,400 ETH pool lands in Seed", () => {
     const p = project(10, 2_400, 40);
-    expect(p.tier.name).toBe("Second");
+    expect(p.tier.name).toBe("Seed");
     expect(p.tier.baseMultiplier).toBe(2);
     near(p.monthOneShare, 20 / 6_820); // shows as 0.29%
     near(p.refi12, 22_100);
     near(p.valueUsd, 8_841);
   });
 
-  it("10 ETH into a 6,000 ETH pool lands in Third", () => {
+  it("10 ETH into a 6,000 ETH pool lands in Growth", () => {
     const p = project(10, 6_000, 40);
-    expect(p.tier.name).toBe("Third");
+    expect(p.tier.name).toBe("Growth");
     near(p.refi12, 8_365);
     near(p.valueUsd, 3_346);
   });
@@ -186,7 +186,7 @@ describe("projectVentureStake with WBTC and USDC", () => {
   });
 
   it("places a deposit by the USD already in the pool", () => {
-    expect(stake(usdc, 30_000, 7_200_000).tier.name).toBe("Second");
+    expect(stake(usdc, 30_000, 7_200_000).tier.name).toBe("Seed");
     expect(stake(wbtc, 1, 5_990_000).tier.name).toBe("Founding");
   });
 

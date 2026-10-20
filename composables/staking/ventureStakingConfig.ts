@@ -57,8 +57,8 @@ export const VENTURE_STAKING = {
   tiers: [
     // The spec's 2,000 / 3,000 / 5,000 ETH at its $3,000 ETH.
     { name: "Founding", capacityUsd: 6_000_000, baseMultiplier: 3 },
-    { name: "Second", capacityUsd: 9_000_000, baseMultiplier: 2 },
-    { name: "Third", capacityUsd: 15_000_000, baseMultiplier: 1.5 },
+    { name: "Seed", capacityUsd: 9_000_000, baseMultiplier: 2 },
+    { name: "Growth", capacityUsd: 15_000_000, baseMultiplier: 1.5 },
     { name: "Open", capacityUsd: Infinity, baseMultiplier: 1 },
   ] as VentureTier[],
   /** Share of a tier's bonus (multiplier - 1) left after each 12-month step. */
