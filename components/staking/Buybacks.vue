@@ -96,9 +96,9 @@
       </div>
       <div>
         <span class="bb__value">
-          {{ formatPct(first.buybackShare) }} <small>to</small> {{ formatPct(last.buybackShare) }}
+          {{ formatPrice(first.priceUsd) }} <small>to</small> {{ formatPrice(last.priceUsd) }}
         </span>
-        <span class="bb__label">of supply bought back a year, year 1 to {{ last.year }}</span>
+        <span class="bb__label">Implied REFI price, year 1 to {{ last.year }} ({{ formatMultiple(projection.priceMultiple) }})</span>
       </div>
       <div>
         <span class="bb__value">{{ formatPct(projection.totalBuybackShare) }}</span>
@@ -150,7 +150,7 @@
               <span v-if="hoverYear === row.year" class="bb__tip" :class="{ 'bb__tip--left': row.year > 4 }">
                 <strong>Year {{ row.year }} · {{ formatUsdCompact(row.aumUsd) }} AUM</strong>
                 {{ formatUsdCompact(row.revenueUsd) }} buys {{ formatPct(row.buybackShare) }} of supply
-                <span>{{ formatPct(row.emissionShare) }} emitted</span>
+                <span>{{ formatPct(row.emissionShare) }} emitted · REFI {{ formatPrice(row.priceUsd) }}</span>
               </span>
             </div>
           </div>
@@ -162,7 +162,8 @@
     </div>
 
     <p class="bb__fine">
-      Simulation at the scenario price. Manager and referral fees are estimates.
+      The price follows revenue at {{ BB.revenueMultiple }}x, never below the FDV scenario, so buybacks top out
+      near {{ formatPct(1 / BB.revenueMultiple) }} of supply a year. Manager and referral fees are estimates.
     </p>
   </section>
 </template>
@@ -226,6 +227,9 @@ const emissionPoints = computed(() => {
 });
 
 const hoverYear = ref<number | null>(null);
+
+const formatPrice = (value: number) => `$${value.toFixed(2)}`;
+const formatMultiple = (value: number) => `${value >= 10 ? Math.round(value) : value.toFixed(1)}x`;
 
 const formatPct = (value: number) => {
   const pct = value * 100;

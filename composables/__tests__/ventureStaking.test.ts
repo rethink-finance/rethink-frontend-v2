@@ -269,14 +269,24 @@ describe("buybacks", () => {
     near(all, 0.2);
   });
 
-  it("projects buybacks as AUM compounds", () => {
+  it("projects buybacks as AUM compounds, the price rising with revenue", () => {
     const p = buybackProjection({ startAumUsd: 250_000_000, growth: 0.75, fdvMillions: 40 })!;
     expect(p.years).toHaveLength(6);
+    // Year 1: revenue is too small to move the price off the $40M scenario.
+    expect(p.years[0].fdvUsd).toBe(40_000_000);
     expect(p.years[0].buybackShare).toBeCloseTo(637_500 / 40_000_000);
-    expect(p.years[2].aumUsd).toBeCloseTo(250_000_000 * 1.75 ** 2);
-    expect(p.years[0].priceToRevenue).toBeCloseTo(40_000_000 / 637_500);
-    // Year 3 buys back 4.9% against 3.2% emitted.
+    // Year 3 revenue at 25x outgrows the scenario, so the price follows revenue.
+    expect(p.years[2].fdvUsd).toBeCloseTo(p.years[2].revenueUsd * 25);
     expect(p.netDeflationaryYear).toBe(3);
+    // $0.40 to about $2.61 by year 6.
+    expect(p.years[5].priceUsd).toBeCloseTo((637_500 * 1.75 ** 5 * 25) / 100_000_000);
+    near(p.priceMultiple, 6.54);
+  });
+
+  it("never buys more than 1/multiple of supply a year", () => {
+    const p = buybackProjection({ startAumUsd: 2_000_000_000, growth: 2, fdvMillions: 25 })!;
+    for (const row of p.years) expect(row.buybackShare).toBeLessThanOrEqual(1 / 25 + 1e-12);
+    expect(p.totalBuybackShare).toBeLessThanOrEqual(6 / 25 + 1e-12);
   });
 
   it("turns net deflationary later without growth, as emissions decay", () => {

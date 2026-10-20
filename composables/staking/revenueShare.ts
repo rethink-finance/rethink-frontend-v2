@@ -40,12 +40,13 @@ export interface BuybackYear {
   year: number;
   aumUsd: number;
   revenueUsd: number;
-  /** Share of supply bought back that year at the scenario price. */
+  /** The FDV that year: the scenario, or revenue × multiple once that is higher. */
+  fdvUsd: number;
+  priceUsd: number;
+  /** Share of supply bought back that year at that year's price. */
   buybackShare: number;
   /** Share of supply the program emits that year. */
   emissionShare: number;
-  /** FDV over that year's revenue. */
-  priceToRevenue: number;
 }
 
 export interface BuybackProjection {
@@ -54,37 +55,45 @@ export interface BuybackProjection {
   netDeflationaryYear: number | null;
   /** Share of supply bought back over the whole horizon. */
   totalBuybackShare: number;
+  /** Price in the last year over the scenario price. */
+  priceMultiple: number;
 }
 
 /**
- * Buybacks year by year with AUM compounding at `growth`, all bought at the
- * scenario price (a rising price would buy fewer tokens for the same dollars).
+ * Buybacks year by year with AUM compounding at `growth`. The price never
+ * falls below the FDV scenario and rises with revenue at `revenueMultiple`,
+ * so growing revenue lifts the price instead of buying an ever larger slice
+ * of a fixed-price supply.
  */
 export const buybackProjection = (
   { startAumUsd, growth, fdvMillions }: { startAumUsd: number; growth: number; fdvMillions: number },
   model: VentureRevenueModel = VENTURE_BUYBACKS.revenue,
   years: number = VENTURE_BUYBACKS.years,
+  revenueMultiple: number = VENTURE_BUYBACKS.revenueMultiple,
   program = VENTURE_STAKING,
 ): BuybackProjection | null => {
   if (![startAumUsd, fdvMillions].every((n) => Number.isFinite(n) && n > 0) || !(growth >= 0)) {
     return null;
   }
-  const fdvUsd = fdvMillions * 1e6;
+  const scenarioFdv = fdvMillions * 1e6;
   const rows = Array.from({ length: years }, (_, i) => {
     const aumUsd = startAumUsd * (1 + growth) ** i;
     const revenueUsd = revenueBreakdown(aumUsd, model).totalUsd;
+    const fdvUsd = Math.max(scenarioFdv, revenueUsd * revenueMultiple);
     return {
       year: i + 1,
       aumUsd,
       revenueUsd,
+      fdvUsd,
+      priceUsd: fdvUsd / program.supply,
       buybackShare: revenueUsd / fdvUsd,
       emissionShare: emissionShareInYear(i + 1, program),
-      priceToRevenue: fdvUsd / revenueUsd,
     };
   });
   return {
     years: rows,
     netDeflationaryYear: rows.find((row) => row.buybackShare >= row.emissionShare)?.year ?? null,
     totalBuybackShare: rows.reduce((sum, row) => sum + row.buybackShare, 0),
+    priceMultiple: rows[rows.length - 1].fdvUsd / scenarioFdv,
   };
 };
