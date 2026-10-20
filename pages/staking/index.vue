@@ -37,11 +37,7 @@
 
     <section class="staking__main">
       <div class="staking__left">
-        <StakingTrancheCard
-          :fills="fills"
-          :counted-by-asset="program.countedByAsset"
-          :selected="selectedAsset"
-        />
+        <StakingTrancheCard :fills="fills" />
         <StakingYieldSources v-model:selected="selectedAsset" :holdings="program.holdings" />
         <StakingBuybacks />
       </div>
