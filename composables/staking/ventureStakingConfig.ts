@@ -1,5 +1,23 @@
 import { ChainId } from "~/types/enums/chain_id";
 
+export interface VentureAsset {
+  symbol: "ETH" | "WBTC" | "USDC";
+  /** USD per unit. ETH reads the program's ethPriceUsd. */
+  priceUsd: number;
+  /** Yearly yield the deposit would otherwise earn; this is what gets redirected. */
+  yieldRate: number;
+  /** How the forgone yield is named in copy ("staking yield"). */
+  yieldLabel: string;
+  defaultAmount: number;
+  min: number;
+  step: number;
+  sliderMin: number;
+  sliderMax: number;
+  sliderStep: number;
+  /** Fraction digits worth showing for an amount of this asset. */
+  displayDecimals: number;
+}
+
 export interface VentureTier {
   name: string;
   /** ETH this tier holds; the last tier is open-ended. */
@@ -39,6 +57,55 @@ export const VENTURE_STAKING = {
   defaultFdvMillions: 40,
   defaultEth: 10,
 } as const;
+
+/**
+ * Assets the calculator accepts. Non-ETH deposits count toward the
+ * ETH-denominated tiers at their USD value. The ranges keep each slider near
+ * the ETH one's 1 to 200 ETH.
+ */
+export const VENTURE_STAKING_ASSETS: VentureAsset[] = [
+  {
+    symbol: "ETH",
+    priceUsd: VENTURE_STAKING.ethPriceUsd,
+    yieldRate: VENTURE_STAKING.stakingYield,
+    yieldLabel: "staking yield",
+    defaultAmount: VENTURE_STAKING.defaultEth,
+    min: 0.1,
+    step: 0.1,
+    sliderMin: 1,
+    sliderMax: 200,
+    sliderStep: 1,
+    displayDecimals: 3,
+  },
+  {
+    symbol: "WBTC",
+    // TODO: placeholder price and yield; confirm with the program terms.
+    priceUsd: 100_000,
+    yieldRate: 0.01,
+    yieldLabel: "yield",
+    defaultAmount: 0.3,
+    min: 0.001,
+    step: 0.01,
+    sliderMin: 0.03,
+    sliderMax: 6,
+    sliderStep: 0.01,
+    displayDecimals: 4,
+  },
+  {
+    symbol: "USDC",
+    // TODO: placeholder yield; confirm with the program terms.
+    priceUsd: 1,
+    yieldRate: 0.05,
+    yieldLabel: "yield",
+    defaultAmount: 30_000,
+    min: 100,
+    step: 100,
+    sliderMin: 3_000,
+    sliderMax: 600_000,
+    sliderStep: 1_000,
+    displayDecimals: 0,
+  },
+];
 
 /**
  * Where the live pool size comes from. `address` is empty until the venture

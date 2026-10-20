@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   effectiveMultiplier,
   monthOneEmission,
+  projectVentureStake,
   projectVentureStaking,
   tierAt,
   weightedPool,
 } from "../staking/ventureStaking";
-import { VENTURE_STAKING } from "../staking/ventureStakingConfig";
+import { VENTURE_STAKING, VENTURE_STAKING_ASSETS } from "../staking/ventureStakingConfig";
 
 /** Within ±0.5% of the reference implementation's figure. */
 const near = (actual: number, expected: number) =>
@@ -131,5 +132,44 @@ describe("projectVentureStaking", () => {
     const p = project(10, NaN, 40);
     expect(p.isAssumedPool).toBe(true);
     near(p.valueUsd, 15_075);
+  });
+});
+
+describe("projectVentureStake with WBTC and USDC", () => {
+  const [eth, wbtc, usdc] = VENTURE_STAKING_ASSETS;
+  const stake = (asset: typeof eth, amount: number, livePoolEth = 0) => {
+    const result = projectVentureStake({ asset, amount, livePoolEth, fdvMillions: 40 });
+    if (!result) throw new Error("expected a projection");
+    return result;
+  };
+
+  it("weighs a deposit at its ETH value", () => {
+    // $30,000 of USDC or WBTC earns the same REFI as 10 ETH at $3,000.
+    const ten = stake(eth, 10);
+    const dollars = stake(usdc, 30_000);
+    const bitcoin = stake(wbtc, 30_000 / wbtc.priceUsd);
+    expect(dollars.ethEquivalent).toBeCloseTo(10);
+    expect(dollars.refi12).toBeCloseTo(ten.refi12);
+    expect(bitcoin.refi12).toBeCloseTo(ten.refi12);
+    expect(dollars.tier.name).toBe("Founding");
+  });
+
+  it("counts the yield the deposited asset gives up", () => {
+    const dollars = stake(usdc, 30_000);
+    expect(dollars.yieldRedirected).toBeCloseTo(30_000 * usdc.yieldRate);
+    expect(dollars.yieldRedirectedUsd).toBeCloseTo(30_000 * usdc.yieldRate);
+    expect(dollars.multipleVsYield).toBeCloseTo(dollars.valueUsd / (30_000 * usdc.yieldRate));
+
+    const bitcoin = stake(wbtc, 0.3);
+    expect(bitcoin.yieldRedirected).toBeCloseTo(0.3 * wbtc.yieldRate);
+    expect(bitcoin.yieldRedirectedUsd).toBeCloseTo(0.3 * wbtc.yieldRate * wbtc.priceUsd);
+  });
+
+  it("places a large USDC deposit by its ETH value in a live pool", () => {
+    expect(stake(usdc, 30_000, 2_400).tier.name).toBe("Second");
+  });
+
+  it("returns null for an empty amount", () => {
+    expect(projectVentureStake({ asset: usdc, amount: NaN, livePoolEth: 0, fdvMillions: 40 })).toBeNull();
   });
 });

@@ -100,10 +100,10 @@ const stake = () => {
   }
 };
 
-/** The calculator's "Stake ETH" hands its amount over and focuses the field. */
-const prefill = (eth: number) => {
-  token.value = "ETH";
-  amount.value = eth;
+/** The calculator's stake button hands its asset and amount over and focuses the field. */
+const prefill = (symbol: StakeToken, value: number) => {
+  token.value = symbol;
+  amount.value = value;
   amountInput.value?.focus();
 };
 

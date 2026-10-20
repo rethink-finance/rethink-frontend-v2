@@ -3,7 +3,12 @@
  * and what it is worth at a given FDV. Pure math, no framework imports, so
  * the staking flow can reuse it and the tests can pin it.
  */
-import { VENTURE_STAKING, type VentureTier } from "./ventureStakingConfig";
+import {
+  VENTURE_STAKING,
+  VENTURE_STAKING_ASSETS,
+  type VentureAsset,
+  type VentureTier,
+} from "./ventureStakingConfig";
 
 export type VentureStakingProgram = typeof VENTURE_STAKING;
 
@@ -14,7 +19,16 @@ export interface VentureProjectionInput {
   fdvMillions: number;
 }
 
+export interface VentureStakeInput {
+  asset: VentureAsset;
+  amount: number;
+  livePoolEth: number;
+  fdvMillions: number;
+}
+
 export interface VentureProjection {
+  /** The deposit in ETH at USD value; what the tiers and the pool weigh. */
+  ethEquivalent: number;
   tier: VentureTier;
   /** ETH already in the pool ahead of the visitor. */
   existingEth: number;
@@ -24,7 +38,8 @@ export interface VentureProjection {
   refi12: number;
   pricePerRefi: number;
   valueUsd: number;
-  yieldRedirectedEth: number;
+  /** Yearly yield given up, in the deposited asset. */
+  yieldRedirected: number;
   yieldRedirectedUsd: number;
   multipleVsYield: number;
 }
@@ -88,15 +103,21 @@ export const weightedPool = (
 /**
  * The visitor's whole deposit takes the tier at the end of the existing pool,
  * and the pool is held at its current size for the horizon (no inflows).
- * Returns null for a missing or non-positive amount so the UI shows dashes.
+ * A WBTC or USDC deposit weighs in at its ETH value; the yield it gives up is
+ * its own. Returns null for a missing or non-positive amount so the UI shows
+ * dashes.
  */
-export const projectVentureStaking = (
-  { eth, livePoolEth, fdvMillions }: VentureProjectionInput,
+export const projectVentureStake = (
+  { asset, amount, livePoolEth, fdvMillions }: VentureStakeInput,
   program: VentureStakingProgram = VENTURE_STAKING,
 ): VentureProjection | null => {
-  if (!Number.isFinite(eth) || eth <= 0 || !Number.isFinite(fdvMillions) || fdvMillions <= 0) {
+  if (
+    !Number.isFinite(amount) || amount <= 0 ||
+    !Number.isFinite(fdvMillions) || fdvMillions <= 0
+  ) {
     return null;
   }
+  const eth = (amount * asset.priceUsd) / program.ethPriceUsd;
   const isAssumedPool = !(Number.isFinite(livePoolEth) && livePoolEth > 0);
   const existingEth = isAssumedPool
     ? Math.max(program.assumedLaunchPoolEth - eth, 0)
@@ -115,10 +136,11 @@ export const projectVentureStaking = (
 
   const pricePerRefi = (fdvMillions * 1e6) / program.supply;
   const valueUsd = refi12 * pricePerRefi;
-  const yieldRedirectedEth = eth * program.stakingYield;
-  const yieldRedirectedUsd = yieldRedirectedEth * program.ethPriceUsd;
+  const yieldRedirected = amount * asset.yieldRate;
+  const yieldRedirectedUsd = yieldRedirected * asset.priceUsd;
 
   return {
+    ethEquivalent: eth,
     tier,
     existingEth,
     isAssumedPool,
@@ -126,8 +148,22 @@ export const projectVentureStaking = (
     refi12,
     pricePerRefi,
     valueUsd,
-    yieldRedirectedEth,
+    yieldRedirected,
     yieldRedirectedUsd,
     multipleVsYield: valueUsd / yieldRedirectedUsd,
   };
 };
+
+/** The ETH case, as the program spec states it. */
+export const projectVentureStaking = (
+  { eth, livePoolEth, fdvMillions }: VentureProjectionInput,
+  program: VentureStakingProgram = VENTURE_STAKING,
+) => projectVentureStake(
+  {
+    asset: { ...VENTURE_STAKING_ASSETS[0], priceUsd: program.ethPriceUsd, yieldRate: program.stakingYield },
+    amount: eth,
+    livePoolEth,
+    fdvMillions,
+  },
+  program,
+);

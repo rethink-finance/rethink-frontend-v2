@@ -6,9 +6,9 @@
         Staking
       </h1>
       <p class="staking__lede">
-        Stake ETH and earn REFI. Your ETH stays in a non-custodial vault you
-        can exit any settlement cycle; only its staking yield goes to the
-        Rethink treasury.
+        Stake ETH, WBTC or USDC and earn REFI. Your deposit stays in a
+        non-custodial vault you can exit any settlement cycle; only its yield
+        goes to the Rethink treasury.
       </p>
     </header>
 
@@ -24,14 +24,16 @@
 
 <script setup lang="ts">
 import { useVenturePool } from "~/composables/staking/useVenturePool";
+import type { VentureAsset } from "~/composables/staking/ventureStakingConfig";
 
 const { livePoolEth } = useVenturePool();
-const stakeCard = ref<{ prefill: (eth: number) => void; $el: HTMLElement }>();
+type StakeSymbol = VentureAsset["symbol"];
+const stakeCard = ref<{ prefill: (symbol: StakeSymbol, amount: number) => void; $el: HTMLElement }>();
 
-const onCalculatorStake = (eth: number) => {
+const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
   if (!stakeCard.value) return;
   stakeCard.value.$el?.scrollIntoView?.({ behavior: "smooth", block: "center" });
-  if (Number.isFinite(eth) && eth > 0) stakeCard.value.prefill(eth);
+  if (Number.isFinite(amount) && amount > 0) stakeCard.value.prefill(symbol, amount);
 };
 </script>
 
