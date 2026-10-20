@@ -27,7 +27,7 @@
             </span>
           </h1>
           <div class="stake_header__meta">
-            <span class="stake_header__curator">by Rethink Finance</span>
+            <span class="stake_header__curator">by rethink.finance DAO</span>
             <span class="stake_header__sep" />
             <span v-for="symbol in ASSET_SYMBOLS" :key="symbol" class="stake_header__chip">
               <IconChain v-if="symbol === 'ETH'" chain-short="eth" />
