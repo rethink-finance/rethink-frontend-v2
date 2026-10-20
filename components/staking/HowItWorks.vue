@@ -15,7 +15,8 @@
     <li class="how__step how__step--accent">
       <span class="how__icon"><Icon icon="mdi:star-four-points-outline" width="1rem" /></span>
       <span class="how__text">
-        <strong>Earn points:</strong> <em>{{ multiplier }}x</em> right now.
+        <strong>Earn points:</strong> <em>{{ multiplier }}x</em> right now, converted to REFI at TGE,
+        100% vested.
       </span>
     </li>
   </ol>

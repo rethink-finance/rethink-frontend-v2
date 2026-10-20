@@ -316,7 +316,7 @@ const routes = computed<IRoute[]>(() => [
   {
     to: "/staking",
     exactMatch: true,
-    title: "Staking",
+    title: "Stake",
     text: "",
   },
   {

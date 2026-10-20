@@ -5,7 +5,7 @@
         <div class="staking__intro">
           <div class="staking__title-row">
             <h1 class="staking__title">
-              Staking
+              Venture Staking
             </h1>
             <span
               v-if="isPreview"
