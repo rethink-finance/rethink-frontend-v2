@@ -1,16 +1,14 @@
 <template>
   <div class="staking page_shell">
     <header class="staking__hero">
-      <span class="staking__eyebrow">Venture staking</span>
       <!-- Placeholder copy until the final staking narrative is in. -->
       <h1 class="staking__title">
-        Keep your ETH.<br>
-        <span class="staking__title-accent">Stake its future.</span>
+        Staking
       </h1>
       <p class="staking__lede">
-        Route your staking yield to the Rethink treasury and earn REFI from the
-        first block. Your principal never moves: it stays in a non-custodial
-        vault you can leave at any settlement cycle.
+        Stake ETH and earn REFI. Your ETH stays in a non-custodial vault you
+        can exit any settlement cycle; only its staking yield goes to the
+        Rethink treasury.
       </p>
     </header>
 
@@ -51,30 +49,18 @@ const onCalculatorStake = (eth: number) => {
     margin-top: calc(1rem + 4px);
   }
 
-  &__eyebrow {
-    @include card-title;
-    color: $color-cyan;
-  }
-
   &__title {
     margin: 0;
-    font-size: clamp(2.25rem, 6vw, 3.5rem);
+    font-size: 44px;
     font-weight: 700;
     letter-spacing: -0.02em;
-    line-height: 1.05;
+    line-height: 1;
     color: $color-title;
-  }
-
-  &__title-accent {
-    background: $gradient-brand;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
   }
 
   &__lede {
     margin: 0;
-    font-size: 1.0625rem;
+    font-size: $text-md;
     line-height: 1.6;
     color: $color-subtitle;
   }

@@ -2,7 +2,6 @@
   <section class="calc" aria-labelledby="calc-title">
     <header class="calc__head">
       <span id="calc-title" class="calc__eyebrow">Venture staking calculator</span>
-      <span class="calc__badge">Projection</span>
     </header>
 
     <div class="calc__inputs">
@@ -289,22 +288,11 @@ const formatMultiple = (multiple: number) =>
   position: relative;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--accent-line);
+  border: 1px solid $color-line;
   border-radius: $default-border-radius;
-  background:
-    radial-gradient(120% 60% at 100% 0%, $color-accent-soft, transparent 60%),
-    $color-surface;
+  background: $color-surface;
   box-shadow: var(--shadow-card);
   overflow: hidden;
-
-  // A brand-gradient rule across the top sets it apart from the stake card.
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0 0 auto;
-    height: 2px;
-    background: $gradient-brand;
-  }
 
   &__head {
     display: flex;
@@ -316,18 +304,6 @@ const formatMultiple = (multiple: number) =>
 
   &__eyebrow {
     @include card-title;
-  }
-
-  &__badge {
-    padding: 0.2rem 0.5rem;
-    border: 1px solid $color-cyan-line;
-    border-radius: $default-border-radius;
-    background: $color-cyan-tint;
-    font-family: $font-mono;
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: $color-cyan;
   }
 
   &__inputs {
@@ -504,10 +480,7 @@ const formatMultiple = (multiple: number) =>
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.02em;
-    background: $gradient-brand;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: $color-title;
   }
 
   &__subline {
@@ -554,9 +527,9 @@ const formatMultiple = (multiple: number) =>
 
   &__multiple {
     font-family: $font-mono;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: $color-cyan;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: $color-subtitle;
   }
 
   &__reassure {
@@ -654,7 +627,7 @@ const formatMultiple = (multiple: number) =>
     border-radius: $default-border-radius;
     background: $color-card-background;
     font-family: $font-mono;
-    color: $color-cyan;
+    color: $color-title;
   }
 
   &__tranche {
@@ -688,7 +661,7 @@ const formatMultiple = (multiple: number) =>
     span {
       display: block;
       height: 100%;
-      background: $gradient-brand;
+      background: $color-primary;
     }
   }
 
