@@ -75,24 +75,6 @@
       </div>
     </div>
 
-    <div v-if="projection" class="bb__figures" aria-live="polite">
-      <div>
-        <span class="bb__value bb__value--accent">
-          {{ projection.netDeflationaryYear ? `Year ${projection.netDeflationaryYear}` : "Beyond year 6" }}
-        </span>
-        <span class="bb__label">REFI turns net deflationary</span>
-      </div>
-      <div>
-        <span class="bb__value">
-          {{ formatPct(first.buybackShare) }} <small>to</small> {{ formatPct(last.buybackShare) }}
-        </span>
-        <span class="bb__label">of supply bought back a year, year 1 to {{ last.year }}, at a flat {{ flatPrice }}</span>
-      </div>
-      <div>
-        <span class="bb__value">{{ formatPct(projection.totalBuybackShare) }}</span>
-        <span class="bb__label">of all REFI bought back over {{ last.year }} years, at a flat {{ flatPrice }}</span>
-      </div>
-    </div>
 
     <div v-if="projection" class="bb__chart">
       <div class="bb__legend" aria-hidden="true">
@@ -211,8 +193,6 @@ const feeCells = computed(() => {
 const projection = computed(() =>
   buybackProjection({ startAumUsd: aum.value, growth: growthPct.value / 100, fdvMillions: fdv.value }),
 );
-const first = computed(() => projection.value!.years[0]);
-const last = computed(() => projection.value!.years[projection.value!.years.length - 1]);
 
 /** A round top for the y axis that fits the tallest bar or emission. */
 const yMax = computed(() => {
@@ -462,49 +442,8 @@ const chartSummary = computed(() => {
     }
   }
 
-  &__figures {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-    padding: 1.125rem 0;
-    border-top: 1px solid $color-line;
-    border-bottom: 1px solid $color-line;
 
-    @media (max-width: $screen-md) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
 
-    div {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      min-width: 0;
-    }
-  }
-
-  &__value {
-    font-family: $font-mono;
-    font-size: 1.375rem;
-    font-weight: 600;
-    line-height: 1.15;
-    color: $color-title;
-    white-space: nowrap;
-
-    small {
-      font-size: 0.6em;
-      font-weight: 400;
-      color: $color-subtitle;
-    }
-
-    &--accent {
-      color: $color-cyan;
-    }
-  }
-
-  &__label {
-    font-size: $text-xs;
-    color: $color-subtitle;
-  }
 
   &__chart {
     display: flex;
