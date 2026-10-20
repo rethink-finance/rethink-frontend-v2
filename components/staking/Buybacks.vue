@@ -6,7 +6,7 @@
     </div>
     <p class="bb__headline">
       <span class="bb__big">100%</span>
-      <span>of the revenue Rethink Finance earns <strong>buys back REFI</strong> on the open market.</span>
+      <span>of the protocol revenue <strong>buys back REFI</strong> on the open market.</span>
     </p>
 
     <div class="bb__sources">
@@ -36,7 +36,7 @@
     <div class="bb__controls">
       <label class="bb__control">
         <span class="bb__control-top">
-          <span class="bb__control-label">Rethink AUM today</span>
+          <span class="bb__control-label">Rethink AUM Y1</span>
           <span class="bb__control-value">{{ formatUsdCompact(aum) }}</span>
         </span>
         <input
@@ -46,7 +46,7 @@
           min="0"
           max="1000"
           step="1"
-          aria-label="Rethink assets under management today"
+          aria-label="Rethink assets under management in year 1"
           :style="{ '--fill': `${aumStep / 10}%` }"
         >
       </label>

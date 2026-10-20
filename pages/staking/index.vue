@@ -17,9 +17,6 @@
             Staking
           </h1>
           <ul class="staking__flex" aria-label="Program guarantees">
-            <li class="staking__flex-item staking__flex-item--accent">
-              <Icon icon="mdi:fire" width="1rem" />100% of revenue buys back REFI
-            </li>
             <li class="staking__flex-item">
               <Icon icon="mdi:scale-balance" width="1rem" />No leverage
             </li>
@@ -249,17 +246,6 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
       color: $color-subtitle;
     }
 
-    &--accent {
-      border-color: $color-cyan-line;
-      background:
-        linear-gradient($color-cyan-tint, $color-cyan-tint),
-        $color-surface;
-      color: $color-cyan;
-
-      :deep(svg) {
-        color: $color-cyan;
-      }
-    }
   }
 
 
