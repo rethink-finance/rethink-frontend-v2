@@ -94,7 +94,7 @@
             </div>
 
             <div class="calc__line calc__line--bonus">
-              <span class="calc__line-icon"><Icon icon="mdi:star-four-points-outline" width="1.375rem" /></span>
+              <span class="calc__line-icon"><StakingRefiMark :size="26" /></span>
               <div class="calc__line-body">
                 <span class="calc__line-label">Your REFI after the first year would be worth</span>
                 <span class="calc__hero">

@@ -1,7 +1,7 @@
 <template>
   <section class="sources brand_card" aria-labelledby="sources-title">
     <div class="sources__head">
-      <span id="sources-title" class="brand_card__eyebrow">Where the yield comes from</span>
+      <span id="sources-title" class="brand_card__eyebrow">Source of yield</span>
       <StakingAssetTabs :model-value="selected" size="small" @update:model-value="emit('update:selected', $event)" />
     </div>
 

@@ -3,37 +3,25 @@
     <span id="bb-title" class="brand_card__eyebrow">Buybacks</span>
     <p class="bb__headline">
       <span class="bb__big">100%</span>
-      <span>of the protocol revenue <strong>buys back REFI</strong> on the open market.</span>
+      <span>of the protocol revenue <strong>buys back <StakingRefiMark :size="18" /> REFI</strong> on the open market.</span>
     </p>
 
-    <div class="bb__sources">
-      <button
-        type="button"
-        class="bb__sources-line"
-        :aria-expanded="showSources"
-        aria-controls="bb-sources"
-        @click="showSources = !showSources"
+    <div class="bb__fees" aria-label="Revenue sources">
+      <div
+        v-for="cell in feeCells"
+        :key="cell.key"
+        :class="cell.op ? 'bb__op' : ['bb__fee', { 'bb__fee--total': cell.total }]"
+        :aria-hidden="cell.op ? 'true' : undefined"
       >
-        <span>
-          {{ BB.revenue.platformFeeBps }} bps platform fee + {{ BB.revenue.managerShare * 100 }}% of manager fees
-          + referrals ≈ <strong>{{ revenue.totalBps.toFixed(1) }} bps of AUM</strong>
-        </span>
-        <Icon :icon="showSources ? 'mdi:chevron-up' : 'mdi:chevron-down'" width="1rem" />
-      </button>
-      <ul
-        v-show="showSources"
-        id="bb-sources"
-        class="bb__sources-list"
-        aria-label="Revenue sources"
-      >
-        <li v-for="source in sources" :key="source.label">
-          <span class="bb__source-text">
-            <strong>{{ source.label }}</strong>
-            <span>{{ source.basis }}</span>
-          </span>
-          <span class="bb__source-usd">{{ formatUsdCompact(source.usd) }}</span>
-        </li>
-      </ul>
+        <template v-if="cell.op">
+          {{ cell.op }}
+        </template>
+        <template v-else>
+          <span class="bb__fee-usd">{{ formatUsdCompact(cell.usd ?? 0) }}</span>
+          <span class="bb__fee-label">{{ cell.label }}</span>
+          <span class="bb__fee-basis">{{ cell.basis }}</span>
+        </template>
+      </div>
     </div>
 
     <div class="bb__controls">
@@ -189,7 +177,6 @@ const growthPct = ref(BB.defaultGrowth * 100);
 const fdv = ref<number>(VENTURE_STAKING.defaultFdvMillions);
 
 const revenue = computed(() => revenueBreakdown(aum.value));
-const showSources = ref(false);
 const sources = computed(() => {
   const model = BB.revenue;
   return [
@@ -201,6 +188,24 @@ const sources = computed(() => {
     },
     { label: "Referral fees", basis: `~${model.referralBps} bps of AUM (assumed)`, usd: revenue.value.referralsUsd },
   ];
+});
+
+/** The fees as a sum: source + source + source = total. */
+const feeCells = computed(() => {
+  const cells: { key: string; op?: string; label?: string; basis?: string; usd?: number; total?: boolean }[] = [];
+  sources.value.forEach((source, index) => {
+    if (index) cells.push({ key: `op${index}`, op: "+" });
+    cells.push({ key: source.label, ...source });
+  });
+  cells.push({ key: "eq", op: "=" });
+  cells.push({
+    key: "total",
+    label: "Buybacks a year",
+    basis: `${revenue.value.totalBps.toFixed(1)} bps of ${formatUsdCompact(aum.value)} AUM`,
+    usd: revenue.value.totalUsd,
+    total: true,
+  });
+  return cells;
 });
 
 const projection = computed(() =>
@@ -287,72 +292,67 @@ const chartSummary = computed(() => {
     color: transparent;
   }
 
-  &__sources {
+  &__fees {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0.5rem;
+
+    @media (max-width: $screen-md) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  &__fee {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    padding: 0.75rem 0.875rem;
     border: 1px solid $color-line;
     border-radius: $default-border-radius;
     background: $color-card-background;
-  }
 
-  &__sources-line {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    width: 100%;
-    padding: 0.75rem 1rem;
-    text-align: left;
-    font-size: $text-sm;
-    color: $color-subtitle;
-
-    strong {
-      font-weight: 600;
-      color: $color-title;
-    }
-
-    &:focus-visible {
-      outline: 1px solid var(--accent-line);
-      outline-offset: -2px;
+    &--total {
+      border-color: $color-cyan-line;
+      background:
+        linear-gradient($color-cyan-tint, $color-cyan-tint),
+        $color-surface;
     }
   }
 
-  &__sources-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin: 0;
-    padding: 0.75rem 1rem;
-    border-top: 1px solid $color-line;
-    list-style: none;
-
-    li {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-  }
-
-  &__source-text {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 0.5rem;
-    font-size: $text-sm;
-    color: $color-subtitle;
-
-    strong {
-      font-weight: 600;
-      color: $color-title;
-    }
-
-    span {
-      font-size: $text-xs;
-    }
-  }
-
-  &__source-usd {
+  &__fee-usd {
     font-family: $font-mono;
-    font-size: $text-sm;
+    font-size: 1.125rem;
+    font-weight: 600;
     color: $color-title;
+  }
+
+  &__fee--total &__fee-usd {
+    color: $color-cyan;
+  }
+
+  &__fee-label {
+    font-size: $text-sm;
+    font-weight: 600;
+    color: $color-title;
+  }
+
+  &__fee-basis {
+    font-size: 11px;
+    line-height: 1.4;
+    color: $color-subtitle;
+  }
+
+  &__op {
+    align-self: center;
+    font-family: $font-mono;
+    font-size: 1rem;
+    color: $color-subtitle;
+
+    @media (max-width: $screen-md) {
+      display: none;
+    }
   }
 
   &__controls {
