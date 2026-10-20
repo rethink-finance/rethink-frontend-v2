@@ -19,6 +19,20 @@
           <p class="staking__lede">
             The earlier you stake, the more points you earn.
           </p>
+          <ul class="staking__flex" aria-label="Program guarantees">
+            <li class="staking__flex-item staking__flex-item--accent">
+              <Icon icon="mdi:fire" width="1rem" />100% of revenue buys back REFI
+            </li>
+            <li class="staking__flex-item">
+              <Icon icon="mdi:scale-balance" width="1rem" />No leverage
+            </li>
+            <li class="staking__flex-item">
+              <Icon icon="mdi:link-variant-off" width="1rem" />No bridges
+            </li>
+            <li class="staking__flex-item">
+              <Icon icon="mdi:layers-off-outline" width="1rem" />No restaking
+            </li>
+          </ul>
         </div>
 
         <StakingHowItWorks
@@ -37,7 +51,7 @@
           :selected="selectedAsset"
         />
         <StakingYieldSources v-model:selected="selectedAsset" :holdings="program.holdings" />
-        <StakingRevenueShare />
+        <StakingBuybacks />
         <StakingEmissionChart :current-month="program.currentMonth" />
       </div>
       <aside
@@ -202,6 +216,44 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     letter-spacing: -0.04em;
     line-height: 0.95;
     color: $color-title;
+  }
+
+  &__flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.25rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__flex-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4375rem 0.875rem 0.4375rem 0.6875rem;
+    border: 1px solid $color-line-2;
+    border-radius: 999px;
+    background: $color-surface;
+    font-size: $text-sm;
+    font-weight: 600;
+    color: $color-title;
+
+    :deep(svg) {
+      color: $color-subtitle;
+    }
+
+    &--accent {
+      border-color: $color-cyan-line;
+      background:
+        linear-gradient($color-cyan-tint, $color-cyan-tint),
+        $color-surface;
+      color: $color-cyan;
+
+      :deep(svg) {
+        color: $color-cyan;
+      }
+    }
   }
 
   &__lede {

@@ -1,57 +1,55 @@
 /**
- * Revenue share math: what REFI holders receive when 100% of the protocol's
- * fees on AUM are distributed to staked REFI. Pure, so it can be tested.
+ * Buyback math: 100% of the fees Rethink Finance earns on AUM buy REFI on
+ * the market. Pure, so it can be tested.
  */
+import { emissionSchedule } from "./ventureStaking";
 import { VENTURE_STAKING } from "./ventureStakingConfig";
 
-export interface RevenueShareInput {
+export interface BuybackInput {
   aumUsd: number;
   feeBps: number;
-  /** Share of REFI supply that is staked and receives the fees, 0..1. */
-  stakedShare: number;
   fdvMillions: number;
 }
 
-export interface RevenueShare {
-  /** Fees distributed to REFI holders a year. */
-  feesUsd: number;
-  /** Yearly yield on staked REFI at the scenario price. */
-  stakedApr: number;
-  /** Fees spent buying REFI each day, if distributions buy on the market. */
-  dailyBuyUsd: number;
-  /** Share of total supply those buys absorb in a year. */
-  supplyBoughtShare: number;
-  /** FDV over yearly fees: how many years of fees the valuation is. */
-  priceToFees: number;
-  /** AUM at which staked REFI yields as much as staked ETH. */
-  breakEvenAumUsd: number;
+export interface Buybacks {
+  /** Revenue spent buying REFI a year. */
+  yearlyUsd: number;
+  dailyUsd: number;
+  /** REFI bought a year at the scenario price. */
+  tokensPerYear: number;
+  /** Share of total supply bought back a year. */
+  supplyShare: number;
 }
 
 export const annualFees = (aumUsd: number, feeBps: number) => aumUsd * (feeBps / 10_000);
 
-/** Yield on staked REFI for a given AUM; the curve the chart draws. */
-export const stakedAprAt = (
+/** Share of supply bought back a year at a given AUM; the curve the chart draws. */
+export const buybackShareAt = (
   aumUsd: number,
-  { feeBps, stakedShare, fdvMillions }: Omit<RevenueShareInput, "aumUsd">,
-) => annualFees(aumUsd, feeBps) / (fdvMillions * 1e6 * stakedShare);
+  { feeBps, fdvMillions }: Omit<BuybackInput, "aumUsd">,
+) => annualFees(aumUsd, feeBps) / (fdvMillions * 1e6);
 
-export const revenueShare = (
-  input: RevenueShareInput,
-  program = VENTURE_STAKING,
-): RevenueShare | null => {
-  const { aumUsd, feeBps, stakedShare, fdvMillions } = input;
-  if (![aumUsd, feeBps, stakedShare, fdvMillions].every((n) => Number.isFinite(n) && n > 0)) {
-    return null;
-  }
-  const fdvUsd = fdvMillions * 1e6;
-  const feesUsd = annualFees(aumUsd, feeBps);
-  const price = fdvUsd / program.supply;
+/** Share of supply the staking program emits in program year `year` (1-based). */
+export const emissionShareInYear = (year: number, program = VENTURE_STAKING) =>
+  emissionSchedule(program)
+    .slice((year - 1) * 12, year * 12)
+    .reduce((sum, value) => sum + value, 0) / program.supply;
+
+/** AUM at which a year's buybacks absorb `supplyShare` of the supply. */
+export const aumToBuyBack = (
+  supplyShare: number,
+  { feeBps, fdvMillions }: Omit<BuybackInput, "aumUsd">,
+) => (supplyShare * fdvMillions * 1e6) / (feeBps / 10_000);
+
+export const buybacks = (input: BuybackInput, program = VENTURE_STAKING): Buybacks | null => {
+  const { aumUsd, feeBps, fdvMillions } = input;
+  if (![aumUsd, feeBps, fdvMillions].every((n) => Number.isFinite(n) && n > 0)) return null;
+  const yearlyUsd = annualFees(aumUsd, feeBps);
+  const price = (fdvMillions * 1e6) / program.supply;
   return {
-    feesUsd,
-    stakedApr: stakedAprAt(aumUsd, input),
-    dailyBuyUsd: feesUsd / 365,
-    supplyBoughtShare: feesUsd / price / program.supply,
-    priceToFees: fdvUsd / feesUsd,
-    breakEvenAumUsd: (program.stakingYield * fdvUsd * stakedShare) / (feeBps / 10_000),
+    yearlyUsd,
+    dailyUsd: yearlyUsd / 365,
+    tokensPerYear: yearlyUsd / price,
+    supplyShare: buybackShareAt(aumUsd, input),
   };
 };

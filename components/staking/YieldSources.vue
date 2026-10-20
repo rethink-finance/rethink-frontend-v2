@@ -23,10 +23,6 @@
 
     <StakingYieldFlow :asset="asset" :amount="amount" :strategy="strategy" />
 
-    <p class="sources__hint">
-      <Icon icon="mdi:shield-check-outline" width="0.95rem" />
-      No leverage, no bridges, no restaking.
-    </p>
   </section>
 </template>
 
@@ -149,13 +145,5 @@ const amountLabel = computed(() =>
     color: $color-subtitle;
   }
 
-  &__hint {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0;
-    font-size: $text-xs;
-    color: $color-subtitle;
-  }
 }
 </style>

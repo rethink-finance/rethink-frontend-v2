@@ -58,9 +58,6 @@
       <Icon icon="mdi:arrow-right" width="1.1rem" class="ms-2" />
     </v-btn>
 
-    <p class="stake__note">
-      Non-custodial: a Rethink vault on a Safe. You hold the share token.
-    </p>
   </section>
 </template>
 
@@ -234,12 +231,5 @@ defineExpose({ prefill });
     }
   }
 
-  &__note {
-    margin: 0;
-    font-size: $text-xs;
-    line-height: 1.5;
-    text-align: center;
-    color: $color-subtitle;
-  }
 }
 </style>

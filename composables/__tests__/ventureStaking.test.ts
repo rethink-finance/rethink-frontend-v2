@@ -14,7 +14,7 @@ import {
   VENTURE_STAKING_ASSETS,
   VENTURE_STAKING_YIELD_STRATEGIES,
 } from "../staking/ventureStakingConfig";
-import { revenueShare, stakedAprAt } from "../staking/revenueShare";
+import { aumToBuyBack, buybackShareAt, buybacks, emissionShareInYear } from "../staking/revenueShare";
 import { ribbonPath, yieldFlowBands } from "../staking/yieldFlow";
 
 /** Within ±0.5% of the reference implementation's figure. */
@@ -240,28 +240,33 @@ describe("yieldFlowBands", () => {
   });
 });
 
-describe("revenueShare", () => {
-  const base = { aumUsd: 250_000_000, feeBps: 15, stakedShare: 0.2, fdvMillions: 40 };
+describe("buybacks", () => {
+  const base = { aumUsd: 250_000_000, feeBps: 15, fdvMillions: 40 };
 
-  it("distributes 15 bps of AUM to staked REFI", () => {
-    const r = revenueShare(base)!;
-    expect(r.feesUsd).toBeCloseTo(375_000);
-    // $375K over the $8M of REFI that is staked at a $40M FDV.
-    expect(r.stakedApr).toBeCloseTo(375_000 / 8_000_000);
-    expect(r.dailyBuyUsd).toBeCloseTo(375_000 / 365);
-    expect(r.supplyBoughtShare).toBeCloseTo(375_000 / 40_000_000);
-    expect(r.priceToFees).toBeCloseTo(40_000_000 / 375_000);
+  it("spends 15 bps of AUM buying REFI", () => {
+    const b = buybacks(base)!;
+    expect(b.yearlyUsd).toBeCloseTo(375_000);
+    expect(b.dailyUsd).toBeCloseTo(375_000 / 365);
+    // $375K at $0.40 a REFI.
+    expect(b.tokensPerYear).toBeCloseTo(937_500);
+    expect(b.supplyShare).toBeCloseTo(0.009375);
   });
 
-  it("finds the AUM where staked REFI out-earns staked ETH", () => {
-    const r = revenueShare(base)!;
-    // 3% of $8M staked is $240K of fees, which is $160M of AUM at 15 bps.
-    expect(r.breakEvenAumUsd).toBeCloseTo(160_000_000);
-    expect(stakedAprAt(r.breakEvenAumUsd, base)).toBeCloseTo(0.03);
+  it("knows each year's emissions as a share of supply", () => {
+    near(emissionShareInYear(1), 0.07536);
+    expect(emissionShareInYear(2) / emissionShareInYear(1)).toBeCloseTo(0.965 ** 12);
+    const all = Array.from({ length: 6 }, (_, i) => emissionShareInYear(i + 1)).reduce((a, b) => a + b, 0);
+    near(all, 0.2);
+  });
+
+  it("finds the AUM where buybacks outpace a year's emissions", () => {
+    const aum = aumToBuyBack(emissionShareInYear(1), base);
+    near(aum, 2_009_600_000);
+    expect(buybackShareAt(aum, base)).toBeCloseTo(emissionShareInYear(1));
   });
 
   it("returns null for empty inputs", () => {
-    expect(revenueShare({ ...base, aumUsd: 0 })).toBeNull();
-    expect(revenueShare({ ...base, stakedShare: NaN })).toBeNull();
+    expect(buybacks({ ...base, aumUsd: 0 })).toBeNull();
+    expect(buybacks({ ...base, fdvMillions: NaN })).toBeNull();
   });
 });

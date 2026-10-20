@@ -212,18 +212,16 @@ export const VENTURE_STAKING_PREVIEW = {
 };
 
 /**
- * Revenue share: 100% of the fees Rethink Finance captures go to REFI
- * holders who stake. The simulator's ranges and defaults live here.
- * TODO: confirm the fee rate, the distribution mechanism (buy-back and
- * distribute, or pay out in stables) and the starting AUM.
+ * Buybacks: 100% of the revenue Rethink Finance earns buys back REFI. The
+ * simulator's ranges and defaults live here.
+ * TODO: confirm the fee rate and the starting AUM.
  */
-export const VENTURE_REVENUE_SHARE = {
+export const VENTURE_BUYBACKS = {
   feeOptionsBps: [10, 15, 25],
   defaultFeeBps: 15,
   aumMinUsd: 10_000_000,
   aumMaxUsd: 5_000_000_000,
   defaultAumUsd: 250_000_000,
-  stakedShareMin: 0.05,
-  stakedShareMax: 0.8,
-  defaultStakedShare: 0.2,
+  /** Program years whose emissions the chart compares buybacks against. */
+  emissionYears: [1, 3],
 } as const;

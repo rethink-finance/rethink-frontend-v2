@@ -1,22 +1,23 @@
 <template>
-  <section class="rev brand_card" aria-labelledby="rev-title">
-    <div class="rev__head">
-      <span id="rev-title" class="brand_card__eyebrow">Revenue share</span>
-      <span class="rev__badge">Simulation</span>
+  <section class="bb brand_card" aria-labelledby="bb-title">
+    <div class="bb__head">
+      <span id="bb-title" class="brand_card__eyebrow">Buybacks</span>
+      <span class="bb__badge">Simulation</span>
     </div>
-    <p class="rev__headline">
-      <strong>100% of the fees Rethink Finance earns</strong> go to REFI stakers.
+    <p class="bb__headline">
+      <span class="bb__big">100%</span>
+      <span>of the revenue Rethink Finance earns <strong>buys back REFI</strong> on the open market.</span>
     </p>
 
-    <div class="rev__controls">
-      <label class="rev__control">
-        <span class="rev__control-top">
-          <span class="rev__control-label">Rethink AUM</span>
-          <span class="rev__control-value">{{ formatUsdCompact(aum) }}</span>
+    <div class="bb__controls">
+      <label class="bb__control bb__control--wide">
+        <span class="bb__control-top">
+          <span class="bb__control-label">Rethink AUM</span>
+          <span class="bb__control-value">{{ formatUsdCompact(aum) }}</span>
         </span>
         <input
           v-model.number="aumStep"
-          class="rev__slider"
+          class="bb__slider"
           type="range"
           min="0"
           max="1000"
@@ -25,31 +26,15 @@
           :style="{ '--fill': `${aumStep / 10}%` }"
         >
       </label>
-      <label class="rev__control">
-        <span class="rev__control-top">
-          <span class="rev__control-label">REFI staked</span>
-          <span class="rev__control-value">{{ Math.round(staked * 100) }}%</span>
-        </span>
-        <input
-          v-model.number="stakedPct"
-          class="rev__slider"
-          type="range"
-          :min="RS.stakedShareMin * 100"
-          :max="RS.stakedShareMax * 100"
-          step="1"
-          aria-label="Share of REFI supply staked"
-          :style="{ '--fill': `${((stakedPct - RS.stakedShareMin * 100) / ((RS.stakedShareMax - RS.stakedShareMin) * 100)) * 100}%` }"
-        >
-      </label>
-      <div class="rev__control">
-        <span id="rev-fee" class="rev__control-label">Protocol fee</span>
-        <div class="rev__segments" role="group" aria-labelledby="rev-fee">
+      <div class="bb__control">
+        <span id="bb-fee" class="bb__control-label">Protocol fee</span>
+        <div class="bb__segments" role="group" aria-labelledby="bb-fee">
           <button
-            v-for="bps in RS.feeOptionsBps"
+            v-for="bps in BB.feeOptionsBps"
             :key="bps"
             type="button"
-            class="rev__segment"
-            :class="{ 'rev__segment--active': bps === feeBps }"
+            class="bb__segment"
+            :class="{ 'bb__segment--active': bps === feeBps }"
             :aria-pressed="bps === feeBps"
             @click="feeBps = bps"
           >
@@ -57,15 +42,15 @@
           </button>
         </div>
       </div>
-      <div class="rev__control">
-        <span id="rev-fdv" class="rev__control-label">FDV</span>
-        <div class="rev__segments" role="group" aria-labelledby="rev-fdv">
+      <div class="bb__control">
+        <span id="bb-fdv" class="bb__control-label">FDV</span>
+        <div class="bb__segments" role="group" aria-labelledby="bb-fdv">
           <button
             v-for="scenario in VENTURE_STAKING.fdvScenarios"
             :key="scenario.fdvMillions"
             type="button"
-            class="rev__segment"
-            :class="{ 'rev__segment--active': scenario.fdvMillions === fdv }"
+            class="bb__segment"
+            :class="{ 'bb__segment--active': scenario.fdvMillions === fdv }"
             :aria-pressed="scenario.fdvMillions === fdv"
             @click="fdv = scenario.fdvMillions"
           >
@@ -75,32 +60,34 @@
       </div>
     </div>
 
-    <div class="rev__figures" aria-live="polite">
+    <div class="bb__figures" aria-live="polite">
       <div>
-        <span class="rev__value">{{ result ? formatUsdCompact(result.feesUsd) : DASH }}</span>
-        <span class="rev__label">Paid to REFI stakers a year</span>
+        <span class="bb__value bb__value--accent">{{ result ? formatUsdCompact(result.yearlyUsd) : DASH }}</span>
+        <span class="bb__label">of REFI bought back a year</span>
       </div>
       <div>
-        <span class="rev__value rev__value--accent">{{ result ? formatPct(result.stakedApr) : DASH }}</span>
-        <span class="rev__label">Real yield on staked REFI</span>
+        <span class="bb__value">{{ result ? formatUsdCompact(result.dailyUsd) : DASH }}</span>
+        <span class="bb__label">Buy pressure, every day</span>
       </div>
       <div>
-        <span class="rev__value">{{ result ? formatUsdCompact(result.dailyBuyUsd) : DASH }}</span>
-        <span class="rev__label">Buy pressure a day</span>
+        <span class="bb__value">{{ result ? formatPct(result.supplyShare) : DASH }}</span>
+        <span class="bb__label">
+          of supply a year<template v-if="result">, {{ formatCompact(result.tokensPerYear) }} REFI</template>
+        </span>
       </div>
       <div>
-        <span class="rev__value">{{ result ? formatPct(result.supplyBoughtShare) : DASH }}</span>
-        <span class="rev__label">of supply bought a year</span>
+        <span class="bb__value">{{ formatUsdCompact(roundSig(crossings[0].aum)) }}</span>
+        <span class="bb__label">AUM to outpace year-{{ crossings[0].year }} emissions</span>
       </div>
     </div>
 
-    <div class="rev__chart">
-      <div class="rev__y" aria-hidden="true">
-        <span v-for="tick in Y_TICKS" :key="tick" :style="{ top: `${yPct(tick)}%` }">{{ Number((tick * 100).toPrecision(2)) }}%</span>
+    <div class="bb__chart">
+      <div class="bb__y" aria-hidden="true">
+        <span v-for="tick in Y_TICKS" :key="tick" :style="{ top: `${yPct(tick)}%` }">{{ tickLabel(tick) }}</span>
       </div>
       <div
         ref="plot"
-        class="rev__plot"
+        class="bb__plot"
         role="img"
         :aria-label="chartSummary"
         @pointermove="onPointer"
@@ -109,92 +96,93 @@
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <linearGradient
-              id="rev-fill"
+              id="bb-fill"
               x1="0"
               x2="0"
               y1="0"
               y2="1"
             >
-              <stop offset="0" class="rev__stop-top" />
-              <stop offset="1" class="rev__stop-bottom" />
+              <stop offset="0" class="bb__stop-top" />
+              <stop offset="1" class="bb__stop-bottom" />
             </linearGradient>
           </defs>
           <line
             v-for="tick in Y_TICKS"
             :key="tick"
-            class="rev__grid"
+            class="bb__grid"
             x1="0"
             x2="100"
             :y1="yPct(tick)"
             :y2="yPct(tick)"
           />
-          <path class="rev__area" :d="areaPath" fill="url(#rev-fill)" />
-          <path class="rev__line" :d="linePath" />
+          <path class="bb__area" :d="areaPath" fill="url(#bb-fill)" />
+          <path class="bb__line" :d="linePath" />
           <line
-            class="rev__eth"
+            v-for="crossing in crossings"
+            :key="crossing.year"
+            class="bb__emission"
             x1="0"
             x2="100"
-            :y1="yPct(ethYield)"
-            :y2="yPct(ethYield)"
-          />
-          <line
-            v-if="breakEvenX !== null"
-            class="rev__breakeven"
-            :x1="breakEvenX"
-            :x2="breakEvenX"
-            :y1="yPct(ethYield)"
-            y2="100"
+            :y1="yPct(crossing.share)"
+            :y2="yPct(crossing.share)"
           />
         </svg>
 
-        <span class="rev__eth-label" :style="{ top: `${yPct(ethYield)}%` }">
-          ETH staking {{ formatPct(ethYield) }}
+        <span
+          v-for="crossing in crossings"
+          :key="`l${crossing.year}`"
+          class="bb__emission-label"
+          :style="{ top: `${yPct(crossing.share)}%` }"
+        >
+          Year-{{ crossing.year }} emissions {{ formatPct(crossing.share) }}
         </span>
         <span
-          v-if="breakEvenX !== null && result"
-          class="rev__breakeven-label"
-          :class="{ 'rev__breakeven-label--left': breakEvenX > 70 }"
-          :style="{ left: `${breakEvenX}%` }"
+          v-for="crossing in visibleCrossings"
+          :key="`c${crossing.year}`"
+          class="bb__cross"
+          :style="{ left: `${xPct(crossing.aum)}%`, top: `${yPct(crossing.share)}%` }"
         >
-          Beats ETH from {{ formatUsdCompact(result.breakEvenAumUsd) }} AUM
+          <span class="bb__cross-label">{{ formatUsdCompact(roundSig(crossing.aum)) }}</span>
         </span>
-        <span class="rev__dot" :style="pointStyle(aum)" />
+        <span class="bb__dot" :style="pointStyle(aum)" />
 
         <template v-if="hoverX !== null">
-          <span class="rev__crosshair" :style="{ left: `${hoverX}%` }" />
-          <span class="rev__dot rev__dot--hover" :style="pointStyle(aumAt(hoverX))" />
+          <span class="bb__crosshair" :style="{ left: `${hoverX}%` }" />
           <span
-            class="rev__tip"
-            :class="{ 'rev__tip--left': hoverX > 60 }"
+            class="bb__tip"
+            :class="{ 'bb__tip--left': hoverX > 60 }"
             :style="pointStyle(aumAt(hoverX))"
           >
             <strong>{{ formatUsdCompact(aumAt(hoverX)) }} AUM</strong>
-            {{ formatPct(aprAt(aumAt(hoverX))) }} on staked REFI
+            buys back {{ formatPct(shareAt(aumAt(hoverX))) }} of supply a year
           </span>
         </template>
       </div>
-      <div class="rev__x" aria-hidden="true">
+      <div class="bb__x" aria-hidden="true">
         <span v-for="tick in X_TICKS" :key="tick" :style="{ left: `${xPct(tick)}%` }">{{ formatUsdCompact(tick) }}</span>
       </div>
     </div>
 
-    <p class="rev__fine">
-      Assumes the fees buy REFI on the market and are paid to stakers, at the scenario price. AUM is the
-      total Rethink vaults manage. A simulation, not a forecast.
+    <p class="bb__fine">
+      Where the blue line crosses an emissions line, buybacks take more REFI off the market than the program
+      adds that year. Priced at the FDV scenario. A simulation, not a forecast.
     </p>
   </section>
 </template>
 
 <script setup lang="ts">
-import { DASH, formatUsdCompact } from "~/composables/staking/formatStaking";
-import { revenueShare, stakedAprAt } from "~/composables/staking/revenueShare";
-import { VENTURE_REVENUE_SHARE as RS, VENTURE_STAKING } from "~/composables/staking/ventureStakingConfig";
-
-const ethYield = VENTURE_STAKING.stakingYield;
+import { DASH, formatCompact, formatUsdCompact } from "~/composables/staking/formatStaking";
+import {
+  aumToBuyBack,
+  buybackShareAt,
+  buybacks,
+  emissionShareInYear,
+} from "~/composables/staking/revenueShare";
+import { VENTURE_BUYBACKS as BB, VENTURE_STAKING } from "~/composables/staking/ventureStakingConfig";
 
 // The AUM slider runs on a log scale so $10M and $5B both get room.
-const logMin = Math.log10(RS.aumMinUsd);
-const logMax = Math.log10(RS.aumMaxUsd);
+const logMin = Math.log10(BB.aumMinUsd);
+const logMax = Math.log10(BB.aumMaxUsd);
 const aumToStep = (aum: number) => Math.round(((Math.log10(aum) - logMin) / (logMax - logMin)) * 1000);
 const stepToAum = (step: number) => {
   const raw = 10 ** (logMin + (step / 1000) * (logMax - logMin));
@@ -203,50 +191,46 @@ const stepToAum = (step: number) => {
   return Math.round(raw / magnitude) * magnitude;
 };
 
-const aumStep = ref(aumToStep(RS.defaultAumUsd));
+const aumStep = ref(aumToStep(BB.defaultAumUsd));
 const aum = computed(() => stepToAum(aumStep.value));
-const stakedPct = ref(RS.defaultStakedShare * 100);
-const staked = computed(() => stakedPct.value / 100);
-const feeBps = ref<number>(RS.defaultFeeBps);
+const feeBps = ref<number>(BB.defaultFeeBps);
 const fdv = ref<number>(VENTURE_STAKING.defaultFdvMillions);
 
-const params = computed(() => ({ feeBps: feeBps.value, stakedShare: staked.value, fdvMillions: fdv.value }));
-const result = computed(() => revenueShare({ aumUsd: aum.value, ...params.value }));
-const aprAt = (aumUsd: number) => stakedAprAt(aumUsd, params.value);
+const params = computed(() => ({ feeBps: feeBps.value, fdvMillions: fdv.value }));
+const result = computed(() => buybacks({ aumUsd: aum.value, ...params.value }));
+const shareAt = (aumUsd: number) => buybackShareAt(aumUsd, params.value);
 
-// Both axes are logarithmic, which makes yield against AUM a straight line.
-const Y_MIN = 0.001;
+const crossings = computed(() =>
+  BB.emissionYears.map((year) => {
+    const share = emissionShareInYear(year);
+    return { year, share, aum: aumToBuyBack(share, params.value) };
+  }),
+);
+const visibleCrossings = computed(() =>
+  crossings.value.filter((crossing) => crossing.aum >= BB.aumMinUsd && crossing.aum <= BB.aumMaxUsd),
+);
+
+// Both axes are logarithmic, which makes buybacks against AUM a straight line.
+const Y_MIN = 0.0001;
 const Y_MAX = 1;
-const Y_TICKS = [0.001, 0.01, 0.1, 1];
+const Y_TICKS = [0.0001, 0.001, 0.01, 0.1, 1];
 const X_TICKS = [10_000_000, 100_000_000, 1_000_000_000, 5_000_000_000];
 
 const xPct = (aumUsd: number) => ((Math.log10(aumUsd) - logMin) / (logMax - logMin)) * 100;
 const aumAt = (x: number) => 10 ** (logMin + (x / 100) * (logMax - logMin));
-const yPct = (apr: number) => {
-  const clamped = Math.min(Math.max(apr, Y_MIN), Y_MAX);
+const yPct = (share: number) => {
+  const clamped = Math.min(Math.max(share, Y_MIN), Y_MAX);
   return (1 - (Math.log10(clamped) - Math.log10(Y_MIN)) / (Math.log10(Y_MAX) - Math.log10(Y_MIN))) * 100;
 };
 
-const samples = computed(() =>
-  Array.from({ length: 41 }, (_, i) => {
-    const x = (i / 40) * 100;
-    return [x, yPct(aprAt(aumAt(x)))] as const;
-  }),
-);
 const linePath = computed(() =>
-  samples.value.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`).join(" "),
+  [0, 100].map((x, i) => `${i ? "L" : "M"}${x},${yPct(shareAt(aumAt(x))).toFixed(2)}`).join(" "),
 );
 const areaPath = computed(() => `${linePath.value} L100,100 L0,100 Z`);
 
-const breakEvenX = computed(() => {
-  const value = result.value?.breakEvenAumUsd;
-  if (!value || value < RS.aumMinUsd || value > RS.aumMaxUsd) return null;
-  return xPct(value);
-});
-
 const pointStyle = (aumUsd: number) => ({
   left: `${xPct(aumUsd)}%`,
-  top: `${yPct(aprAt(aumUsd))}%`,
+  top: `${yPct(shareAt(aumUsd))}%`,
 });
 
 const plot = ref<HTMLElement>();
@@ -263,17 +247,23 @@ const formatPct = (value: number) => {
   if (pct >= 1) return `${pct.toFixed(1)}%`;
   return `${pct.toFixed(2)}%`;
 };
+/** Two significant figures: $850M, $2B. */
+const roundSig = (value: number) => {
+  const magnitude = 10 ** (Math.floor(Math.log10(value)) - 1);
+  return Math.round(value / magnitude) * magnitude;
+};
+
+const tickLabel = (tick: number) => `${Number((tick * 100).toPrecision(2))}%`;
 
 const chartSummary = computed(() =>
-  result.value
-    ? `Yield on staked REFI rises with Rethink AUM. At ${formatUsdCompact(aum.value)} it is ` +
-      `${formatPct(result.value.stakedApr)}; it passes ETH staking at ${formatUsdCompact(result.value.breakEvenAumUsd)}.`
-    : "Yield on staked REFI against Rethink AUM.",
+  `Share of REFI supply bought back a year against Rethink AUM. At ${formatUsdCompact(aum.value)} it is ` +
+  `${result.value ? formatPct(result.value.supplyShare) : "unknown"}; buybacks outpace year-1 emissions from ` +
+  `${formatUsdCompact(crossings.value[0].aum)}.`,
 );
 </script>
 
 <style scoped lang="scss">
-.rev {
+.bb {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -297,7 +287,10 @@ const chartSummary = computed(() =>
   }
 
   &__headline {
-    margin: -0.25rem 0 0;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin: 0;
     font-size: 1.125rem;
     line-height: 1.4;
     color: $color-subtitle;
@@ -306,6 +299,25 @@ const chartSummary = computed(() =>
       font-weight: 600;
       color: $color-title;
     }
+
+    @media (max-width: $screen-sm) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+  }
+
+  &__big {
+    flex-shrink: 0;
+    font-family: $font-mono;
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    background: $gradient-brand;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   &__controls {
@@ -322,6 +334,10 @@ const chartSummary = computed(() =>
     display: flex;
     flex-direction: column;
     gap: 0.625rem;
+
+    &--wide {
+      grid-column: 1 / -1;
+    }
   }
 
   &__control-top {
@@ -527,44 +543,48 @@ const chartSummary = computed(() =>
     vector-effect: non-scaling-stroke;
   }
 
-  &__eth {
+  &__emission {
     stroke: var(--text-faint);
     stroke-width: 1;
     stroke-dasharray: 4 4;
     vector-effect: non-scaling-stroke;
   }
 
-  &__breakeven {
-    stroke: var(--cyan-raw);
-    stroke-width: 1;
-    stroke-dasharray: 2 3;
-    vector-effect: non-scaling-stroke;
-  }
-
-  &__eth-label,
-  &__breakeven-label {
+  &__emission-label {
     position: absolute;
+    left: 0.25rem;
     font-family: $font-mono;
     font-size: 10px;
+    color: $color-subtitle;
     white-space: nowrap;
+    transform: translateY(calc(-100% - 3px));
     pointer-events: none;
   }
 
-  &__eth-label {
-    right: 0;
-    color: $color-subtitle;
-    transform: translateY(calc(-100% - 4px));
+  &__cross {
+    position: absolute;
+    z-index: 1;
+    width: 11px;
+    height: 11px;
+    border: 2px solid $color-cyan-raw;
+    border-radius: 50%;
+    background: $color-surface;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
   }
 
-  &__breakeven-label {
-    bottom: 6px;
-    padding-left: 6px;
+  &__cross-label {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 50%;
+    padding: 0 0.25rem;
+    border-radius: 2px;
+    background: $color-surface;
+    font-family: $font-mono;
+    font-size: 10px;
     color: $color-cyan;
-
-    &--left {
-      padding: 0 6px 0 0;
-      transform: translateX(-100%);
-    }
+    white-space: nowrap;
+    transform: translateX(-50%);
   }
 
   &__dot {
@@ -577,13 +597,6 @@ const chartSummary = computed(() =>
     box-shadow: 0 0 0 4px $color-cyan-tint;
     transform: translate(-50%, -50%);
     pointer-events: none;
-
-    &--hover {
-      width: 10px;
-      height: 10px;
-      background: $color-primary;
-      box-shadow: none;
-    }
   }
 
   &__crosshair {
@@ -611,6 +624,7 @@ const chartSummary = computed(() =>
     white-space: nowrap;
     transform: translate(12px, -110%);
     pointer-events: none;
+    z-index: 2;
 
     strong {
       font-weight: 600;
