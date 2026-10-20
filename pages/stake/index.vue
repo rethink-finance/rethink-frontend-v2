@@ -67,14 +67,6 @@
           </div>
           <span class="stake_stats__divider stake_stats__divider--push" />
           <div class="stake_stats__item">
-            <span class="stake_stats__label">Points now</span>
-            <div class="stake_stats__value_row">
-              <span class="stake_stats__value stake_stats__value--accent">{{ currentTier.baseMultiplier }}x</span>
-              <span class="stake_stats__note stake_stats__note--caps">{{ currentTier.name }}</span>
-            </div>
-          </div>
-          <span class="stake_stats__divider" />
-          <div class="stake_stats__item">
             <span class="stake_stats__label">Stakers</span>
             <div class="stake_stats__value_row">
               <span class="stake_stats__value">{{ program.stakers ?? DASH }}</span>
@@ -385,9 +377,6 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
       line-height: 0.95;
     }
 
-    &--accent {
-      color: $color-cyan;
-    }
   }
 
   &__note {
