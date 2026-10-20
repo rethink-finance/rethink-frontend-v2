@@ -226,16 +226,10 @@ export const VENTURE_BUYBACKS = {
   aumMinUsd: 10_000_000,
   aumMaxUsd: 2_000_000_000,
   defaultAumUsd: 250_000_000,
-  growthMax: 1,
+  growthMax: 2,
   defaultGrowth: 0.75,
   /** Years projected; the program emits over six. */
   years: 6,
-  /**
-   * Assumed: REFI trades at this multiple of yearly revenue once revenue
-   * outgrows the FDV scenario. Buying pushes the price up, so buybacks can
-   * never absorb more than 1/multiple of supply a year.
-   */
-  revenueMultiple: 25,
 } as const;
 
 export type VentureRevenueModel = typeof VENTURE_BUYBACKS.revenue;
