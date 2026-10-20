@@ -14,20 +14,7 @@
       </button>
     </div>
 
-    <div class="stake__tokens" role="tablist" aria-label="Deposit token">
-      <button
-        v-for="option in tokens"
-        :key="option"
-        type="button"
-        role="tab"
-        class="stake__token"
-        :class="{ 'stake__token--active': option === token }"
-        :aria-selected="option === token"
-        @click="token = option"
-      >
-        {{ option }}
-      </button>
-    </div>
+    <StakingAssetTabs v-model="token" />
 
     <label class="stake__deposit">
       <span class="stake__caption">You deposit</span>
@@ -88,12 +75,12 @@
 
 <script setup lang="ts">
 import { useToastStore } from "~/store/toasts/toast.store";
-import { VENTURE_STAKING_VAULT } from "~/composables/staking/ventureStakingConfig";
+import { VENTURE_STAKING_VAULT, type VentureAsset } from "~/composables/staking/ventureStakingConfig";
 
-const tokens = ["ETH", "WBTC", "USDC"] as const;
-type StakeToken = (typeof tokens)[number];
+type StakeToken = VentureAsset["symbol"];
 
-const token = ref<StakeToken>("ETH");
+/** The selected asset; the page highlights it in every section. */
+const token = defineModel<StakeToken>("token", { required: true });
 const amount = ref<string | number>("");
 const amountInput = ref<HTMLInputElement>();
 const toastStore = useToastStore();
@@ -137,38 +124,7 @@ defineExpose({ prefill });
   flex-direction: column;
   gap: 1rem;
 
-  &__tokens {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.25rem;
-    padding: 0.25rem;
-    border: 1px solid $color-line;
-    border-radius: $default-border-radius;
-    background: $color-card-background;
-  }
 
-  &__token {
-    padding: 0.625rem 0;
-    border-radius: $default-border-radius;
-    font-family: $font-mono;
-    font-size: $text-sm;
-    letter-spacing: 0.08em;
-    color: $color-subtitle;
-    transition: background $default-transition-time, color $default-transition-time;
-
-    &:hover {
-      color: $color-title;
-    }
-
-    &:focus-visible {
-      outline: 1px solid var(--accent-line);
-    }
-
-    &--active {
-      background: var(--fill-2);
-      color: $color-title;
-    }
-  }
 
   &__deposit {
     display: flex;

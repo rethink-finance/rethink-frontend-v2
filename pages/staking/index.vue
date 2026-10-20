@@ -29,17 +29,20 @@
       </div>
     </section>
 
-    <StakingProgramStats :program="program" />
-
     <section class="staking__main">
       <div class="staking__left">
-        <StakingTrancheCard :fills="fills" :counted-by-asset="program.countedByAsset" />
-        <StakingYieldSources :holdings="program.holdings" />
+        <StakingTrancheCard
+          :fills="fills"
+          :counted-by-asset="program.countedByAsset"
+          :selected="selectedAsset"
+        />
+        <StakingYieldSources v-model:selected="selectedAsset" :holdings="program.holdings" />
         <StakingEmissionChart :current-month="program.currentMonth" />
       </div>
       <aside class="staking__right" aria-label="Deposit and your position">
         <StakingStakeCard
           ref="stakeCard"
+          v-model:token="selectedAsset"
           :multiplier="currentTier.baseMultiplier"
           @calculate="isCalculatorOpen = true"
         />
@@ -69,6 +72,8 @@ const fills = computed(() => tierFills(poolUsd.value));
 const currentTier = computed(() => (fills.value.find((fill) => fill.isCurrent) ?? fills.value[0]).tier);
 
 const isCalculatorOpen = ref(false);
+/** One asset is in focus across the page: the deposit card picks it. */
+const selectedAsset = ref<StakeSymbol>("ETH");
 const stakeCard = ref<{ prefill: (symbol: StakeSymbol, amount: number) => void; $el: HTMLElement }>();
 
 const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {

@@ -20,8 +20,12 @@ export interface VentureAsset {
 
 export interface VentureYieldSource {
   name: string;
-  /** What the deposit becomes there, e.g. "stETH" or "USDC market". */
-  detail: string;
+  /** DefiLlama protocol slug for the logo; none draws a generic mark. */
+  logo?: string;
+  /** The position token the deposit becomes there. */
+  position: string;
+  /** Share of the asset placed here, 0..1; an asset's sources sum to 1. */
+  weight: number;
 }
 
 /** Where an asset's yield comes from. Shown on the staking page. */
@@ -135,32 +139,33 @@ export const VENTURE_STAKING_ASSETS: VentureAsset[] = [
  * TODO: confirm venues and weights with the strategy owner before launch.
  */
 export const VENTURE_STAKING_YIELD_STRATEGIES: Record<VentureAsset["symbol"], VentureYieldStrategy> = {
+  // TODO: the weights are illustrative; set them from the live allocation.
   ETH: {
     label: "Liquid staking",
     summary: "Staked with Ethereum validators through the most established liquid staking providers.",
     sources: [
-      { name: "Lido", detail: "stETH" },
-      { name: "Rocket Pool", detail: "rETH" },
-      { name: "Coinbase", detail: "cbETH" },
-      { name: "Own validators", detail: "native" },
+      { name: "Lido", logo: "lido", position: "stETH", weight: 0.4 },
+      { name: "Rocket Pool", logo: "rocket-pool", position: "rETH", weight: 0.25 },
+      { name: "Coinbase", logo: "coinbase-wrapped-staked-eth", position: "cbETH", weight: 0.2 },
+      { name: "Own validators", position: "Native ETH", weight: 0.15 },
     ],
   },
   WBTC: {
     label: "Blue-chip lending",
     summary: "Lent on the deepest over-collateralized markets. No bridges, no restaking.",
     sources: [
-      { name: "Aave v3", detail: "WBTC market" },
-      { name: "SparkLend", detail: "WBTC market" },
+      { name: "Aave v3", logo: "aave-v3", position: "aEthWBTC", weight: 0.6 },
+      { name: "SparkLend", logo: "sparklend", position: "spWBTC", weight: 0.4 },
     ],
   },
   USDC: {
     label: "Money market",
     summary: "Spread across the safest stablecoin savings and lending vaults.",
     sources: [
-      { name: "Spark", detail: "Savings rate" },
-      { name: "Aave v3", detail: "USDC market" },
-      { name: "Morpho", detail: "Curated vaults" },
-      { name: "Compound v3", detail: "USDC market" },
+      { name: "Spark Savings", logo: "spark-savings", position: "sUSDC", weight: 0.35 },
+      { name: "Aave v3", logo: "aave-v3", position: "aEthUSDC", weight: 0.3 },
+      { name: "Morpho", logo: "morpho-blue", position: "steakUSDC", weight: 0.2 },
+      { name: "Compound v3", logo: "compound-v3", position: "cUSDCv3", weight: 0.15 },
     ],
   },
 };

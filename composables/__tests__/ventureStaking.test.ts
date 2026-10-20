@@ -9,7 +9,12 @@ import {
   tierFills,
   weightedPool,
 } from "../staking/ventureStaking";
-import { VENTURE_STAKING, VENTURE_STAKING_ASSETS } from "../staking/ventureStakingConfig";
+import {
+  VENTURE_STAKING,
+  VENTURE_STAKING_ASSETS,
+  VENTURE_STAKING_YIELD_STRATEGIES,
+} from "../staking/ventureStakingConfig";
+import { ribbonPath, yieldFlowBands } from "../staking/yieldFlow";
 
 /** Within ±0.5% of the reference implementation's figure. */
 const near = (actual: number, expected: number) =>
@@ -201,5 +206,35 @@ describe("tierFills", () => {
     const fills = tierFills(NaN);
     expect(fills[0].isCurrent).toBe(true);
     expect(fills.every((f) => f.filledUsd === 0)).toBe(true);
+  });
+});
+
+describe("yield strategies", () => {
+  it("places every asset's whole deposit", () => {
+    for (const [symbol, strategy] of Object.entries(VENTURE_STAKING_YIELD_STRATEGIES)) {
+      const total = strategy.sources.reduce((sum, source) => sum + source.weight, 0);
+      expect(total, symbol).toBeCloseTo(1);
+    }
+  });
+});
+
+describe("yieldFlowBands", () => {
+  it("slices the deposit by weight and spaces the venue nodes", () => {
+    const bands = yieldFlowBands([0.5, 0.25, 0.25], 220, 10);
+    expect(bands.map((b) => b.from)).toEqual([[0, 110], [110, 165], [165, 220]]);
+    expect(bands[0].to).toEqual([0, 100]);
+    expect(bands[1].to).toEqual([110, 160]);
+    expect(bands[2].to[1]).toBeCloseTo(220);
+  });
+
+  it("draws nothing without weights", () => {
+    expect(yieldFlowBands([], 200, 8)).toEqual([]);
+    expect(yieldFlowBands([0, 0], 200, 8)).toEqual([]);
+  });
+
+  it("closes each ribbon", () => {
+    expect(ribbonPath(0, 100, [0, 10], [20, 30])).toBe(
+      "M0.00,0.00 C50.00,0.00 50.00,20.00 100.00,20.00 L100.00,30.00 C50.00,30.00 50.00,10.00 0.00,10.00 Z",
+    );
   });
 });

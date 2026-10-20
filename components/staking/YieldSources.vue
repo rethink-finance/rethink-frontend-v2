@@ -2,42 +2,31 @@
   <section class="sources brand_card" aria-labelledby="sources-title">
     <div class="sources__head">
       <span id="sources-title" class="brand_card__eyebrow">Where the yield comes from</span>
-      <span class="sources__hint">No leverage, no bridges, no restaking</span>
+      <StakingAssetTabs :model-value="selected" size="small" @update:model-value="emit('update:selected', $event)" />
     </div>
 
-    <div class="sources__grid">
-      <article v-for="row in rows" :key="row.asset.symbol" class="sources__asset">
-        <header class="sources__asset-head">
-          <span class="sources__symbol">
-            <IconChain v-if="row.asset.symbol === 'ETH'" chain-short="eth" :size="20" />
-            <IconBaseAsset v-else :symbol="row.asset.symbol" :size="20" />
-            {{ row.asset.symbol }}
-          </span>
-          <span class="sources__rate" :title="`Assumed yearly yield for ${row.asset.symbol}`">
-            ~{{ formatRate(row.asset.yieldRate) }}
-          </span>
-        </header>
-
-        <div class="sources__deposited">
-          <span class="sources__amount">{{ row.amountLabel }} {{ row.asset.symbol }}</span>
-          <span class="sources__usd">{{ formatUsdCompact(row.usd) }} deposited</span>
-        </div>
-
-        <div class="sources__strategy">
-          <span class="sources__label">{{ row.strategy.label }}</span>
-          <p class="sources__summary">
-            {{ row.strategy.summary }}
-          </p>
-        </div>
-
-        <ul class="sources__list">
-          <li v-for="source in row.strategy.sources" :key="source.name" class="sources__venue">
-            <span class="sources__venue-name">{{ source.name }}</span>
-            <span class="sources__venue-detail">{{ source.detail }}</span>
-          </li>
-        </ul>
-      </article>
+    <div class="sources__facts">
+      <div class="sources__deposited">
+        <span class="sources__amount">{{ amountLabel }} {{ asset.symbol }}</span>
+        <span class="sources__usd">{{ formatUsdCompact(amount * asset.priceUsd) }} deposited</span>
+      </div>
+      <div class="sources__strategy">
+        <span class="sources__label">
+          {{ strategy.label }}
+          <span class="sources__rate" title="Assumed yearly yield">~{{ formatRate(asset.yieldRate) }} a year</span>
+        </span>
+        <p class="sources__summary">
+          {{ strategy.summary }}
+        </p>
+      </div>
     </div>
+
+    <StakingYieldFlow :asset="asset" :amount="amount" :strategy="strategy" />
+
+    <p class="sources__hint">
+      <Icon icon="mdi:shield-check-outline" width="0.95rem" />
+      No leverage, no bridges, no restaking.
+    </p>
   </section>
 </template>
 
@@ -54,20 +43,22 @@ import {
   type VentureAsset,
 } from "~/composables/staking/ventureStakingConfig";
 
+type AssetSymbol = VentureAsset["symbol"];
+
 const props = defineProps<{
-  holdings: Record<VentureAsset["symbol"], number>;
+  selected: AssetSymbol;
+  holdings: Record<AssetSymbol, number>;
 }>();
 
-const rows = computed(() =>
-  VENTURE_STAKING_ASSETS.map((asset) => {
-    const amount = props.holdings[asset.symbol] ?? 0;
-    return {
-      asset,
-      amountLabel: asset.symbol === "USDC" ? formatCompact(amount) : formatAmount(amount, 2),
-      usd: amount * asset.priceUsd,
-      strategy: VENTURE_STAKING_YIELD_STRATEGIES[asset.symbol],
-    };
-  }),
+const emit = defineEmits<{ "update:selected": [symbol: AssetSymbol] }>();
+
+const asset = computed(
+  () => VENTURE_STAKING_ASSETS.find((option) => option.symbol === props.selected) ?? VENTURE_STAKING_ASSETS[0],
+);
+const strategy = computed(() => VENTURE_STAKING_YIELD_STRATEGIES[asset.value.symbol]);
+const amount = computed(() => props.holdings[asset.value.symbol] ?? 0);
+const amountLabel = computed(() =>
+  asset.value.symbol === "USDC" ? formatCompact(amount.value) : formatAmount(amount.value, 2),
 );
 </script>
 
@@ -75,78 +66,45 @@ const rows = computed(() =>
 .sources {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 
   &__head {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 0.5rem 1rem;
+    gap: 0.75rem 1rem;
   }
 
-  &__hint {
-    font-size: $text-xs;
-    color: $color-subtitle;
-  }
-
-  &__grid {
+  &__facts {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 1rem 2rem;
 
-    @media (max-width: $screen-md) {
+    @media (max-width: $screen-sm) {
       grid-template-columns: minmax(0, 1fr);
     }
-  }
-
-  &__asset {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1.125rem;
-    border: 1px solid $color-line;
-    border-radius: $default-border-radius;
-    background: $color-card-background;
-  }
-
-  &__asset-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  &__symbol {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-family: $font-mono;
-    font-size: $text-sm;
-    font-weight: 600;
-    color: $color-title;
-  }
-
-  &__rate {
-    padding: 0.125rem 0.5rem;
-    border: 1px solid $color-line-2;
-    border-radius: 999px;
-    font-family: $font-mono;
-    font-size: 11px;
-    color: $color-subtitle;
-    cursor: help;
   }
 
   &__deposited {
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
+    padding-right: 2rem;
+    border-right: 1px solid $color-line;
+
+    @media (max-width: $screen-sm) {
+      padding-right: 0;
+      border-right: 0;
+    }
   }
 
   &__amount {
     font-family: $font-mono;
-    font-size: 1.375rem;
+    font-size: 1.75rem;
     font-weight: 600;
+    line-height: 1.1;
     color: $color-title;
     white-space: nowrap;
   }
@@ -160,11 +118,13 @@ const rows = computed(() =>
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    padding-top: 0.875rem;
-    border-top: 1px solid $color-line;
   }
 
   &__label {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.625rem;
     font-family: $font-mono;
     font-size: 11px;
     letter-spacing: 0.1em;
@@ -172,39 +132,30 @@ const rows = computed(() =>
     color: $color-cyan;
   }
 
+  &__rate {
+    padding: 0.0625rem 0.4375rem;
+    border: 1px solid $color-line-2;
+    border-radius: 999px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: $color-subtitle;
+    cursor: help;
+  }
+
   &__summary {
     margin: 0;
-    font-size: $text-xs;
+    font-size: $text-sm;
     line-height: 1.5;
     color: $color-subtitle;
   }
 
-  &__list {
+  &__hint {
     display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
+    align-items: center;
+    gap: 0.5rem;
     margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  &__venue {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.75rem;
-    font-size: $text-sm;
-  }
-
-  &__venue-name {
-    color: $color-title;
-  }
-
-  &__venue-detail {
-    font-family: $font-mono;
-    font-size: 11px;
+    font-size: $text-xs;
     color: $color-subtitle;
-    white-space: nowrap;
   }
 }
 </style>

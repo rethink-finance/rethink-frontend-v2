@@ -8,16 +8,22 @@
       </span>
     </div>
 
-    <div class="tranche__figure">
-      <span class="tranche__filled">{{ formatUsdCompact(current.filledUsd) }}</span>
-      <span class="tranche__capacity">
-        <template v-if="isFinite(current.tier.capacityUsd)">
+    <div class="tranche__summary">
+      <div class="tranche__figure">
+        <span class="tranche__filled">{{ formatUsdCompact(current.filledUsd) }}</span>
+        <span v-if="isFinite(current.tier.capacityUsd)" class="tranche__capacity">
           / {{ formatUsdCompact(current.tier.capacityUsd) }}
+        </span>
+      </div>
+      <p class="tranche__note">
+        <template v-if="next">
+          <strong>{{ formatUsdCompact(current.tier.capacityUsd - current.filledUsd) }}</strong> left at
+          {{ current.tier.baseMultiplier }}x, then {{ next.tier.name }} at {{ next.tier.baseMultiplier }}x
         </template>
         <template v-else>
-          deposited
+          Every bonus tier is full
         </template>
-      </span>
+      </p>
     </div>
 
     <div
@@ -33,27 +39,22 @@
         v-for="segment in segments"
         :key="segment.symbol"
         class="tranche__segment"
+        :class="{ 'tranche__segment--dim': segment.symbol !== selected }"
         :style="{ width: `${segment.width}%`, background: `var(--asset-${segment.symbol.toLowerCase()})` }"
       />
     </div>
 
     <ul class="tranche__legend" aria-label="Deposits by asset">
-      <li v-for="segment in segments" :key="segment.symbol">
+      <li
+        v-for="segment in segments"
+        :key="segment.symbol"
+        :class="{ 'tranche__legend--active': segment.symbol === selected }"
+      >
         <span class="tranche__swatch" :style="{ background: `var(--asset-${segment.symbol.toLowerCase()})` }" />
         {{ segment.symbol }}
         <span class="tranche__legend-usd">{{ formatUsdCompact(segment.usd) }}</span>
       </li>
     </ul>
-
-    <p class="tranche__note">
-      <template v-if="next">
-        {{ formatUsdCompact(current.tier.capacityUsd - current.filledUsd) }} left at
-        {{ current.tier.baseMultiplier }}x. Then {{ next.tier.name }} at {{ next.tier.baseMultiplier }}x.
-      </template>
-      <template v-else>
-        Every bonus tier is full; new deposits earn 1x.
-      </template>
-    </p>
 
     <ol class="tranche__tiers" aria-label="All tiers">
       <li
@@ -62,29 +63,20 @@
         class="tranche__tier"
         :class="{ 'tranche__tier--current': fill.isCurrent }"
       >
-        <span class="tranche__tier-name">
-          {{ fill.tier.name }}
-          <span v-if="fill.isCurrent" class="tranche__tag tranche__tag--now">Filling now</span>
-          <span v-else-if="fill.ratio >= 1" class="tranche__tag">Full</span>
+        <span class="tranche__tier-top">
+          <span class="tranche__tier-name">{{ fill.tier.name }}</span>
+          <span class="tranche__tier-mult">{{ fill.tier.baseMultiplier }}x</span>
         </span>
         <span class="tranche__tier-range">{{ rangeLabel(fill) }}</span>
-        <span class="tranche__tier-mult">{{ fill.tier.baseMultiplier }}x</span>
         <span class="tranche__tier-bar" aria-hidden="true">
           <span :style="{ width: `${barWidth(fill)}%` }" />
         </span>
       </li>
     </ol>
 
-    <p class="tranche__rule">
-      <Icon icon="mdi:lock-outline" width="1rem" />
-      <span>
-        Every deposit counts at its USD value on the day it comes in. Price moves never
-        push the count back, so your multiplier is locked when you deposit.
-      </span>
-    </p>
-
-    <p class="tranche__fade">
-      Bonuses fade: full in year one, half in year two, a quarter in year three, then 1x.
+    <p class="tranche__fine">
+      <Icon icon="mdi:lock-outline" width="0.875rem" />
+      Counted in USD on deposit day, so your multiplier locks in. Bonuses fade yearly: full, half, a quarter, then 1x.
     </p>
   </section>
 </template>
@@ -100,6 +92,8 @@ const props = defineProps<{
   fills: TierFill[];
   /** Deposit-time USD by asset; splits the bar into its sources. */
   countedByAsset: Record<AssetSymbol, number>;
+  /** The asset picked in the deposit card; its share stands out. */
+  selected: AssetSymbol;
 }>();
 
 const currentIndex = computed(() => Math.max(props.fills.findIndex((fill) => fill.isCurrent), 0));
@@ -107,10 +101,11 @@ const current = computed(() => props.fills[currentIndex.value]);
 const next = computed(() => props.fills[currentIndex.value + 1]);
 
 const rangeLabel = ({ startUsd, tier }: TierFill) => {
-  if (!Number.isFinite(tier.capacityUsd)) return `${formatUsdCompact(startUsd)} and up`;
-  if (startUsd === 0) return `First ${formatUsdCompact(tier.capacityUsd)}`;
+  if (!Number.isFinite(tier.capacityUsd)) return `${formatUsdCompact(startUsd)}+`;
   return `${formatUsdCompact(startUsd)} to ${formatUsdCompact(startUsd + tier.capacityUsd)}`;
 };
+
+const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100, 3) : fill.ratio * 100);
 
 /**
  * The current tier's fill split by asset, in proportion to each asset's
@@ -127,16 +122,14 @@ const segments = computed(() => {
       width: total > 0 ? current.value.ratio * 100 * (props.countedByAsset[symbol] / total) : 0,
     }));
 });
-
-const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100, 1.5) : fill.ratio * 100);
 </script>
 
 <style scoped lang="scss">
 .tranche {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.75rem 1.875rem;
+  gap: 0.875rem;
+  padding: 1.5rem 1.75rem;
   border: 1px solid $color-line-2;
   border-radius: $default-border-radius;
   background: $color-surface;
@@ -175,16 +168,23 @@ const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100
     animation: tranche-pulse 2s ease-out infinite;
   }
 
+  &__summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+  }
+
   &__figure {
     display: flex;
     align-items: baseline;
-    flex-wrap: wrap;
     gap: 0.5rem;
     font-family: $font-mono;
   }
 
   &__filled {
-    font-size: clamp(2.75rem, 6vw, 3.75rem);
+    font-size: 2.25rem;
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.03em;
@@ -192,8 +192,20 @@ const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100
   }
 
   &__capacity {
-    font-size: 1.125rem;
+    font-size: 1rem;
     color: $color-subtitle;
+  }
+
+  &__note {
+    margin: 0;
+    font-size: $text-sm;
+    color: $color-subtitle;
+
+    strong {
+      font-family: $font-mono;
+      font-weight: 600;
+      color: $color-title;
+    }
   }
 
   &__bar {
@@ -205,7 +217,7 @@ const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100
     background: var(--fill-2);
     overflow: hidden;
 
-    // A slow sheen across the filled part: the tier is live.
+    // A slow sheen across the bar: the tier is live.
     &::after {
       content: "";
       position: absolute;
@@ -220,13 +232,10 @@ const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100
   &__segment {
     display: block;
     height: 100%;
+    transition: opacity $default-transition-time;
 
-    &:first-child {
-      border-radius: 5px 0 0 5px;
-    }
-
-    &:last-child {
-      border-radius: 0 5px 5px 0;
+    &--dim {
+      opacity: 0.3;
     }
   }
 
@@ -239,13 +248,19 @@ const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100
     list-style: none;
     font-family: $font-mono;
     font-size: $text-xs;
-    color: $color-title;
+    color: $color-subtitle;
 
     li {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
+      transition: color $default-transition-time;
     }
+  }
+
+  &__legend--active {
+    color: $color-title;
+    font-weight: 600;
   }
 
   &__swatch {
@@ -255,108 +270,70 @@ const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100
   }
 
   &__legend-usd {
+    font-weight: 400;
     color: $color-subtitle;
-  }
-
-  &__rule {
-    display: flex;
-    gap: 0.625rem;
-    margin: 0;
-    padding: 0.75rem 0.875rem;
-    border: 1px solid $color-line;
-    border-radius: $default-border-radius;
-    background: $color-card-background;
-    font-size: $text-xs;
-    line-height: 1.5;
-    color: $color-subtitle;
-
-    :deep(svg) {
-      flex-shrink: 0;
-      margin-top: 0.0625rem;
-      color: $color-title;
-    }
-  }
-
-  &__note,
-  &__fade {
-    margin: 0;
-    font-size: $text-sm;
-    line-height: 1.5;
-    color: $color-subtitle;
-  }
-
-  &__fade {
-    font-size: $text-xs;
   }
 
   &__tiers {
-    display: flex;
-    flex-direction: column;
-    margin: 0.5rem 0 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0.25rem 0 0;
     padding: 0;
     list-style: none;
+
+    @media (max-width: $screen-sm) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   &__tier {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "name mult"
-      "range mult"
-      "bar bar";
-    column-gap: 1rem;
-    row-gap: 0.25rem;
-    padding: 0.875rem 0;
-    border-top: 1px solid $color-line;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+
+    &--current {
+      border-color: $color-cyan-line;
+    }
+  }
+
+  &__tier-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
   }
 
   &__tier-name {
-    grid-area: name;
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
     font-size: $text-sm;
     font-weight: 600;
     color: $color-title;
   }
 
-  &__tag {
-    font-family: $font-mono;
-    font-size: 10px;
-    font-weight: 400;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-subtitle;
-
-    &--now {
-      color: $color-cyan;
-    }
-  }
-
-  &__tier-range {
-    grid-area: range;
-    font-family: $font-mono;
-    font-size: $text-xs;
-    color: $color-subtitle;
-  }
-
   &__tier-mult {
-    grid-area: mult;
-    align-self: center;
     font-family: $font-mono;
-    font-size: 1.375rem;
+    font-size: $text-md;
     font-weight: 600;
     color: $color-subtitle;
   }
 
   &__tier--current &__tier-mult {
-    color: $color-title;
+    color: $color-cyan;
+  }
+
+  &__tier-range {
+    font-family: $font-mono;
+    font-size: 11px;
+    color: $color-subtitle;
   }
 
   &__tier-bar {
-    grid-area: bar;
     height: 3px;
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
     border-radius: 2px;
     background: var(--fill-2);
     overflow: hidden;
@@ -372,8 +349,26 @@ const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100
     background: $color-primary;
   }
 
+  &__fine {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: $text-xs;
+    line-height: 1.5;
+    color: $color-subtitle;
+
+    :deep(svg) {
+      flex-shrink: 0;
+    }
+  }
+
   @media (max-width: $screen-sm) {
-    padding: 1.5rem 1.25rem;
+    padding: 1.25rem;
+
+    &__fine {
+      align-items: flex-start;
+    }
   }
 }
 
