@@ -4,9 +4,6 @@
       <span id="tranche-title" class="tranche__eyebrow">
         <span class="tranche__pulse" aria-hidden="true" />Now staked
       </span>
-      <span class="tranche__total">
-        {{ formatUsdCompact(totalUsd) }}<template v-if="hasCapacity"> of {{ formatUsdCompact(stageEndUsd) }}</template>
-      </span>
     </div>
 
     <div class="tranche__offer">
@@ -97,8 +94,6 @@ const current = computed(() => props.fills[currentIndex.value]);
 const later = computed(() => props.fills.slice(currentIndex.value + 1));
 
 const hasCapacity = computed(() => Number.isFinite(current.value.tier.capacityUsd));
-const totalUsd = computed(() => current.value.startUsd + current.value.filledUsd);
-const stageEndUsd = computed(() => current.value.startUsd + current.value.tier.capacityUsd);
 
 /** The claimed part of the bar, split by each asset's share of everything counted. */
 const segments = computed(() => {
@@ -157,11 +152,6 @@ const assetRows = computed(() =>
     animation: tranche-pulse 2s ease-out infinite;
   }
 
-  &__total {
-    font-family: $font-mono;
-    font-size: $text-sm;
-    color: $color-subtitle;
-  }
 
   &__offer {
     display: flex;
