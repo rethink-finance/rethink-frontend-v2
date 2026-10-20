@@ -289,6 +289,9 @@ const chartSummary = computed(() => {
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.04em;
+    // The gradient is painted only inside the box, and the tight tracking
+    // leaves the last glyph overhanging it; the padding gives it room.
+    padding-right: 0.08em;
     background: $gradient-brand;
     -webkit-background-clip: text;
     background-clip: text;

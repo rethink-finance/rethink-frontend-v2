@@ -1,24 +1,72 @@
 <template>
-  <div class="staking page_shell">
-    <section class="staking__hero">
-      <div class="staking__title-row">
-        <h1 class="staking__title">
-          Venture Staking
-        </h1>
-        <span
-          v-if="isPreview"
-          class="staking__preview"
-          title="Sample figures until the staking vault is deployed"
-        >
-          Preview data
-        </span>
-      </div>
+  <div class="stake_page page_shell">
+    <div class="stake_topbar">
+      <NuxtLink to="/" class="stake_topbar__back">
+        <Icon icon="mdi:arrow-left" width="0.8125rem" />
+        All vaults
+      </NuxtLink>
+    </div>
 
-      <StakingHowItWorks :multiplier="currentTier.baseMultiplier" />
-    </section>
+    <!-- The fund details page's layout: identity top-left, content beneath it,
+         and the deposit rail filling the right column from the title down so
+         it stays pinned while the left column scrolls. -->
+    <div class="stake_layout">
+      <header class="stake_header stake_layout__header">
+        <div class="stake_header__tile">
+          <StakingRefiMark :size="44" />
+        </div>
+        <div class="stake_header__body">
+          <h1 class="stake_header__title">
+            Venture Staking
+            <span
+              v-if="isPreview"
+              class="stake_header__preview"
+              title="Sample figures until the staking vault is deployed"
+            >
+              Preview data
+            </span>
+          </h1>
+          <div class="stake_header__meta">
+            <span class="stake_header__curator">by rethink.finance DAO</span>
+            <span class="stake_header__sep" />
+            <span v-for="symbol in ASSET_SYMBOLS" :key="symbol" class="stake_header__chip">
+              <IconChain v-if="symbol === 'ETH'" chain-short="eth" />
+              <IconBaseAsset v-else :symbol="symbol" />
+              {{ symbol }}
+            </span>
+            <span class="stake_header__sep" />
+            <span class="stake_header__chip">
+              <IconChain chain-short="eth" />
+              Ethereum
+            </span>
+          </div>
+        </div>
+      </header>
 
-    <section class="staking__main">
-      <div class="staking__left">
+      <aside class="stake_layout__rail" aria-label="Deposit and your position">
+        <StakingStakeCard
+          ref="stakeCard"
+          v-model:token="selectedAsset"
+          :multiplier="currentTier.baseMultiplier"
+          @calculate="isCalculatorOpen = true"
+        />
+        <StakingPositionCard :position="position" :is-connected="accountStore.isConnected" />
+      </aside>
+
+      <div class="stake_layout__body">
+        <StakingHowItWorks :multiplier="currentTier.baseMultiplier" />
+
+        <!-- The vault page's stat strip: the headline figure at display size,
+             the derived ones a step down beside it. -->
+        <div class="stake_stats">
+          <div class="stake_stats__item">
+            <span class="stake_stats__label stake_stats__label--accent">Total staked</span>
+            <div class="stake_stats__value_row">
+              <span class="stake_stats__value stake_stats__value--hero">{{ formatUsdCompact(program.stakedUsd) }}</span>
+            </div>
+          </div>
+        </div>
+
         <StakingTrancheCard
           :fills="fills"
           :counted-by-asset="program.countedByAsset"
@@ -28,21 +76,7 @@
         <StakingYieldSources v-model:selected="selectedAsset" :holdings="program.holdings" />
         <StakingBuybacks />
       </div>
-      <aside
-        ref="aside"
-        class="staking__right"
-        aria-label="Deposit and your position"
-        :style="{ top: `${stickyTop}px` }"
-      >
-        <StakingStakeCard
-          ref="stakeCard"
-          v-model:token="selectedAsset"
-          :multiplier="currentTier.baseMultiplier"
-          @calculate="isCalculatorOpen = true"
-        />
-        <StakingPositionCard :position="position" :is-connected="accountStore.isConnected" />
-      </aside>
-    </section>
+    </div>
 
     <StakingCalculatorDialog
       v-model="isCalculatorOpen"
@@ -55,11 +89,14 @@
 
 <script setup lang="ts">
 import { useAccountStore } from "~/store/account/account.store";
+import { formatUsdCompact } from "~/composables/staking/formatStaking";
 import { useVentureStats } from "~/composables/staking/useVentureStats";
 import { tierFills } from "~/composables/staking/ventureStaking";
-import type { VentureAsset } from "~/composables/staking/ventureStakingConfig";
+import { VENTURE_STAKING_ASSETS, type VentureAsset } from "~/composables/staking/ventureStakingConfig";
 
 type StakeSymbol = VentureAsset["symbol"];
+
+const ASSET_SYMBOLS = VENTURE_STAKING_ASSETS.map((asset) => asset.symbol);
 
 const accountStore = useAccountStore();
 const { isPreview, program, poolUsd, poolYieldWeight, position } = useVentureStats();
@@ -71,32 +108,6 @@ const isCalculatorOpen = ref(false);
 const selectedAsset = ref<StakeSymbol>("ETH");
 const stakeCard = ref<{ prefill: (symbol: StakeSymbol, amount: number) => void; $el: HTMLElement }>();
 
-/**
- * Sticky offset for the deposit column. It pins under the navbar when it
- * fits the window; when it is taller, the offset goes negative so it scrolls
- * until its bottom is in view and pins there. Nothing is ever cut off and the
- * column never scrolls on its own.
- */
-const NAVBAR_PX = 64;
-const STICKY_GAP_PX = 24;
-const aside = ref<HTMLElement>();
-const stickyTop = ref(NAVBAR_PX + STICKY_GAP_PX);
-const updateStickyTop = () => {
-  const height = aside.value?.offsetHeight ?? 0;
-  stickyTop.value = Math.min(NAVBAR_PX + STICKY_GAP_PX, window.innerHeight - height - STICKY_GAP_PX);
-};
-let asideObserver: ResizeObserver | undefined;
-onMounted(() => {
-  updateStickyTop();
-  asideObserver = new ResizeObserver(updateStickyTop);
-  if (aside.value) asideObserver.observe(aside.value);
-  window.addEventListener("resize", updateStickyTop);
-});
-onUnmounted(() => {
-  asideObserver?.disconnect();
-  window.removeEventListener("resize", updateStickyTop);
-});
-
 const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
   if (!stakeCard.value) return;
   stakeCard.value.$el?.scrollIntoView?.({ behavior: "smooth", block: "center" });
@@ -105,46 +116,182 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
 </script>
 
 <style scoped lang="scss">
-.staking {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  // The hero glow bleeds past the container; never into a sideways scroll.
-  overflow-x: clip;
+.stake_page {
+  position: relative;
   padding-bottom: 2rem;
+  isolation: isolate;
+  // The glow bleeds past the container; never into a sideways scroll.
+  overflow-x: clip;
 
-  &__hero {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    padding: 2rem 0 0.5rem;
-    isolation: isolate;
+  // A brand glow and a faint grid behind the top of the page, fading out
+  // before the cards.
+  &::before {
+    content: "";
+    position: absolute;
+    top: -4rem;
+    right: -50vw;
+    left: -50vw;
+    z-index: -1;
+    height: 34rem;
+    background:
+      radial-gradient(40rem 20rem at 70% 30%, $color-accent-soft, transparent 70%),
+      linear-gradient($color-line 1px, transparent 1px) 0 0 / 48px 48px,
+      linear-gradient(90deg, $color-line 1px, transparent 1px) 0 0 / 48px 48px;
+    mask-image: radial-gradient(60rem 26rem at 50% 30%, #000 30%, transparent 75%);
+    pointer-events: none;
+  }
+}
 
-    // A brand glow and a faint grid behind the hero, fading out at the edges.
-    &::before {
-      content: "";
-      position: absolute;
-      inset: -4rem -50vw 0;
-      z-index: -1;
-      background:
-        radial-gradient(40rem 20rem at 70% 30%, $color-accent-soft, transparent 70%),
-        linear-gradient($color-line 1px, transparent 1px) 0 0 / 48px 48px,
-        linear-gradient(90deg, $color-line 1px, transparent 1px) 0 0 / 48px 48px;
-      mask-image: radial-gradient(60rem 26rem at 50% 30%, #000 30%, transparent 75%);
-      pointer-events: none;
+// The vault page's "All vaults" row.
+.stake_topbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.75rem;
+
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: $font-mono;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    text-decoration: none;
+    transition: color $default-transition-time ease;
+
+    &:hover {
+      color: $color-white;
     }
+  }
+}
 
-    @media (max-width: $screen-md) {
-      padding-top: 2rem;
+.stake_layout {
+  @include xl {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    column-gap: 1.375rem;
+    align-items: start;
+  }
+
+  &__header {
+    @include xl {
+      grid-column: 1;
+      grid-row: 1;
     }
   }
 
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1.375rem;
+    min-width: 0;
 
-  &__title-row {
+    @include xl {
+      grid-column: 1;
+      grid-row: 2;
+    }
+  }
+
+  // The deposit rail spans both rows so it can stay pinned for the whole
+  // scroll, always by its top so the Deposit header never slides under the
+  // navbar. Below desktop it comes right after the identity.
+  &__rail {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 0;
+    margin-bottom: 1.375rem;
+
+    :deep(.brand_card) {
+      padding: 1.375rem 1.5rem;
+    }
+
+    @include xl {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: start;
+      position: sticky;
+      top: calc(#{$navbar-height} + 1rem);
+      margin-bottom: 0;
+    }
+
+    // Short windows: tighten both cards so the whole rail still fits.
+    @media (max-height: 820px) and (min-width: $screen-xl) {
+      gap: 0.75rem;
+
+      :deep(.brand_card) {
+        padding: 1rem 1.25rem;
+      }
+
+      :deep(.stake) {
+        gap: 0.625rem;
+      }
+
+      :deep(.stake__deposit) {
+        padding: 0.625rem 0.875rem;
+      }
+
+      :deep(.stake__amount) {
+        font-size: 1.75rem;
+      }
+
+      :deep(.stake__row) {
+        padding: 0.4375rem 0;
+      }
+
+      :deep(.position) {
+        gap: 0.625rem;
+      }
+
+      :deep(.position__refi) {
+        font-size: 1.625rem;
+      }
+
+      :deep(.position__row) {
+        padding: 0.375rem 0;
+      }
+    }
+  }
+}
+
+// The vault page's identity block.
+.stake_header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+
+  &__tile {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 78px;
+    height: 78px;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    background: $color-navy-gray-light;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6875rem;
+    min-width: 220px;
+  }
+
+  &__title {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.875rem;
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: $color-white;
   }
 
   &__preview {
@@ -153,62 +300,97 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     border-radius: $default-border-radius;
     font-family: $font-mono;
     font-size: 10px;
+    font-weight: 400;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: $color-subtitle;
     cursor: help;
   }
 
-  &__title {
-    margin: 0;
-    // The same size as Discover's "On-chain vaults".
-    font-size: clamp(30px, 3.4vw, 44px);
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    color: $color-title;
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
   }
 
-
-  &__main {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
-    align-items: start;
-    gap: 2rem;
-
-    @media (max-width: $screen-lg) {
-      grid-template-columns: minmax(0, 1fr);
-    }
+  &__curator {
+    font-size: 15px;
+    color: $color-steel-blue;
   }
 
-  &__left,
-  &__right {
+  &__sep {
+    flex: none;
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: $color-steel-blue;
+  }
+
+  &__chip {
+    display: flex;
+    align-items: center;
+    gap: 0.4375rem;
+    font-family: $font-mono;
+    font-size: 13.5px;
+    color: $color-text-irrelevant;
+  }
+}
+
+// The vault page's stat strip.
+.stake_stats {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.5rem 2.5rem;
+  margin: 0.5rem 0;
+
+  &__item {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 0.8125rem;
     min-width: 0;
   }
 
-  // The deposit stays in view while the left column scrolls; the offset
-  // comes from updateStickyTop.
-  &__right {
-    position: sticky;
-    gap: 1.25rem;
+  &__label {
+    font-family: $font-mono;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
 
-    :deep(.brand_card) {
-      padding: 1.375rem 1.5rem;
-    }
-
-    @media (max-width: $screen-lg) {
-      position: static;
-    }
-  }
-
-  // On one column the deposit comes first: it is what the page is for.
-  @media (max-width: $screen-lg) {
-    &__right {
-      order: -1;
+    &--accent {
+      letter-spacing: 0.16em;
+      color: $color-cyan;
     }
   }
+
+  &__value_row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.625rem;
+  }
+
+  &__value {
+    font-family: $font-mono;
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1;
+    color: $color-white;
+    font-variant-numeric: tabular-nums;
+
+    &--hero {
+      font-size: clamp(36px, 4.4vw, 56px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+    }
+
+  }
+
+
 }
 </style>
