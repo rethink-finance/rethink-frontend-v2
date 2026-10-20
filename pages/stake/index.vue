@@ -65,16 +65,6 @@
               <span class="stake_stats__value stake_stats__value--hero">{{ formatUsdCompact(program.stakedUsd) }}</span>
             </div>
           </div>
-          <span class="stake_stats__divider stake_stats__divider--push" />
-          <div class="stake_stats__item">
-            <span class="stake_stats__label">Stakers</span>
-            <div class="stake_stats__value_row">
-              <span class="stake_stats__value">{{ program.stakers ?? DASH }}</span>
-              <span v-if="program.daysLive !== null" class="stake_stats__note stake_stats__note--caps">
-                {{ program.daysLive }} days live
-              </span>
-            </div>
-          </div>
         </div>
 
         <StakingTrancheCard
@@ -99,7 +89,7 @@
 
 <script setup lang="ts">
 import { useAccountStore } from "~/store/account/account.store";
-import { DASH, formatUsdCompact } from "~/composables/staking/formatStaking";
+import { formatUsdCompact } from "~/composables/staking/formatStaking";
 import { useVentureStats } from "~/composables/staking/useVentureStats";
 import { tierFills } from "~/composables/staking/ventureStaking";
 import { VENTURE_STAKING_ASSETS, type VentureAsset } from "~/composables/staking/ventureStakingConfig";
@@ -379,33 +369,6 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
 
   }
 
-  &__note {
-    font-family: $font-mono;
-    font-size: 12.5px;
-    color: $color-steel-blue;
-    white-space: nowrap;
 
-    &--caps {
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-  }
-
-  &__divider {
-    display: none;
-    width: 1px;
-    align-self: stretch;
-    background: $color-line;
-
-    @include md {
-      display: block;
-    }
-
-    &--push {
-      @include md {
-        margin-left: auto;
-      }
-    }
-  }
 }
 </style>
