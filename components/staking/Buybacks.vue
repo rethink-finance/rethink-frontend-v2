@@ -86,11 +86,11 @@
         <span class="bb__value">
           {{ formatPct(first.buybackShare) }} <small>to</small> {{ formatPct(last.buybackShare) }}
         </span>
-        <span class="bb__label">of supply bought back a year, year 1 to {{ last.year }}</span>
+        <span class="bb__label">of supply bought back a year, year 1 to {{ last.year }}, at a flat {{ flatPrice }}</span>
       </div>
       <div>
         <span class="bb__value">{{ formatPct(projection.totalBuybackShare) }}</span>
-        <span class="bb__label">of all REFI bought back over {{ last.year }} years</span>
+        <span class="bb__label">of all REFI bought back over {{ last.year }} years, at a flat {{ flatPrice }}</span>
       </div>
     </div>
 
@@ -150,7 +150,9 @@
     </div>
 
     <p class="bb__fine">
-      Simulation at the scenario price. Manager and referral fees are estimates.
+      Assumes every buyback happens at the launch price of {{ flatPrice }} (a ${{ fdv }}M valuation). In
+      practice buying pushes the price up, so the same revenue buys less supply and lifts the price
+      instead. Manager and referral fees are estimates.
     </p>
   </section>
 </template>
@@ -231,6 +233,9 @@ const emissionPoints = computed(() => {
 });
 
 const hoverYear = ref<number | null>(null);
+
+/** The launch price the projection buys at, from the chosen valuation. */
+const flatPrice = computed(() => `$${((fdv.value * 1e6) / VENTURE_STAKING.supply).toFixed(2)}`);
 
 const formatPct = (value: number) => {
   const pct = value * 100;
