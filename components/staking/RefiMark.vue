@@ -1,33 +1,26 @@
 <template>
-  <span
+  <img
     class="refi_mark"
+    src="@/assets/images/logo_mobile.svg"
+    alt="REFI"
     :style="{ '--refi-mark-size': `${size}px` }"
-    role="img"
-    aria-label="REFI"
   >
-    <img src="@/assets/images/logo_mobile.svg" alt="">
-  </span>
 </template>
 
 <script setup lang="ts">
-/** The REFI token's mark: the Rethink glyph on a disc, sized like a token icon. */
+/**
+ * The REFI token's mark: the Rethink glyph, which is already a circle, drawn
+ * bare like the other token icons. Nothing behind it; a disc doubles the ring.
+ */
 withDefaults(defineProps<{ size?: number }>(), { size: 18 });
 </script>
 
 <style scoped lang="scss">
 .refi_mark {
-  display: inline-grid;
+  display: inline-block;
   flex: none;
-  place-items: center;
   width: var(--refi-mark-size);
   height: var(--refi-mark-size);
-  border-radius: 50%;
-  background: var(--surface-3);
-  vertical-align: middle;
-
-  img {
-    width: 64%;
-    height: 64%;
-  }
+  vertical-align: -0.15em;
 }
 </style>
