@@ -117,6 +117,12 @@
   --donut-4: #7b8dff;
   --donut-5: #2c8bff;
   --donut-6: #8892a8;
+  /* Staking asset marks (ETH, WBTC, USDC), in bar order; validated as a
+     categorical set against --surface for lightness band and CVD. */
+  --asset-eth: #3b6fff;
+  --asset-wbtc: #c47e1c;
+  --asset-usdc: #0c96c2;
+  --sheen: rgba(255, 255, 255, 0.18);
 
   /* Code display (json_field, consoles) */
   --code-string: #dcdcaa;
@@ -212,6 +218,10 @@
   --donut-4: #5a68e0;
   --donut-5: #1d79e0;
   --donut-6: #6b7284;
+  --asset-eth: #1f5fff;
+  --asset-wbtc: #b5701a;
+  --asset-usdc: #087aab;
+  --sheen: rgba(255, 255, 255, 0.55);
 
   --code-string: #8a6d00;
 

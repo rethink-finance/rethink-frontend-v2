@@ -43,7 +43,7 @@
 
     <section class="staking__main">
       <div class="staking__left">
-        <StakingTrancheCard :fills="fills" />
+        <StakingTrancheCard :fills="fills" :counted-by-asset="program.countedByAsset" />
         <StakingEmissionChart :current-month="program.currentMonth" />
       </div>
       <div class="staking__right">
@@ -58,7 +58,7 @@
 
     <StakingCalculatorDialog
       v-model="isCalculatorOpen"
-      :pool-eth="poolEth"
+      :pool-usd="poolUsd"
       @stake="onCalculatorStake"
     />
   </div>
@@ -73,8 +73,8 @@ import type { VentureAsset } from "~/composables/staking/ventureStakingConfig";
 type StakeSymbol = VentureAsset["symbol"];
 
 const accountStore = useAccountStore();
-const { isPreview, program, poolEth, position } = useVentureStats();
-const fills = computed(() => tierFills(poolEth.value));
+const { isPreview, program, poolUsd, position } = useVentureStats();
+const fills = computed(() => tierFills(poolUsd.value));
 const currentTier = computed(() => (fills.value.find((fill) => fill.isCurrent) ?? fills.value[0]).tier);
 
 const isCalculatorOpen = ref(false);

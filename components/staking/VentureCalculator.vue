@@ -68,52 +68,64 @@
         </div>
 
         <div class="calc__result" aria-live="polite">
-          <span class="calc__caption">Your REFI after the first year would be worth</span>
-          <div class="calc__hero">
-            {{ projection ? formatUsd(projection.valueUsd) : DASH }}
+          <span class="calc__caption">After one year you have</span>
+
+          <div class="calc__ledger">
+            <div class="calc__line calc__line--principal">
+              <span class="calc__line-icon"><Icon icon="mdi:shield-check-outline" width="1.375rem" /></span>
+              <div class="calc__line-body">
+                <span class="calc__line-label">Your principal, untouched</span>
+                <span class="calc__line-value">
+                  <template v-if="projection">
+                    {{ formatAmount(amount, asset.displayDecimals) }} {{ asset.symbol }}
+                    <small>{{ formatUsd(projection.amountUsd) }}</small>
+                  </template>
+                  <template v-else>
+                    {{ DASH }}
+                  </template>
+                </span>
+                <span class="calc__line-note">100% stays yours. Withdraw it any settlement cycle.</span>
+              </div>
+              <span class="calc__tag">Kept</span>
+            </div>
+
+            <div class="calc__plus" aria-hidden="true">
+              <Icon icon="mdi:plus" width="1rem" />
+            </div>
+
+            <div class="calc__line calc__line--bonus">
+              <span class="calc__line-icon"><Icon icon="mdi:star-four-points-outline" width="1.375rem" /></span>
+              <div class="calc__line-body">
+                <span class="calc__line-label">Your REFI after the first year would be worth</span>
+                <span class="calc__hero">
+                  {{ projection ? formatUsd(projection.valueUsd) : DASH }}
+                </span>
+                <span class="calc__line-note">
+                  <template v-if="projection">
+                    {{ formatCompact(projection.refi12) }} REFI in the ${{ fdv }}M scenario,
+                    {{ projection.tier.name }} tier at {{ projection.tier.baseMultiplier }}x
+                  </template>
+                  <template v-else>
+                    Enter how much {{ asset.symbol }} you would stake.
+                  </template>
+                </span>
+              </div>
+              <span class="calc__tag calc__tag--bonus">On top</span>
+            </div>
           </div>
-          <p class="calc__subline">
+
+          <p class="calc__trade">
             <template v-if="projection">
-              You enter the <strong>{{ projection.tier.name }} tier at {{ projection.tier.baseMultiplier }}x</strong>.
-              In the ${{ fdv }}M scenario that is
-              <strong>{{ formatMultiple(projection.multipleVsYield) }}</strong>
-              the {{ asset.yieldLabel }} you give up.
+              The only thing you give up is the {{ asset.yieldLabel }}:
+              <strong>
+                {{ formatAmount(projection.yieldRedirected, asset.displayDecimals) }} {{ asset.symbol }}
+                ({{ formatUsd(projection.yieldRedirectedUsd) }}) a year.
+              </strong>
+              Your REFI is worth <strong class="calc__multiple">{{ formatMultiple(projection.multipleVsYield) }}</strong> that.
             </template>
             <template v-else>
-              Enter how much {{ asset.symbol }} you would stake.
+              The only thing you give up is the {{ asset.yieldLabel }}.
             </template>
-          </p>
-
-          <div class="calc__stats">
-            <div class="calc__stat">
-              <span class="calc__stat-value">
-                {{ projection ? `${formatCompact(projection.refi12)} REFI` : DASH }}
-              </span>
-              <span class="calc__stat-label">REFI you earn</span>
-            </div>
-            <span class="calc__multiple">
-              {{ projection ? formatMultiple(projection.multipleVsYield) : DASH }}
-            </span>
-            <div class="calc__stat">
-              <span class="calc__stat-value">
-                <template v-if="projection">
-                  {{ formatAmount(projection.yieldRedirected, asset.displayDecimals) }} {{ asset.symbol }}
-                  · {{ formatUsd(projection.yieldRedirectedUsd) }}
-                </template>
-                <template v-else>
-                  {{ DASH }}
-                </template>
-              </span>
-              <span class="calc__stat-label">{{ asset.yieldLabel }} you redirect in a year</span>
-            </div>
-          </div>
-
-          <p class="calc__reassure">
-            <span class="calc__dot" aria-hidden="true" />
-            <span>
-              <strong>Your {{ asset.symbol }} never leaves your control.</strong>
-              It sits in a non-custodial vault you can exit at any time; only the yield moves.
-            </span>
           </p>
 
           <div class="calc__ctas">
@@ -156,16 +168,16 @@
             <dd>
               <template v-if="projection">
                 {{ projection.tier.name }} ({{ projection.tier.baseMultiplier }}x),
-                {{ formatInt(projection.existingEth) }} ETH ahead of you
+                {{ formatUsdCompact(projection.existingUsd) }} deposited ahead of you
               </template>
               <template v-else>
                 {{ DASH }}
               </template>
             </dd>
           </div>
-          <div v-if="asset.symbol !== 'ETH'" class="calc__breakdown-row">
-            <dt>Counts toward the pool as</dt>
-            <dd>{{ projection ? `${formatAmount(projection.ethEquivalent)} ETH` : DASH }}</dd>
+          <div class="calc__breakdown-row">
+            <dt>Counts toward the tiers as</dt>
+            <dd>{{ projection ? formatUsd(projection.amountUsd) : DASH }}</dd>
           </div>
           <div class="calc__breakdown-row">
             <dt>Month-1 share</dt>
@@ -192,7 +204,7 @@
         {{ formatRate(VENTURE_STAKING.stakingYield) }} staking yield.
         <template v-if="asset.symbol !== 'ETH'">
           {{ asset.symbol }} at {{ formatUsd(asset.priceUsd) }} with a {{ formatRate(asset.yieldRate) }} yield,
-          counted toward the ETH tiers at that value.
+          counted toward the tiers at its USD value.
         </template>
         Emissions start near {{ formatInt(monthOneEmission()) }} REFI a month and decay
         {{ formatRate(VENTURE_STAKING.monthlyDecay) }} monthly over {{ VENTURE_STAKING.emissionMonths }} months.
@@ -211,6 +223,7 @@ import {
   formatInt,
   formatRate,
   formatUsd,
+  formatUsdCompact,
 } from "~/composables/staking/formatStaking";
 import {
   monthOneEmission,
@@ -224,8 +237,8 @@ import {
 } from "~/composables/staking/ventureStakingConfig";
 
 const props = defineProps<{
-  /** ETH (at ETH value) in the pool now; 0 before launch or when the read fails. */
-  poolEth: number;
+  /** USD deposited so far at deposit-time value; 0 before launch or when the read fails. */
+  poolUsd: number;
 }>();
 
 const emit = defineEmits<{ stake: [symbol: VentureAsset["symbol"], amount: number] }>();
@@ -267,7 +280,7 @@ const projection = computed(() =>
   projectVentureStake({
     asset: asset.value,
     amount: amount.value,
-    livePoolEth: props.poolEth,
+    livePoolUsd: props.poolUsd,
     fdvMillions: fdv.value,
   }),
 );
@@ -276,9 +289,9 @@ const projection = computed(() =>
 const pricePerRefi = computed(() => (fdv.value * 1e6) / VENTURE_STAKING.supply);
 
 const poolSentence = computed(() =>
-  props.poolEth > 0
-    ? `${formatInt(props.poolEth)} ETH staked so far`
-    : `${formatInt(VENTURE_STAKING.assumedLaunchPoolEth)} ETH assumed at launch`,
+  props.poolUsd > 0
+    ? `${formatUsdCompact(props.poolUsd)} deposited so far`
+    : `${formatUsdCompact(VENTURE_STAKING.assumedLaunchPoolUsd)} assumed at launch`,
 );
 
 const formatPrice = (value: number) => `$${value.toFixed(2)}`;
@@ -511,67 +524,130 @@ const formatMultiple = (multiple: number) =>
     color: $color-subtitle;
   }
 
+
+
+
+
+
+
+
+
+
+  &__ledger {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+  }
+
+  &__line {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 1rem;
+    padding: 1.25rem;
+
+    &--bonus {
+      border-top: 1px solid $color-line;
+      border-radius: 0 0 $default-border-radius $default-border-radius;
+      background: $color-cyan-tint;
+    }
+  }
+
+  &__line-icon {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    color: $color-title;
+  }
+
+  &__line--bonus &__line-icon {
+    border-color: $color-cyan-line;
+    color: $color-cyan;
+  }
+
+  &__line-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  &__line-label {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-subtitle;
+  }
+
+  &__line-value {
+    font-family: $font-mono;
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: $color-title;
+
+    small {
+      margin-left: 0.5rem;
+      font-size: $text-sm;
+      font-weight: 400;
+      color: $color-subtitle;
+    }
+  }
+
   &__hero {
     font-family: $font-mono;
-    font-size: clamp(2.5rem, 6vw, 3.5rem);
+    font-size: clamp(2.25rem, 5vw, 3rem);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.02em;
     color: $color-title;
   }
 
-  &__subline {
-    margin: 0;
-    font-size: $text-sm;
+  &__line-note {
+    font-size: $text-xs;
     line-height: 1.5;
-    color: var(--text-dim);
+    color: $color-subtitle;
+  }
 
-    strong {
-      color: $color-title;
+  &__tag {
+    padding: 0.1875rem 0.5rem;
+    border: 1px solid $color-line-2;
+    border-radius: 999px;
+    font-family: $font-mono;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-title;
+    white-space: nowrap;
+
+    &--bonus {
+      border-color: $color-cyan-line;
+      color: $color-cyan;
     }
   }
 
-  &__stats {
+  // The "+" sits on the seam between what you keep and what you gain.
+  &__plus {
+    position: relative;
+    z-index: 1;
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 0.5rem;
-    padding: 1rem 1.25rem;
-    border: 1px solid $color-line;
-    border-radius: $default-border-radius;
-    background: $color-card-background;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin: -0.875rem 0 -0.875rem 1.6rem;
+    border: 1px solid $color-cyan-line;
+    border-radius: 50%;
+    background: $color-surface;
+    color: $color-cyan;
   }
 
-  &__stat {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    min-width: 0;
-  }
-
-  &__stat-value {
-    font-family: $font-mono;
-    font-size: $text-md;
-    font-weight: 600;
-    color: $color-title;
-  }
-
-  &__stat-label {
-    font-size: $text-xs;
-    color: $color-subtitle;
-  }
-
-  &__multiple {
-    font-family: $font-mono;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: $color-subtitle;
-  }
-
-  &__reassure {
-    display: flex;
-    gap: 0.625rem;
+  &__trade {
     margin: 0.25rem 0 0;
     font-size: $text-sm;
     line-height: 1.5;
@@ -583,13 +659,9 @@ const formatMultiple = (multiple: number) =>
     }
   }
 
-  &__dot {
-    flex-shrink: 0;
-    width: 6px;
-    height: 6px;
-    margin-top: 0.5rem;
-    border-radius: 50%;
-    background: $color-cyan-raw;
+  &__multiple {
+    font-family: $font-mono;
+    color: $color-cyan !important;
   }
 
   &__ctas {
@@ -690,16 +762,24 @@ const formatMultiple = (multiple: number) =>
       padding-right: 1.25rem;
     }
 
-    &__stats {
-      grid-template-columns: 1fr;
-    }
 
-    &__multiple {
-      order: -1;
-    }
 
     &__btn {
       flex: 1 1 100%;
+    }
+
+    &__line {
+      grid-template-columns: auto minmax(0, 1fr);
+      padding: 1rem;
+    }
+
+    // The labels already say it; the pill would squeeze the figures.
+    &__tag {
+      display: none;
+    }
+
+    &__plus {
+      margin-left: 1.375rem;
     }
   }
 }

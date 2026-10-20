@@ -16,3 +16,12 @@ export const formatAmount = (value: number, decimals = 3) =>
 
 /** 0.035 -> "3.5%", without the float tail that `* 100` leaves. */
 export const formatRate = (rate: number) => `${Number((rate * 100).toFixed(2))}%`;
+
+/** $3.72M, $6M, $310K: for tier sizes and progress where cents are noise. */
+export const formatUsdCompact = (value: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 2,
+  }).format(value);

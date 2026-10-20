@@ -20,7 +20,9 @@
 
       <dl class="position__rows">
         <div class="position__row">
-          <dt>Staked</dt>
+          <dt class="position__principal">
+            <Icon icon="mdi:shield-check-outline" width="0.95rem" />Principal, preserved
+          </dt>
           <dd>
             {{ formatAmount(position.amount) }} {{ position.symbol }}
             <span class="position__muted">· {{ formatUsd(position.amountUsd) }}</span>
@@ -28,7 +30,10 @@
         </div>
         <div class="position__row">
           <dt>Yield reinvested</dt>
-          <dd>{{ formatAmount(position.yieldRedirected) }} {{ position.symbol }}</dd>
+          <dd>
+            {{ formatAmount(position.yieldRedirected) }} {{ position.symbol }}
+            <span class="position__muted">· {{ formatUsd(position.yieldRedirectedUsd) }}</span>
+          </dd>
         </div>
         <div class="position__row">
           <dt>Share of emissions</dt>
@@ -144,6 +149,12 @@ const formatShare = (share: number) =>
       color: $color-title;
       text-align: right;
     }
+  }
+
+  &__principal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
   }
 
   &__muted {

@@ -13,15 +13,15 @@
           <span class="pstats__asset-amount">{{ row.amountLabel }}</span>
           <span class="pstats__asset-usd">{{ formatUsd(row.usd) }}</span>
           <span class="pstats__asset-bar" aria-hidden="true">
-            <span :style="{ width: `${row.share * 100}%` }" />
+            <span :style="{ width: `${row.share * 100}%`, background: `var(--asset-${row.symbol.toLowerCase()})` }" />
           </span>
         </li>
       </ul>
     </div>
     <div class="pstats__cell">
       <span class="pstats__value">
-        <template v-if="program.yieldGeneratedEth !== null">
-          {{ formatAmount(program.yieldGeneratedEth, 2) }} <small>ETH</small>
+        <template v-if="program.yieldGeneratedUsd !== null">
+          {{ formatUsd(program.yieldGeneratedUsd) }}
         </template>
         <template v-else>
           {{ DASH }}
@@ -29,12 +29,7 @@
       </span>
       <span class="pstats__label">Yield generated</span>
       <span class="pstats__detail">
-        <template v-if="program.yieldGeneratedUsd !== null">
-          {{ formatUsd(program.yieldGeneratedUsd) }} reinvested in the ecosystem
-        </template>
-        <template v-else>
-          Reinvested in the ecosystem
-        </template>
+        Across all assets, reinvested in the ecosystem
       </span>
     </div>
     <div class="pstats__cell">
@@ -235,7 +230,6 @@ const assetRows = computed(() =>
       display: block;
       height: 100%;
       border-radius: 2px;
-      background: $color-primary;
     }
 
     @media (max-width: $screen-sm) {

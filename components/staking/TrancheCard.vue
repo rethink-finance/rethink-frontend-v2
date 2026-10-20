@@ -9,32 +9,45 @@
     </div>
 
     <div class="tranche__figure">
-      <span class="tranche__filled">{{ formatInt(current.filledEth) }}</span>
+      <span class="tranche__filled">{{ formatUsdCompact(current.filledUsd) }}</span>
       <span class="tranche__capacity">
-        <template v-if="isFinite(current.tier.capacityEth)">
-          / {{ formatInt(current.tier.capacityEth) }} ETH
+        <template v-if="isFinite(current.tier.capacityUsd)">
+          / {{ formatUsdCompact(current.tier.capacityUsd) }}
         </template>
         <template v-else>
-          ETH
+          deposited
         </template>
       </span>
     </div>
 
     <div
-      v-if="isFinite(current.tier.capacityEth)"
+      v-if="isFinite(current.tier.capacityUsd)"
       class="tranche__bar"
       role="progressbar"
-      :aria-valuenow="Math.round(current.filledEth)"
+      :aria-valuenow="Math.round(current.filledUsd)"
       aria-valuemin="0"
-      :aria-valuemax="current.tier.capacityEth"
-      :aria-label="`${current.tier.name} tier filled`"
+      :aria-valuemax="current.tier.capacityUsd"
+      :aria-label="`${current.tier.name} tier filled, in USD`"
     >
-      <span :style="{ width: `${Math.max(current.ratio * 100, 1)}%` }" />
+      <span
+        v-for="segment in segments"
+        :key="segment.symbol"
+        class="tranche__segment"
+        :style="{ width: `${segment.width}%`, background: `var(--asset-${segment.symbol.toLowerCase()})` }"
+      />
     </div>
+
+    <ul class="tranche__legend" aria-label="Deposits by asset">
+      <li v-for="segment in segments" :key="segment.symbol">
+        <span class="tranche__swatch" :style="{ background: `var(--asset-${segment.symbol.toLowerCase()})` }" />
+        {{ segment.symbol }}
+        <span class="tranche__legend-usd">{{ formatUsdCompact(segment.usd) }}</span>
+      </li>
+    </ul>
 
     <p class="tranche__note">
       <template v-if="next">
-        {{ formatInt(current.tier.capacityEth - current.filledEth) }} ETH left at
+        {{ formatUsdCompact(current.tier.capacityUsd - current.filledUsd) }} left at
         {{ current.tier.baseMultiplier }}x. Then {{ next.tier.name }} at {{ next.tier.baseMultiplier }}x.
       </template>
       <template v-else>
@@ -62,6 +75,14 @@
       </li>
     </ol>
 
+    <p class="tranche__rule">
+      <Icon icon="mdi:lock-outline" width="1rem" />
+      <span>
+        Every deposit counts at its USD value on the day it comes in. Price moves never
+        push the count back, so your multiplier is locked when you deposit.
+      </span>
+    </p>
+
     <p class="tranche__fade">
       Bonuses fade: full in year one, half in year two, a quarter in year three, then 1x.
     </p>
@@ -69,20 +90,43 @@
 </template>
 
 <script setup lang="ts">
-import { formatInt } from "~/composables/staking/formatStaking";
+import { formatUsdCompact } from "~/composables/staking/formatStaking";
 import type { TierFill } from "~/composables/staking/ventureStaking";
+import type { VentureAsset } from "~/composables/staking/ventureStakingConfig";
 
-const props = defineProps<{ fills: TierFill[] }>();
+type AssetSymbol = VentureAsset["symbol"];
+
+const props = defineProps<{
+  fills: TierFill[];
+  /** Deposit-time USD by asset; splits the bar into its sources. */
+  countedByAsset: Record<AssetSymbol, number>;
+}>();
 
 const currentIndex = computed(() => Math.max(props.fills.findIndex((fill) => fill.isCurrent), 0));
 const current = computed(() => props.fills[currentIndex.value]);
 const next = computed(() => props.fills[currentIndex.value + 1]);
 
-const rangeLabel = ({ startEth, tier }: TierFill) => {
-  if (!Number.isFinite(tier.capacityEth)) return `${formatInt(startEth)} ETH and up`;
-  if (startEth === 0) return `First ${formatInt(tier.capacityEth)} ETH`;
-  return `${formatInt(startEth)} to ${formatInt(startEth + tier.capacityEth)} ETH`;
+const rangeLabel = ({ startUsd, tier }: TierFill) => {
+  if (!Number.isFinite(tier.capacityUsd)) return `${formatUsdCompact(startUsd)} and up`;
+  if (startUsd === 0) return `First ${formatUsdCompact(tier.capacityUsd)}`;
+  return `${formatUsdCompact(startUsd)} to ${formatUsdCompact(startUsd + tier.capacityUsd)}`;
 };
+
+/**
+ * The current tier's fill split by asset, in proportion to each asset's
+ * share of everything counted so far.
+ */
+const segments = computed(() => {
+  const symbols = Object.keys(props.countedByAsset) as AssetSymbol[];
+  const total = symbols.reduce((sum, symbol) => sum + props.countedByAsset[symbol], 0);
+  return symbols
+    .filter((symbol) => props.countedByAsset[symbol] > 0)
+    .map((symbol) => ({
+      symbol,
+      usd: props.countedByAsset[symbol],
+      width: total > 0 ? current.value.ratio * 100 * (props.countedByAsset[symbol] / total) : 0,
+    }));
+});
 
 const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100, 1.5) : fill.ratio * 100);
 </script>
@@ -153,16 +197,83 @@ const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100
   }
 
   &__bar {
-    height: 8px;
-    border-radius: 4px;
+    position: relative;
+    display: flex;
+    gap: 2px;
+    height: 10px;
+    border-radius: 5px;
     background: var(--fill-2);
     overflow: hidden;
 
-    span {
-      display: block;
-      height: 100%;
-      border-radius: 4px;
-      background: $gradient-brand;
+    // A slow sheen across the filled part: the tier is live.
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(100deg, transparent 30%, var(--sheen) 50%, transparent 70%);
+      transform: translateX(-100%);
+      animation: tranche-sheen 3.5s ease-in-out infinite;
+      pointer-events: none;
+    }
+  }
+
+  &__segment {
+    display: block;
+    height: 100%;
+
+    &:first-child {
+      border-radius: 5px 0 0 5px;
+    }
+
+    &:last-child {
+      border-radius: 0 5px 5px 0;
+    }
+  }
+
+  &__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: $font-mono;
+    font-size: $text-xs;
+    color: $color-title;
+
+    li {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  }
+
+  &__swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  &__legend-usd {
+    color: $color-subtitle;
+  }
+
+  &__rule {
+    display: flex;
+    gap: 0.625rem;
+    margin: 0;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+    font-size: $text-xs;
+    line-height: 1.5;
+    color: $color-subtitle;
+
+    :deep(svg) {
+      flex-shrink: 0;
+      margin-top: 0.0625rem;
+      color: $color-title;
     }
   }
 
@@ -272,8 +383,14 @@ const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 
+@keyframes tranche-sheen {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tranche__pulse {
+  .tranche__pulse,
+  .tranche__bar::after {
     animation: none;
   }
 }

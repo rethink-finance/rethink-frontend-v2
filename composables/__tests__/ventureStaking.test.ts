@@ -36,11 +36,11 @@ describe("venture staking emission", () => {
 describe("venture staking tiers", () => {
   it("fills tiers in deposit order", () => {
     expect(tierAt(0).name).toBe("Founding");
-    expect(tierAt(1_999).name).toBe("Founding");
-    expect(tierAt(2_000).name).toBe("Second");
-    expect(tierAt(4_999).name).toBe("Second");
-    expect(tierAt(5_000).name).toBe("Third");
-    expect(tierAt(10_000).name).toBe("Open");
+    expect(tierAt(5_999_999).name).toBe("Founding");
+    expect(tierAt(6_000_000).name).toBe("Second");
+    expect(tierAt(14_999_999).name).toBe("Second");
+    expect(tierAt(15_000_000).name).toBe("Third");
+    expect(tierAt(30_000_000).name).toBe("Open");
   });
 
   it("fades the bonus in 12-month steps", () => {
@@ -54,8 +54,9 @@ describe("venture staking tiers", () => {
   });
 
   it("weights the pool tier by tier", () => {
-    expect(weightedPool(2_400, 0)).toBe(2_000 * 3 + 400 * 2);
-    expect(weightedPool(12_000, 0)).toBe(6_000 + 6_000 + 7_500 + 2_000);
+    const usd = (eth: number) => eth * 3_000;
+    expect(weightedPool(usd(2_400), 0)).toBe(usd(2_000 * 3 + 400 * 2));
+    expect(weightedPool(usd(12_000), 0)).toBe(usd(6_000 + 6_000 + 7_500 + 2_000));
   });
 });
 
@@ -65,7 +66,7 @@ describe("projectVentureStaking", () => {
     expect(p.tier.name).toBe("Founding");
     expect(p.tier.baseMultiplier).toBe(3);
     expect(p.isAssumedPool).toBe(true);
-    expect(p.existingEth).toBe(1_990);
+    expect(p.existingUsd).toBe(1_990 * 3_000);
     near(p.monthOneShare, 0.005);
     near(p.refi12, 37_687);
     near(p.valueUsd, 15_075);
@@ -139,8 +140,8 @@ describe("projectVentureStaking", () => {
 
 describe("projectVentureStake with WBTC and USDC", () => {
   const [eth, wbtc, usdc] = VENTURE_STAKING_ASSETS;
-  const stake = (asset: typeof eth, amount: number, livePoolEth = 0) => {
-    const result = projectVentureStake({ asset, amount, livePoolEth, fdvMillions: 40 });
+  const stake = (asset: typeof eth, amount: number, livePoolUsd = 0) => {
+    const result = projectVentureStake({ asset, amount, livePoolUsd, fdvMillions: 40 });
     if (!result) throw new Error("expected a projection");
     return result;
   };
@@ -150,7 +151,7 @@ describe("projectVentureStake with WBTC and USDC", () => {
     const ten = stake(eth, 10);
     const dollars = stake(usdc, 30_000);
     const bitcoin = stake(wbtc, 30_000 / wbtc.priceUsd);
-    expect(dollars.ethEquivalent).toBeCloseTo(10);
+    expect(dollars.amountUsd).toBeCloseTo(30_000);
     expect(dollars.refi12).toBeCloseTo(ten.refi12);
     expect(bitcoin.refi12).toBeCloseTo(ten.refi12);
     expect(dollars.tier.name).toBe("Founding");
@@ -167,12 +168,13 @@ describe("projectVentureStake with WBTC and USDC", () => {
     expect(bitcoin.yieldRedirectedUsd).toBeCloseTo(0.3 * wbtc.yieldRate * wbtc.priceUsd);
   });
 
-  it("places a large USDC deposit by its ETH value in a live pool", () => {
-    expect(stake(usdc, 30_000, 2_400).tier.name).toBe("Second");
+  it("places a deposit by the USD already in the pool", () => {
+    expect(stake(usdc, 30_000, 7_200_000).tier.name).toBe("Second");
+    expect(stake(wbtc, 1, 5_990_000).tier.name).toBe("Founding");
   });
 
   it("returns null for an empty amount", () => {
-    expect(projectVentureStake({ asset: usdc, amount: NaN, livePoolEth: 0, fdvMillions: 40 })).toBeNull();
+    expect(projectVentureStake({ asset: usdc, amount: NaN, livePoolUsd: 0, fdvMillions: 40 })).toBeNull();
   });
 });
 
@@ -188,16 +190,16 @@ describe("emissionSchedule", () => {
 
 describe("tierFills", () => {
   it("fills tiers in order and marks the one a new deposit enters", () => {
-    const fills = tierFills(2_400);
-    expect(fills.map((f) => f.filledEth)).toEqual([2_000, 400, 0, 0]);
-    expect(fills[1].ratio).toBeCloseTo(400 / 3_000);
+    const fills = tierFills(7_200_000);
+    expect(fills.map((f) => f.filledUsd)).toEqual([6_000_000, 1_200_000, 0, 0]);
+    expect(fills[1].ratio).toBeCloseTo(1_200_000 / 9_000_000);
     expect(fills.map((f) => f.isCurrent)).toEqual([false, true, false, false]);
-    expect(fills[2].startEth).toBe(5_000);
+    expect(fills[2].startUsd).toBe(15_000_000);
   });
 
   it("treats an empty or failed read as a fresh pool", () => {
     const fills = tierFills(NaN);
     expect(fills[0].isCurrent).toBe(true);
-    expect(fills.every((f) => f.filledEth === 0)).toBe(true);
+    expect(fills.every((f) => f.filledUsd === 0)).toBe(true);
   });
 });

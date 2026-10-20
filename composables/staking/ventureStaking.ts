@@ -2,6 +2,10 @@
  * Venture staking projection: the REFI a deposit earns over the first year
  * and what it is worth at a given FDV. Pure math, no framework imports, so
  * the staking flow can reuse it and the tests can pin it.
+ *
+ * Everything is measured in USD at deposit time: ETH, WBTC and USDC fill the
+ * same tiers and weigh in the same pool by what they were worth when they
+ * came in.
  */
 import {
   VENTURE_STAKING,
@@ -12,6 +16,7 @@ import {
 
 export type VentureStakingProgram = typeof VENTURE_STAKING;
 
+/** The ETH-only form the program spec states its examples in. */
 export interface VentureProjectionInput {
   eth: number;
   /** ETH staked in the vault right now; 0 (or unknown) means pre-launch. */
@@ -22,16 +27,17 @@ export interface VentureProjectionInput {
 export interface VentureStakeInput {
   asset: VentureAsset;
   amount: number;
-  livePoolEth: number;
+  /** USD deposited so far (at deposit-time prices); 0 or unknown means pre-launch. */
+  livePoolUsd: number;
   fdvMillions: number;
 }
 
 export interface VentureProjection {
-  /** The deposit in ETH at USD value; what the tiers and the pool weigh. */
-  ethEquivalent: number;
+  /** The deposit at USD value; what the tiers and the pool weigh. */
+  amountUsd: number;
   tier: VentureTier;
-  /** ETH already in the pool ahead of the visitor. */
-  existingEth: number;
+  /** USD already deposited ahead of the visitor. */
+  existingUsd: number;
   /** True when the pool size is the launch assumption, not a live read. */
   isAssumedPool: boolean;
   monthOneShare: number;
@@ -59,15 +65,15 @@ export const monthlyEmission = (
   program: VentureStakingProgram = VENTURE_STAKING,
 ) => monthOneEmission(program) * (1 - program.monthlyDecay) ** month;
 
-/** The tier the ETH at `position` (0-based, in deposit order) falls into. */
+/** The tier the dollar at `positionUsd` (0-based, in deposit order) falls into. */
 export const tierAt = (
-  position: number,
+  positionUsd: number,
   program: VentureStakingProgram = VENTURE_STAKING,
 ): VentureTier => {
   let start = 0;
   for (const tier of program.tiers) {
-    if (position < start + tier.capacityEth) return tier;
-    start += tier.capacityEth;
+    if (positionUsd < start + tier.capacityUsd) return tier;
+    start += tier.capacityUsd;
   }
   return program.tiers[program.tiers.length - 1];
 };
@@ -83,17 +89,17 @@ export const effectiveMultiplier = (
   return 1 + (tier.baseMultiplier - 1) * fade;
 };
 
-/** Multiplier-weighted size of `eth` deposited from position 0, walking the tiers in order. */
+/** Multiplier-weighted size of `usd` deposited from position 0, walking the tiers in order. */
 export const weightedPool = (
-  eth: number,
+  usd: number,
   month: number,
   program: VentureStakingProgram = VENTURE_STAKING,
 ) => {
-  let remaining = eth;
+  let remaining = usd;
   let weighted = 0;
   for (const tier of program.tiers) {
     if (remaining <= 0) break;
-    const inTier = Math.min(remaining, tier.capacityEth);
+    const inTier = Math.min(remaining, tier.capacityUsd);
     weighted += inTier * effectiveMultiplier(tier, month, program);
     remaining -= inTier;
   }
@@ -103,12 +109,10 @@ export const weightedPool = (
 /**
  * The visitor's whole deposit takes the tier at the end of the existing pool,
  * and the pool is held at its current size for the horizon (no inflows).
- * A WBTC or USDC deposit weighs in at its ETH value; the yield it gives up is
- * its own. Returns null for a missing or non-positive amount so the UI shows
- * dashes.
+ * Returns null for a missing or non-positive amount so the UI shows dashes.
  */
 export const projectVentureStake = (
-  { asset, amount, livePoolEth, fdvMillions }: VentureStakeInput,
+  { asset, amount, livePoolUsd, fdvMillions }: VentureStakeInput,
   program: VentureStakingProgram = VENTURE_STAKING,
 ): VentureProjection | null => {
   if (
@@ -117,19 +121,19 @@ export const projectVentureStake = (
   ) {
     return null;
   }
-  const eth = (amount * asset.priceUsd) / program.ethPriceUsd;
-  const isAssumedPool = !(Number.isFinite(livePoolEth) && livePoolEth > 0);
-  const existingEth = isAssumedPool
-    ? Math.max(program.assumedLaunchPoolEth - eth, 0)
-    : livePoolEth;
-  const tier = tierAt(existingEth, program);
+  const amountUsd = amount * asset.priceUsd;
+  const isAssumedPool = !(Number.isFinite(livePoolUsd) && livePoolUsd > 0);
+  const existingUsd = isAssumedPool
+    ? Math.max(program.assumedLaunchPoolUsd - amountUsd, 0)
+    : livePoolUsd;
+  const tier = tierAt(existingUsd, program);
   const e0 = monthOneEmission(program);
 
   let refi12 = 0;
   let monthOneShare = 0;
   for (let k = 0; k < program.horizonMonths; k++) {
-    const mine = eth * effectiveMultiplier(tier, k, program);
-    const share = mine / (weightedPool(existingEth, k, program) + mine);
+    const mine = amountUsd * effectiveMultiplier(tier, k, program);
+    const share = mine / (weightedPool(existingUsd, k, program) + mine);
     if (k === 0) monthOneShare = share;
     refi12 += share * e0 * (1 - program.monthlyDecay) ** k;
   }
@@ -140,9 +144,9 @@ export const projectVentureStake = (
   const yieldRedirectedUsd = yieldRedirected * asset.priceUsd;
 
   return {
-    ethEquivalent: eth,
+    amountUsd,
     tier,
-    existingEth,
+    existingUsd,
     isAssumedPool,
     monthOneShare,
     refi12,
@@ -162,7 +166,7 @@ export const projectVentureStaking = (
   {
     asset: { ...VENTURE_STAKING_ASSETS[0], priceUsd: program.ethPriceUsd, yieldRate: program.stakingYield },
     amount: eth,
-    livePoolEth,
+    livePoolUsd: livePoolEth * program.ethPriceUsd,
     fdvMillions,
   },
   program,
@@ -179,32 +183,32 @@ export const emissionSchedule = (program: VentureStakingProgram = VENTURE_STAKIN
 
 export interface TierFill {
   tier: VentureTier;
-  /** Pool position where the tier starts, in ETH. */
-  startEth: number;
-  filledEth: number;
+  /** Pool position where the tier starts, in USD. */
+  startUsd: number;
+  filledUsd: number;
   /** 0..1; the open tier reads 0 until something lands in it, then 1. */
   ratio: number;
   isCurrent: boolean;
 }
 
-/** How full each tier is for a pool of `poolEth`, and which one a new deposit enters. */
+/** How full each tier is after `poolUsd` of deposits, and which one a new deposit enters. */
 export const tierFills = (
-  poolEth: number,
+  poolUsd: number,
   program: VentureStakingProgram = VENTURE_STAKING,
 ): TierFill[] => {
-  const pool = Number.isFinite(poolEth) && poolEth > 0 ? poolEth : 0;
+  const pool = Number.isFinite(poolUsd) && poolUsd > 0 ? poolUsd : 0;
   const current = tierAt(pool, program);
   let start = 0;
   return program.tiers.map((tier) => {
-    const filledEth = Math.min(Math.max(pool - start, 0), tier.capacityEth);
+    const filledUsd = Math.min(Math.max(pool - start, 0), tier.capacityUsd);
     const fill = {
       tier,
-      startEth: start,
-      filledEth,
-      ratio: Number.isFinite(tier.capacityEth) ? filledEth / tier.capacityEth : filledEth > 0 ? 1 : 0,
+      startUsd: start,
+      filledUsd,
+      ratio: Number.isFinite(tier.capacityUsd) ? filledUsd / tier.capacityUsd : filledUsd > 0 ? 1 : 0,
       isCurrent: tier === current,
     };
-    start += tier.capacityEth;
+    start += tier.capacityUsd;
     return fill;
   });
 };

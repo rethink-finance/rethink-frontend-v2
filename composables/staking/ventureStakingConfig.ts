@@ -20,8 +20,11 @@ export interface VentureAsset {
 
 export interface VentureTier {
   name: string;
-  /** ETH this tier holds; the last tier is open-ended. */
-  capacityEth: number;
+  /**
+   * USD this tier holds, counted at deposit-time prices so the count only
+   * moves forward. The last tier is open-ended.
+   */
+  capacityUsd: number;
   baseMultiplier: number;
 }
 
@@ -36,15 +39,16 @@ export const VENTURE_STAKING = {
   monthlyDecay: 0.035,
   /** Filled in order of total ETH deposited. */
   tiers: [
-    { name: "Founding", capacityEth: 2_000, baseMultiplier: 3 },
-    { name: "Second", capacityEth: 3_000, baseMultiplier: 2 },
-    { name: "Third", capacityEth: 5_000, baseMultiplier: 1.5 },
-    { name: "Open", capacityEth: Infinity, baseMultiplier: 1 },
+    // The spec's 2,000 / 3,000 / 5,000 ETH at its $3,000 ETH.
+    { name: "Founding", capacityUsd: 6_000_000, baseMultiplier: 3 },
+    { name: "Second", capacityUsd: 9_000_000, baseMultiplier: 2 },
+    { name: "Third", capacityUsd: 15_000_000, baseMultiplier: 1.5 },
+    { name: "Open", capacityUsd: Infinity, baseMultiplier: 1 },
   ] as VentureTier[],
   /** Share of a tier's bonus (multiplier - 1) left after each 12-month step. */
   multiplierFade: [1, 0.5, 0.25, 0],
   /** Pool assumed while the vault reads empty (pre-launch); includes the visitor. */
-  assumedLaunchPoolEth: 2_000,
+  assumedLaunchPoolUsd: 6_000_000,
   // TODO: read from the app's price feed once the page goes live.
   ethPriceUsd: 3_000,
   stakingYield: 0.03,
@@ -141,7 +145,8 @@ export const VENTURE_STAKING_PREVIEW = {
   /** Days since launch, which places the emission curve's marker. */
   daysLive: 45,
   holdings: { ETH: 1_050, WBTC: 3.1, USDC: 261_000 },
-  yieldGeneratedEth: 4.6,
+  /** All assets' yield reinvested so far, at the price on the day it came in. */
+  yieldGeneratedUsd: 16_400,
   refiDistributed: 1_123_400,
   stakers: 214,
   position: {

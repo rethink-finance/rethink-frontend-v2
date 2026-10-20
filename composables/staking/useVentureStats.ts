@@ -1,4 +1,4 @@
-import { emissionSchedule, tierAt } from "./ventureStaking";
+import { emissionSchedule, tierAt, weightedPool } from "./ventureStaking";
 import {
   VENTURE_STAKING,
   VENTURE_STAKING_ASSETS,
@@ -10,14 +10,20 @@ import {
 import { useVenturePool } from "./useVenturePool";
 
 export interface VentureProgramStats {
-  /** All deposits at ETH value; what the tiers fill against. */
-  stakedEth: number;
+  /** What the deposits are worth today. */
   stakedUsd: number;
+  /**
+   * Deposits at their USD value on the day they came in. This is what fills
+   * the tiers: it only grows, so a price drop never reopens a filled tier.
+   */
+  countedUsd: number;
+  /** countedUsd split by asset, for the tier bar. */
+  countedByAsset: Record<VentureAsset["symbol"], number>;
   holdings: Record<VentureAsset["symbol"], number>;
-  yieldGeneratedEth: number | null;
+  /** Yield reinvested so far across all assets, in USD. */
   yieldGeneratedUsd: number | null;
   refiDistributed: number | null;
-  /** REFI emitted per second right now, for the live counters. */
+  /** Points emitted per second right now, for the live counters. */
   refiPerSecond: number;
   stakers: number | null;
   daysLive: number | null;
@@ -31,6 +37,7 @@ export interface VenturePosition {
   amountUsd: number;
   tier: VentureTier;
   yieldRedirected: number;
+  yieldRedirectedUsd: number;
   refiEarned: number;
   refiPerSecond: number;
   /** Share of this month's emission the position takes. */
@@ -54,13 +61,16 @@ export const useVentureStats = () => {
 
   const program = computed<VentureProgramStats>(() => {
     if (!isPreview) {
+      const usd = livePoolEth.value * VENTURE_STAKING.ethPriceUsd;
       return {
-        stakedEth: livePoolEth.value,
-        stakedUsd: livePoolEth.value * VENTURE_STAKING.ethPriceUsd,
+        stakedUsd: usd,
+        // TODO: the deposit-time count needs each deposit's USD value at the
+        // time (vault events plus a price at that block, or a backend index).
+        countedUsd: usd,
+        countedByAsset: { ETH: usd, WBTC: 0, USDC: 0 },
         holdings: { ETH: livePoolEth.value, WBTC: 0, USDC: 0 },
-        // TODO: per-asset holdings, yield, REFI distributed, stakers and the
+        // TODO: WBTC/USDC holdings, yield, points distributed, stakers and the
         // launch date need the vault's events or a backend index.
-        yieldGeneratedEth: null,
         yieldGeneratedUsd: null,
         refiDistributed: null,
         refiPerSecond: schedule[0] / SECONDS_PER_MONTH,
@@ -70,15 +80,20 @@ export const useVentureStats = () => {
       };
     }
     const preview = VENTURE_STAKING_PREVIEW;
-    const stakedUsd = (Object.keys(preview.holdings) as VentureAsset["symbol"][])
-      .reduce((sum, symbol) => sum + preview.holdings[symbol] * priceOf(symbol), 0);
+    const symbols = Object.keys(preview.holdings) as VentureAsset["symbol"][];
+    // The sample assumes prices have not moved since deposit, so today's value
+    // and the deposit-time count agree.
+    const countedByAsset = Object.fromEntries(
+      symbols.map((symbol) => [symbol, preview.holdings[symbol] * priceOf(symbol)]),
+    ) as Record<VentureAsset["symbol"], number>;
+    const stakedUsd = symbols.reduce((sum, symbol) => sum + countedByAsset[symbol], 0);
     const currentMonth = Math.floor(preview.daysLive / (365 / 12));
     return {
-      stakedEth: stakedUsd / VENTURE_STAKING.ethPriceUsd,
       stakedUsd,
+      countedUsd: stakedUsd,
+      countedByAsset,
       holdings: preview.holdings,
-      yieldGeneratedEth: preview.yieldGeneratedEth,
-      yieldGeneratedUsd: preview.yieldGeneratedEth * VENTURE_STAKING.ethPriceUsd,
+      yieldGeneratedUsd: preview.yieldGeneratedUsd,
       refiDistributed: preview.refiDistributed,
       refiPerSecond: schedule[currentMonth] / SECONDS_PER_MONTH,
       stakers: preview.stakers,
@@ -87,30 +102,29 @@ export const useVentureStats = () => {
     };
   });
 
-  /** The pool the calculator projects against. */
-  const poolEth = computed(() => (isPreview ? program.value.stakedEth : livePoolEth.value));
+  /** What fills the tiers and what the calculator projects against. */
+  const poolUsd = computed(() => program.value.countedUsd);
 
   const position = computed<VenturePosition | null>(() => {
     // TODO: read the connected wallet's share balance once the vault exists.
     if (!isPreview) return null;
     const { symbol, amount, yieldRedirected, refiEarned } = VENTURE_STAKING_PREVIEW.position;
     const amountUsd = amount * priceOf(symbol);
-    const eth = amountUsd / VENTURE_STAKING.ethPriceUsd;
     // The sample position joined at the start, so it sits in the first tier.
     const tier = tierAt(0);
-    const weighted = program.value.stakedEth * tier.baseMultiplier;
-    const share = (eth * tier.baseMultiplier) / weighted;
+    const share = (amountUsd * tier.baseMultiplier) / weightedPool(poolUsd.value, 0);
     return {
       symbol,
       amount,
       amountUsd,
       tier,
       yieldRedirected,
+      yieldRedirectedUsd: yieldRedirected * priceOf(symbol),
       refiEarned,
       refiPerSecond: share * program.value.refiPerSecond,
       share,
     };
   });
 
-  return { isPreview, program, poolEth, position };
+  return { isPreview, program, poolUsd, position };
 };
