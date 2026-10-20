@@ -203,19 +203,8 @@
       </div>
 
       <p class="calc__fine">
-        A projection, not a promise. Pool size: {{ poolSentence }}, held there for 12 months with no
-        new deposits. ETH at {{ formatUsd(VENTURE_STAKING.ethPriceUsd) }} with a
-        {{ formatRate(VENTURE_STAKING.stakingYield) }} staking yield.
-        <template v-if="asset.symbol !== 'ETH'">
-          {{ asset.symbol }} at {{ formatUsd(asset.priceUsd) }} with a {{ formatRate(asset.yieldRate) }} yield,
-          counted toward the tiers at its USD value. Points follow the yield a deposit contributes, so a
-          dollar of {{ asset.symbol }} earns {{ (asset.yieldRate / VENTURE_STAKING.stakingYield).toFixed(2) }}x
-          what a dollar of ETH does.
-        </template>
-        Emissions start near {{ formatInt(monthOneEmission()) }} REFI a month and decay
-        {{ formatRate(VENTURE_STAKING.monthlyDecay) }} monthly over {{ VENTURE_STAKING.emissionMonths }} months.
-        Tier bonuses halve after month 12 and end after month 36. REFI has no market price before TGE;
-        the FDV scenarios are illustrations.
+        A projection at the FDV scenario's price, with the pool ({{ poolSentence }}) held flat.
+        Points follow the yield a deposit contributes; REFI has no market price before TGE.
       </p>
     </div>
   </div>
@@ -227,14 +216,10 @@ import {
   formatAmount,
   formatCompact,
   formatInt,
-  formatRate,
   formatUsd,
   formatUsdCompact,
 } from "~/composables/staking/formatStaking";
-import {
-  monthOneEmission,
-  projectVentureStake,
-} from "~/composables/staking/ventureStaking";
+import { projectVentureStake } from "~/composables/staking/ventureStaking";
 import {
   VENTURE_STAKING,
   VENTURE_STAKING_ASSETS,

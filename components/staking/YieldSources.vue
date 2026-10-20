@@ -15,9 +15,6 @@
           {{ strategy.label }}
           <span class="sources__rate" title="Assumed yearly yield">~{{ formatRate(asset.yieldRate) }} a year</span>
         </span>
-        <p class="sources__summary">
-          {{ strategy.summary }}
-        </p>
       </div>
     </div>
 
@@ -138,12 +135,6 @@ const amountLabel = computed(() =>
     cursor: help;
   }
 
-  &__summary {
-    margin: 0;
-    font-size: $text-sm;
-    line-height: 1.5;
-    color: $color-subtitle;
-  }
 
 }
 </style>

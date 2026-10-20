@@ -1,12 +1,8 @@
 <template>
   <section class="tranche" aria-labelledby="tranche-title">
-    <div class="tranche__head">
-      <span id="tranche-title" class="tranche__eyebrow">Now filling</span>
-      <span class="tranche__chip">
-        <span class="tranche__pulse" aria-hidden="true" />
-        {{ current.tier.name }} tier · {{ current.tier.baseMultiplier }}x
-      </span>
-    </div>
+    <span id="tranche-title" class="tranche__eyebrow">
+      <span class="tranche__pulse" aria-hidden="true" />Now filling
+    </span>
 
     <div class="tranche__summary">
       <div class="tranche__figure">
@@ -68,15 +64,12 @@
           <span class="tranche__tier-mult">{{ fill.tier.baseMultiplier }}x</span>
         </span>
         <span class="tranche__tier-range">{{ rangeLabel(fill) }}</span>
-        <span class="tranche__tier-bar" aria-hidden="true">
-          <span :style="{ width: `${barWidth(fill)}%` }" />
-        </span>
       </li>
     </ol>
 
     <p class="tranche__fine">
       <Icon icon="mdi:lock-outline" width="0.875rem" />
-      Counted in USD on deposit day, so your multiplier locks in. Bonuses fade yearly: full, half, a quarter, then 1x.
+      Your multiplier locks in when you deposit.
     </p>
   </section>
 </template>
@@ -105,7 +98,6 @@ const rangeLabel = ({ startUsd, tier }: TierFill) => {
   return `${formatUsdCompact(startUsd)} to ${formatUsdCompact(startUsd + tier.capacityUsd)}`;
 };
 
-const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100, 3) : fill.ratio * 100);
 
 /**
  * The current tier's fill split by asset, in proportion to each asset's
@@ -135,30 +127,14 @@ const segments = computed(() => {
   background: $color-surface;
   box-shadow: var(--shadow-card);
 
-  &__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
 
   &__eyebrow {
     @include card-title;
-  }
-
-  &__chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.25rem 0.625rem;
-    border: 1px solid $color-cyan-line;
-    border-radius: 999px;
-    background: $color-cyan-tint;
-    font-family: $font-mono;
-    font-size: $text-xs;
-    color: $color-cyan;
-    white-space: nowrap;
+    gap: 0.625rem;
   }
+
 
   &__pulse {
     width: 6px;
@@ -331,23 +307,7 @@ const segments = computed(() => {
     color: $color-subtitle;
   }
 
-  &__tier-bar {
-    height: 3px;
-    margin-top: 0.25rem;
-    border-radius: 2px;
-    background: var(--fill-2);
-    overflow: hidden;
 
-    span {
-      display: block;
-      height: 100%;
-      background: $color-subtitle;
-    }
-  }
-
-  &__tier--current &__tier-bar span {
-    background: $color-primary;
-  }
 
   &__fine {
     display: flex;

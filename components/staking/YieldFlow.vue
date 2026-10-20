@@ -72,25 +72,18 @@
       >
         {{ row.source.position }}
       </span>
-    </div>
 
-    <div class="flow__axis" aria-hidden="true">
-      <span :style="{ left: '0%' }">Deposit</span>
-      <span :style="{ left: `${COLUMNS[1]}%` }">Protocol</span>
-      <span :style="{ left: `${COLUMNS[2]}%` }">Position</span>
+      <p
+        v-if="active !== null"
+        class="flow__tip"
+        :class="{ 'flow__tip--above': active >= rows.length / 2 }"
+        :style="tipStyle(bands[active].to)"
+        aria-live="polite"
+      >
+        <strong>{{ rows[active].amountLabel }} {{ asset.symbol }}</strong>
+        {{ formatUsdCompact(rows[active].usd) }} in {{ rows[active].source.name }}
+      </p>
     </div>
-
-    <p class="flow__caption" aria-live="polite">
-      <template v-if="active !== null">
-        <strong>{{ rows[active].source.name }}</strong>
-        holds {{ rows[active].pct }} of the {{ asset.symbol }}:
-        {{ rows[active].amountLabel }} {{ asset.symbol }} ({{ formatUsdCompact(rows[active].usd) }})
-        as {{ rows[active].source.position }}.
-      </template>
-      <template v-else>
-        Hover a protocol to see how much sits there.
-      </template>
-    </p>
   </div>
 </template>
 
@@ -163,6 +156,12 @@ const nodeStyle = (left: number, [top, bottom]: [number, number]) => ({
 
 const labelStyle = (left: number, [top, bottom]: [number, number]) => ({
   left: `calc(${left}% + 14px)`,
+  top: `${(top + bottom) / 2}px`,
+});
+
+/** Under the hovered venue's label, or over it for the lower half. */
+const tipStyle = ([top, bottom]: [number, number]) => ({
+  left: `calc(${COLUMNS.value[1]}% + 14px)`,
   top: `${(top + bottom) / 2}px`,
 });
 
@@ -304,32 +303,33 @@ const nodeClass = (index: number) => ({
     color: $color-title;
   }
 
-  &__axis {
-    position: relative;
-    height: 1rem;
-    border-top: 1px solid $color-line;
-    padding-top: 0.5rem;
 
-    span {
-      position: absolute;
-      top: 0.5rem;
-      font-family: $font-mono;
-      font-size: 10px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: $color-subtitle;
-    }
-  }
-
-  &__caption {
-    min-height: 1.25rem;
-    margin: 0.5rem 0 0;
+  &__tip {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin: 0;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: var(--surface-float);
+    box-shadow: var(--shadow-float);
+    font-family: $font-mono;
     font-size: $text-xs;
     color: $color-subtitle;
+    white-space: nowrap;
+    transform: translateY(16px);
+    pointer-events: none;
 
     strong {
-      color: $color-title;
       font-weight: 600;
+      color: $color-title;
+    }
+
+    &--above {
+      transform: translateY(calc(-100% - 16px));
     }
   }
 

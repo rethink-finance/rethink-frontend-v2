@@ -1,25 +1,32 @@
 <template>
   <section class="bb brand_card" aria-labelledby="bb-title">
-    <div class="bb__head">
-      <span id="bb-title" class="brand_card__eyebrow">Buybacks</span>
-      <span class="bb__badge">Simulation</span>
-    </div>
+    <span id="bb-title" class="brand_card__eyebrow">Buybacks</span>
     <p class="bb__headline">
       <span class="bb__big">100%</span>
       <span>of the protocol revenue <strong>buys back REFI</strong> on the open market.</span>
     </p>
 
     <div class="bb__sources">
-      <div class="bb__sources-bar" aria-hidden="true">
-        <span
-          v-for="(source, index) in sources"
-          :key="source.label"
-          :style="{ width: `${(source.usd / revenue.totalUsd) * 100}%`, opacity: 1 - index * 0.32 }"
-        />
-      </div>
-      <ul class="bb__sources-list" aria-label="Revenue sources">
-        <li v-for="(source, index) in sources" :key="source.label">
-          <span class="bb__swatch" :style="{ opacity: 1 - index * 0.32 }" />
+      <button
+        type="button"
+        class="bb__sources-line"
+        :aria-expanded="showSources"
+        aria-controls="bb-sources"
+        @click="showSources = !showSources"
+      >
+        <span>
+          {{ BB.revenue.platformFeeBps }} bps platform fee + {{ BB.revenue.managerShare * 100 }}% of manager fees
+          + referrals ≈ <strong>{{ revenue.totalBps.toFixed(1) }} bps of AUM</strong>
+        </span>
+        <Icon :icon="showSources ? 'mdi:chevron-up' : 'mdi:chevron-down'" width="1rem" />
+      </button>
+      <ul
+        v-show="showSources"
+        id="bb-sources"
+        class="bb__sources-list"
+        aria-label="Revenue sources"
+      >
+        <li v-for="source in sources" :key="source.label">
           <span class="bb__source-text">
             <strong>{{ source.label }}</strong>
             <span>{{ source.basis }}</span>
@@ -27,10 +34,6 @@
           <span class="bb__source-usd">{{ formatUsdCompact(source.usd) }}</span>
         </li>
       </ul>
-      <p class="bb__sources-total">
-        {{ formatUsdCompact(revenue.totalUsd) }} a year at {{ formatUsdCompact(aum) }} AUM, about
-        {{ revenue.totalBps.toFixed(1) }} bps, all of it spent buying REFI.
-      </p>
     </div>
 
     <div class="bb__controls">
@@ -101,12 +104,6 @@
         <span class="bb__value">{{ formatPct(projection.totalBuybackShare) }}</span>
         <span class="bb__label">of all REFI bought back over {{ last.year }} years</span>
       </div>
-      <div>
-        <span class="bb__value">
-          {{ Math.round(first.priceToRevenue) }}x <small>to</small> {{ formatMultiple(last.priceToRevenue) }}
-        </span>
-        <span class="bb__label">Price to revenue at a flat price</span>
-      </div>
     </div>
 
     <div v-if="projection" class="bb__chart">
@@ -165,9 +162,7 @@
     </div>
 
     <p class="bb__fine">
-      Bright bars are years when buybacks take more REFI off the market than the program adds. Bought at
-      the FDV scenario's price; a rising price buys fewer tokens. Manager earnings and referral fees are
-      assumptions. A simulation, not a forecast.
+      Simulation at the scenario price. Manager and referral fees are estimates.
     </p>
   </section>
 </template>
@@ -194,6 +189,7 @@ const growthPct = ref(BB.defaultGrowth * 100);
 const fdv = ref<number>(VENTURE_STAKING.defaultFdvMillions);
 
 const revenue = computed(() => revenueBreakdown(aum.value));
+const showSources = ref(false);
 const sources = computed(() => {
   const model = BB.revenue;
   return [
@@ -238,7 +234,6 @@ const formatPct = (value: number) => {
   if (pct >= 1) return `${pct.toFixed(1)}%`;
   return `${pct.toFixed(2)}%`;
 };
-const formatMultiple = (value: number) => (value >= 10 ? `${Math.round(value)}x` : `${value.toFixed(1)}x`);
 
 const chartSummary = computed(() => {
   const p = projection.value;
@@ -256,23 +251,7 @@ const chartSummary = computed(() => {
   flex-direction: column;
   gap: 1.375rem;
 
-  &__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
 
-  &__badge {
-    padding: 0.125rem 0.5rem;
-    border: 1px dashed $color-line-3;
-    border-radius: $default-border-radius;
-    font-family: $font-mono;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-subtitle;
-  }
 
   &__headline {
     display: flex;
@@ -309,26 +288,30 @@ const chartSummary = computed(() => {
   }
 
   &__sources {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 1rem 1.125rem;
     border: 1px solid $color-line;
     border-radius: $default-border-radius;
     background: $color-card-background;
   }
 
-  &__sources-bar {
+  &__sources-line {
     display: flex;
-    gap: 2px;
-    height: 8px;
-    border-radius: 4px;
-    overflow: hidden;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: $text-sm;
+    color: $color-subtitle;
 
-    span {
-      display: block;
-      height: 100%;
-      background: $color-primary;
+    strong {
+      font-weight: 600;
+      color: $color-title;
+    }
+
+    &:focus-visible {
+      outline: 1px solid var(--accent-line);
+      outline-offset: -2px;
     }
   }
 
@@ -337,22 +320,16 @@ const chartSummary = computed(() => {
     flex-direction: column;
     gap: 0.5rem;
     margin: 0;
-    padding: 0;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid $color-line;
     list-style: none;
 
     li {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      display: flex;
       align-items: baseline;
-      gap: 0.625rem;
+      justify-content: space-between;
+      gap: 1rem;
     }
-  }
-
-  &__swatch {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-    background: $color-primary;
   }
 
   &__source-text {
@@ -376,14 +353,6 @@ const chartSummary = computed(() => {
     font-family: $font-mono;
     font-size: $text-sm;
     color: $color-title;
-  }
-
-  &__sources-total {
-    margin: 0;
-    padding-top: 0.625rem;
-    border-top: 1px solid $color-line;
-    font-size: $text-xs;
-    color: $color-subtitle;
   }
 
   &__controls {
@@ -489,7 +458,7 @@ const chartSummary = computed(() => {
 
   &__figures {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
     padding: 1.125rem 0;
     border-top: 1px solid $color-line;

@@ -1,11 +1,6 @@
 <template>
   <section class="position brand_card" aria-labelledby="position-title">
-    <div class="position__head">
-      <span id="position-title" class="brand_card__eyebrow">Your position</span>
-      <span v-if="position" class="position__tier">
-        {{ position.tier.name }} · {{ position.tier.baseMultiplier }}x
-      </span>
-    </div>
+    <span id="position-title" class="brand_card__eyebrow">Your position</span>
 
     <template v-if="position">
       <div class="position__earned">
@@ -14,8 +9,7 @@
           <small>points</small>
         </span>
         <span class="position__caption">
-          +{{ formatInt(position.refiPerSecond * 86_400) }} a day at {{ position.tier.baseMultiplier }}x ·
-          {{ formatShare(position.share) }} of emissions
+          +{{ formatInt(position.refiPerSecond * 86_400) }} a day
         </span>
       </div>
 
@@ -73,8 +67,6 @@ const refiEarned = useAccrual(
 const formatRefi = (value: number) =>
   value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const formatShare = (share: number) =>
-  `${(share * 100).toFixed(share < 0.01 ? 2 : 1)}%`;
 </script>
 
 <style scoped lang="scss">
@@ -83,18 +75,7 @@ const formatShare = (share: number) =>
   flex-direction: column;
   gap: 0.875rem;
 
-  &__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
 
-  &__tier {
-    font-family: $font-mono;
-    font-size: $text-xs;
-    color: $color-subtitle;
-  }
 
   &__earned {
     display: flex;

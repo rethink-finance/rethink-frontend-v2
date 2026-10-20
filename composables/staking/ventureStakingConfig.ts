@@ -31,7 +31,6 @@ export interface VentureYieldSource {
 /** Where an asset's yield comes from. Shown on the staking page. */
 export interface VentureYieldStrategy {
   label: string;
-  summary: string;
   sources: VentureYieldSource[];
 }
 
@@ -142,7 +141,6 @@ export const VENTURE_STAKING_YIELD_STRATEGIES: Record<VentureAsset["symbol"], Ve
   // TODO: the weights are illustrative; set them from the live allocation.
   ETH: {
     label: "Liquid staking",
-    summary: "Staked with Ethereum validators through the most established liquid staking providers.",
     sources: [
       { name: "Lido", logo: "lido", position: "stETH", weight: 0.4 },
       { name: "Rocket Pool", logo: "rocket-pool", position: "rETH", weight: 0.25 },
@@ -152,7 +150,6 @@ export const VENTURE_STAKING_YIELD_STRATEGIES: Record<VentureAsset["symbol"], Ve
   },
   WBTC: {
     label: "Blue-chip lending",
-    summary: "Lent on the deepest over-collateralized markets. No bridges, no restaking.",
     sources: [
       { name: "Aave v3", logo: "aave-v3", position: "aEthWBTC", weight: 0.6 },
       { name: "SparkLend", logo: "sparklend", position: "spWBTC", weight: 0.4 },
@@ -160,7 +157,6 @@ export const VENTURE_STAKING_YIELD_STRATEGIES: Record<VentureAsset["symbol"], Ve
   },
   USDC: {
     label: "Money market",
-    summary: "Spread across the safest stablecoin savings and lending vaults.",
     sources: [
       { name: "Spark Savings", logo: "spark-savings", position: "sUSDC", weight: 0.35 },
       { name: "Aave v3", logo: "aave-v3", position: "aEthUSDC", weight: 0.3 },

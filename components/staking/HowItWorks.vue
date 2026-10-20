@@ -3,19 +3,19 @@
     <li class="how__step">
       <span class="how__icon"><Icon icon="mdi:shield-lock-outline" width="1rem" /></span>
       <span class="how__text">
-        <strong>You deposit</strong> ETH, WBTC or USDC. Your principal stays preserved.
+        <strong>Deposit</strong> ETH, WBTC or USDC. Principal stays yours.
       </span>
     </li>
     <li class="how__step">
       <span class="how__icon"><Icon icon="mdi:sprout-outline" width="1rem" /></span>
       <span class="how__text">
-        <strong>The yield is reinvested</strong> in growing the Rethink Finance ecosystem.
+        <strong>Yield is reinvested</strong> in the Rethink ecosystem.
       </span>
     </li>
     <li class="how__step how__step--accent">
       <span class="how__icon"><Icon icon="mdi:star-four-points-outline" width="1rem" /></span>
       <span class="how__text">
-        <strong>You earn points:</strong> <em>{{ multiplier }}x</em> right now in the {{ tierName }} tier.
+        <strong>Earn points:</strong> <em>{{ multiplier }}x</em> right now.
       </span>
     </li>
   </ol>
@@ -24,7 +24,6 @@
 <script setup lang="ts">
 defineProps<{
   multiplier: number;
-  tierName: string;
 }>();
 </script>
 

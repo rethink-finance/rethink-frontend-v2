@@ -3,8 +3,10 @@
     <section class="staking__hero">
       <div class="staking__top">
         <div class="staking__intro">
-          <div class="staking__eyebrow-row">
-            <span class="staking__eyebrow">Venture staking</span>
+          <div class="staking__title-row">
+            <h1 class="staking__title">
+              Staking
+            </h1>
             <span
               v-if="isPreview"
               class="staking__preview"
@@ -13,9 +15,6 @@
               Preview data
             </span>
           </div>
-          <h1 class="staking__title">
-            Staking
-          </h1>
           <ul class="staking__flex" aria-label="Program guarantees">
             <li class="staking__flex-item">
               <Icon icon="mdi:scale-balance" width="1rem" />No leverage
@@ -32,7 +31,6 @@
         <StakingHowItWorks
           class="staking__how"
           :multiplier="currentTier.baseMultiplier"
-          :tier-name="currentTier.name"
         />
       </div>
     </section>
@@ -46,7 +44,6 @@
         />
         <StakingYieldSources v-model:selected="selectedAsset" :holdings="program.holdings" />
         <StakingBuybacks />
-        <StakingEmissionChart :current-month="program.currentMonth" />
       </div>
       <aside
         ref="aside"
@@ -188,15 +185,10 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     gap: 1.25rem;
   }
 
-  &__eyebrow-row {
+  &__title-row {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-  }
-
-  &__eyebrow {
-    @include card-title;
-    color: $color-cyan;
+    gap: 0.875rem;
   }
 
   &__preview {
