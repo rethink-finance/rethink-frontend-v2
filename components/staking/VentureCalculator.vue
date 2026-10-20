@@ -48,7 +48,7 @@
 
           <div class="calc__field">
             <span id="calc-fdv" class="calc__label">
-              <span class="calc__step">02</span> FDV at TGE
+              <span class="calc__step">02</span> Fully Diluted Valuation at Token Launch
             </span>
             <div class="calc__fdv" role="group" aria-labelledby="calc-fdv">
               <button
@@ -203,7 +203,7 @@
       </div>
 
       <p class="calc__fine">
-        A projection at the FDV scenario's price, with the pool ({{ poolSentence }}) held flat.
+        A projection at the chosen valuation at token launch, with the pool ({{ poolSentence }}) held flat.
         Points follow the yield a deposit contributes; REFI has no market price before TGE.
       </p>
     </div>

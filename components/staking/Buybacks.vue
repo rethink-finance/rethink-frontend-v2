@@ -58,7 +58,7 @@
         >
       </label>
       <div class="bb__control">
-        <span id="bb-fdv" class="bb__control-label">FDV</span>
+        <span id="bb-fdv" class="bb__control-label">Fully Diluted Valuation at Token Launch</span>
         <div class="bb__segments" role="group" aria-labelledby="bb-fdv">
           <button
             v-for="scenario in VENTURE_STAKING.fdvScenarios"
