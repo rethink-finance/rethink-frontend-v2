@@ -2,15 +2,15 @@
   <ol class="how" aria-label="How staking works">
     <li class="how__step">
       <span class="how__top">
-        <span class="how__icon" aria-hidden="true"><Icon icon="mdi:shield-lock-outline" width="1.125rem" /></span>
+        <span class="how__icon" aria-hidden="true"><Icon icon="mdi:shield-lock-outline" width="1rem" /></span>
         <span class="how__num">01</span>
       </span>
       <span class="how__title">Deposit</span>
-      <span class="how__text">ETH, WBTC or USDC. Your principal stays yours.</span>
+      <span class="how__text">Your principal stays yours.</span>
     </li>
     <li class="how__step">
       <span class="how__top">
-        <span class="how__icon" aria-hidden="true"><Icon icon="mdi:sprout-outline" width="1.125rem" /></span>
+        <span class="how__icon" aria-hidden="true"><Icon icon="mdi:sprout-outline" width="1rem" /></span>
         <span class="how__num">02</span>
       </span>
       <span class="how__title">Yield is reinvested</span>
@@ -18,7 +18,7 @@
     </li>
     <li class="how__step how__step--accent">
       <span class="how__top">
-        <span class="how__icon" aria-hidden="true"><Icon icon="mdi:star-four-points-outline" width="1.125rem" /></span>
+        <span class="how__icon" aria-hidden="true"><Icon icon="mdi:star-four-points-outline" width="1rem" /></span>
         <span class="how__num">03</span>
       </span>
       <span class="how__title">Earn <em>{{ multiplier }}x</em> points</span>
@@ -37,7 +37,7 @@ defineProps<{
 // Three cards with an arrow in each gap. The arrows are drawn by CSS, so the
 // list holds exactly the three steps.
 .how {
-  --how-gap: 1.75rem;
+  --how-gap: 1.5rem;
 
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -56,9 +56,9 @@ defineProps<{
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 0.375rem;
+    gap: 0.25rem;
     min-width: 0;
-    padding: 1.125rem 1.25rem 1.25rem;
+    padding: 0.875rem 1rem 1rem;
     border: 1px solid $color-line-2;
     border-radius: $default-border-radius;
     background: $color-surface;
@@ -101,16 +101,16 @@ defineProps<{
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.375rem;
   }
 
   &__icon {
     display: grid;
     place-items: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2rem;
+    height: 2rem;
     border: 1px solid $color-line-2;
-    border-radius: 8px;
+    border-radius: 7px;
     background: var(--fill-1);
     color: $color-title;
   }
