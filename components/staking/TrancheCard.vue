@@ -24,7 +24,13 @@
         aria-valuemax="100"
         :aria-label="`${current.tier.name} stage claimed`"
       >
-        <span :style="{ width: `${Math.max(current.ratio * 100, 1)}%` }" />
+        <span
+          v-for="segment in segments"
+          :key="segment.symbol"
+          class="tranche__segment"
+          :class="{ 'tranche__segment--dim': segment.symbol !== selected }"
+          :style="{ width: `${segment.width}%`, background: `var(--asset-${segment.symbol.toLowerCase()})` }"
+        />
       </div>
 
       <div class="tranche__foot">
@@ -50,14 +56,40 @@
     <p v-else class="tranche__foot">
       Every bonus stage is full; new stakes earn the base rate.
     </p>
+
+    <ul class="tranche__assets" aria-label="Staked by asset">
+      <li
+        v-for="row in assetRows"
+        :key="row.symbol"
+        class="tranche__asset"
+        :class="{ 'tranche__asset--active': row.symbol === selected }"
+      >
+        <span class="tranche__swatch" :style="{ background: `var(--asset-${row.symbol.toLowerCase()})` }" />
+        <IconChain v-if="row.symbol === 'ETH'" chain-short="eth" :size="16" />
+        <IconBaseAsset v-else :symbol="row.symbol" :size="16" />
+        <span class="tranche__asset-amount">{{ row.amountLabel }} {{ row.symbol }}</span>
+        <span class="tranche__asset-usd">{{ formatUsdCompact(row.usd) }}</span>
+      </li>
+    </ul>
   </section>
 </template>
 
 <script setup lang="ts">
-import { formatUsdCompact } from "~/composables/staking/formatStaking";
+import { formatAmount, formatCompact, formatUsdCompact } from "~/composables/staking/formatStaking";
 import type { TierFill } from "~/composables/staking/ventureStaking";
+import { VENTURE_STAKING_ASSETS, type VentureAsset } from "~/composables/staking/ventureStakingConfig";
 
-const props = defineProps<{ fills: TierFill[] }>();
+type AssetSymbol = VentureAsset["symbol"];
+
+const props = defineProps<{
+  fills: TierFill[];
+  /** Deposit-time USD by asset; splits the bar into its sources. */
+  countedByAsset: Record<AssetSymbol, number>;
+  /** Amounts staked, in each asset's own units. */
+  holdings: Record<AssetSymbol, number>;
+  /** The asset picked in the deposit card; its share stands out. */
+  selected: AssetSymbol;
+}>();
 
 const currentIndex = computed(() => Math.max(props.fills.findIndex((fill) => fill.isCurrent), 0));
 const current = computed(() => props.fills[currentIndex.value]);
@@ -67,6 +99,29 @@ const later = computed(() => props.fills.slice(currentIndex.value + 1));
 const hasCapacity = computed(() => Number.isFinite(current.value.tier.capacityUsd));
 const totalUsd = computed(() => current.value.startUsd + current.value.filledUsd);
 const stageEndUsd = computed(() => current.value.startUsd + current.value.tier.capacityUsd);
+
+/** The claimed part of the bar, split by each asset's share of everything counted. */
+const segments = computed(() => {
+  const symbols = Object.keys(props.countedByAsset) as AssetSymbol[];
+  const total = symbols.reduce((sum, symbol) => sum + props.countedByAsset[symbol], 0);
+  return symbols
+    .filter((symbol) => props.countedByAsset[symbol] > 0)
+    .map((symbol) => ({
+      symbol,
+      width: total > 0 ? Math.max(current.value.ratio, 0.01) * 100 * (props.countedByAsset[symbol] / total) : 0,
+    }));
+});
+
+const assetRows = computed(() =>
+  VENTURE_STAKING_ASSETS.map((asset) => {
+    const amount = props.holdings[asset.symbol] ?? 0;
+    return {
+      symbol: asset.symbol,
+      amountLabel: asset.symbol === "USDC" ? formatCompact(amount) : formatAmount(amount, 2),
+      usd: props.countedByAsset[asset.symbol] ?? 0,
+    };
+  }),
+);
 </script>
 
 <style scoped lang="scss">
@@ -137,17 +192,69 @@ const stageEndUsd = computed(() => current.value.startUsd + current.value.tier.c
   }
 
   &__bar {
+    display: flex;
+    gap: 2px;
     height: 10px;
     border-radius: 5px;
     background: var(--fill-2);
     overflow: hidden;
+  }
 
-    span {
-      display: block;
-      height: 100%;
-      border-radius: 5px;
-      background: $gradient-brand;
+  &__segment {
+    display: block;
+    height: 100%;
+    transition: opacity $default-transition-time;
+
+    &--dim {
+      opacity: 0.4;
     }
+  }
+
+  &__assets {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0.125rem 0 0;
+    padding: 0.875rem 0 0;
+    border-top: 1px solid $color-line;
+    list-style: none;
+
+    @media (max-width: $screen-sm) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  &__asset {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    font-family: $font-mono;
+    font-size: $text-xs;
+    color: $color-subtitle;
+    transition: color $default-transition-time;
+  }
+
+  &__asset--active {
+    color: $color-title;
+  }
+
+  &__swatch {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  &__asset-amount {
+    font-size: $text-sm;
+    font-weight: 600;
+    color: $color-title;
+    white-space: nowrap;
+  }
+
+  &__asset-usd {
+    white-space: nowrap;
   }
 
   &__foot {
