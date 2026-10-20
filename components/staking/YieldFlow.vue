@@ -112,19 +112,40 @@ const GAP = 10;
  * last two in so the position labels keep room on the right.
  */
 const canvas = ref<HTMLElement>();
-const isNarrow = ref(false);
-// The last column holds short token names (stETH, steakUSDC), so it only
-// gets the room they need and the ribbons take the rest.
-const COLUMNS = computed(() => (isNarrow.value ? [0, 32, 70] : [0, 42, 84]));
+const canvasWidth = ref(0);
+const positionWidth = ref(0);
+
+/** Width of the longest position name (stETH, steakUSDC) now on screen. */
+const measurePositions = () => {
+  const labels = canvas.value?.querySelectorAll<HTMLElement>(".flow__position") ?? [];
+  positionWidth.value = Math.max(0, ...[...labels].map((label) => label.scrollWidth));
+};
+
+/**
+ * Left edge of each column, in percent of the width. The last column sits
+ * so its longest name ends at the card's edge, giving the ribbons all the
+ * room the short names do not need; the middle column halves what is left.
+ */
+const COLUMNS = computed(() => {
+  const width = canvasWidth.value;
+  if (!width || !positionWidth.value) return [0, 42, 84];
+  const last = ((width - positionWidth.value - 14 - 2) / width) * 100;
+  const clamped = Math.min(Math.max(last, 60), 94);
+  return [0, clamped / 2, clamped];
+});
 
 let observer: ResizeObserver | undefined;
 onMounted(() => {
   observer = new ResizeObserver(([entry]) => {
-    isNarrow.value = entry.contentRect.width < 560;
+    canvasWidth.value = entry.contentRect.width;
   });
   if (canvas.value) observer.observe(canvas.value);
+  measurePositions();
 });
 onUnmounted(() => observer?.disconnect());
+
+// Another asset brings other names; measure once they are on screen.
+watch(() => props.strategy, () => nextTick(measurePositions));
 
 const active = ref<number | null>(null);
 watch(() => props.asset.symbol, () => { active.value = null; });
