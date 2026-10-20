@@ -150,9 +150,7 @@
     </div>
 
     <p class="bb__fine">
-      Assumes every buyback happens at the launch price of {{ flatPrice }} (a ${{ fdv }}M valuation). In
-      practice buying pushes the price up, so the same revenue buys less supply and lifts the price
-      instead. Manager and referral fees are estimates.
+      Assumes a flat {{ flatPrice }} price; real buybacks lift the price instead. Fees are estimates.
     </p>
   </section>
 </template>
