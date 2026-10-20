@@ -1,23 +1,6 @@
 <template>
-  <section class="calc" aria-labelledby="calc-title">
-    <button
-      type="button"
-      class="calc__head"
-      :aria-expanded="isOpen"
-      aria-controls="calc-body"
-      @click="isOpen = !isOpen"
-    >
-      <span class="calc__head-text">
-        <span id="calc-title" class="calc__eyebrow">Venture staking calculator</span>
-        <span class="calc__teaser">{{ teaser }}</span>
-      </span>
-      <span class="calc__head-action">
-        {{ isOpen ? "Close" : "Open" }}
-        <Icon :icon="isOpen ? 'mdi:chevron-up' : 'mdi:chevron-down'" width="1.25rem" />
-      </span>
-    </button>
-
-    <div v-show="isOpen" id="calc-body">
+  <div class="calc">
+    <div>
       <div class="calc__grid">
         <div class="calc__inputs">
           <div class="calc__field">
@@ -217,7 +200,7 @@
         the FDV scenarios are illustrations.
       </p>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -247,7 +230,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{ stake: [symbol: VentureAsset["symbol"], amount: number] }>();
 
-const isOpen = ref(false);
 const asset = ref<VentureAsset>(VENTURE_STAKING_ASSETS[0]);
 const amountInput = ref<string | number>(asset.value.defaultAmount);
 const slider = ref<number>(asset.value.defaultAmount);
@@ -290,12 +272,6 @@ const projection = computed(() =>
   }),
 );
 
-const teaser = computed(() =>
-  projection.value
-    ? `${formatAmount(amount.value, asset.value.displayDecimals)} ${asset.value.symbol} could earn ` +
-      `${formatUsd(projection.value.valueUsd)} of REFI in year one`
-    : "Project what your stake could earn in REFI",
-);
 
 const pricePerRefi = computed(() => (fdv.value * 1e6) / VENTURE_STAKING.supply);
 
@@ -313,71 +289,21 @@ const formatShare = (share: number) =>
 const formatMultiple = (multiple: number) =>
   `${multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)}x`;
 
-defineExpose({ open: () => { isOpen.value = true; } });
 </script>
 
 <style scoped lang="scss">
 .calc {
   display: flex;
   flex-direction: column;
-  border: 1px solid $color-line;
-  border-radius: $default-border-radius;
-  background: $color-surface;
-  box-shadow: var(--shadow-card);
 
-  &__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    width: 100%;
-    padding: 1.5rem 1.875rem;
-    text-align: left;
 
-    &:focus-visible {
-      outline: 1px solid var(--accent-line);
-      outline-offset: -2px;
-    }
 
-    &:hover .calc__head-action {
-      color: $color-title;
-      border-color: $color-line-3;
-    }
-  }
 
-  &__head-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-    min-width: 0;
-  }
 
-  &__eyebrow {
-    @include card-title;
-  }
-
-  &__teaser {
-    font-size: $text-sm;
-    color: $color-subtitle;
-  }
-
-  &__head-action {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.375rem 0.5rem 0.375rem 0.75rem;
-    border: 1px solid $color-line-2;
-    border-radius: $default-border-radius;
-    font-size: $text-sm;
-    color: $color-subtitle;
-    transition: color $default-transition-time, border-color $default-transition-time;
-  }
 
   &__grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-    border-top: 1px solid $color-line;
 
     @media (max-width: $screen-lg) {
       grid-template-columns: minmax(0, 1fr);
@@ -747,18 +673,12 @@ defineExpose({ open: () => { isOpen.value = true; } });
   }
 
   @media (max-width: $screen-sm) {
-    &__head,
     &__inputs,
     &__result {
       padding-left: 1.25rem;
       padding-right: 1.25rem;
     }
 
-    &__head-action {
-      font-size: 0;
-      padding: 0.375rem;
-      gap: 0;
-    }
 
     &__toggle {
       padding: 1rem 1.25rem;

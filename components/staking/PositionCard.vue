@@ -11,10 +11,10 @@
       <div class="position__earned">
         <span class="position__refi">
           {{ refiEarned === null ? DASH : formatRefi(refiEarned) }}
-          <small>REFI</small>
+          <small>points</small>
         </span>
         <span class="position__caption">
-          Earned so far · +{{ formatInt(position.refiPerSecond * 86_400) }} REFI a day
+          Earned so far · +{{ formatInt(position.refiPerSecond * 86_400) }} a day at {{ position.tier.baseMultiplier }}x
         </span>
       </div>
 
@@ -27,7 +27,7 @@
           </dd>
         </div>
         <div class="position__row">
-          <dt>Yield redirected</dt>
+          <dt>Yield reinvested</dt>
           <dd>{{ formatAmount(position.yieldRedirected) }} {{ position.symbol }}</dd>
         </div>
         <div class="position__row">
@@ -39,10 +39,10 @@
 
     <p v-else class="position__empty">
       <template v-if="isConnected">
-        No stake yet. Once you deposit, your REFI accrues here every block.
+        No stake yet. Once you deposit, your points add up here.
       </template>
       <template v-else>
-        Connect your wallet to see your stake, the yield you redirect and the REFI you earn.
+        Connect your wallet to see your stake and the points you earn.
       </template>
     </p>
   </section>

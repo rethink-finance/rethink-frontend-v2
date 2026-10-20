@@ -14,7 +14,9 @@
         <template v-if="isFinite(current.tier.capacityEth)">
           / {{ formatInt(current.tier.capacityEth) }} ETH
         </template>
-        <template v-else>ETH</template>
+        <template v-else>
+          ETH
+        </template>
       </span>
     </div>
 
@@ -33,25 +35,36 @@
     <p class="tranche__note">
       <template v-if="next">
         {{ formatInt(current.tier.capacityEth - current.filledEth) }} ETH left at
-        {{ current.tier.baseMultiplier }}x. After that, deposits enter the {{ next.tier.name }} tier at
-        {{ next.tier.baseMultiplier }}x.
+        {{ current.tier.baseMultiplier }}x. Then {{ next.tier.name }} at {{ next.tier.baseMultiplier }}x.
       </template>
       <template v-else>
-        Every tier above the open tier is full; new deposits earn the base rate.
+        Every bonus tier is full; new deposits earn 1x.
       </template>
     </p>
 
-    <ol class="tranche__steps" aria-label="All tiers">
+    <ol class="tranche__tiers" aria-label="All tiers">
       <li
         v-for="fill in fills"
         :key="fill.tier.name"
-        class="tranche__step"
-        :class="{ 'tranche__step--current': fill.isCurrent, 'tranche__step--full': fill.ratio >= 1 && !fill.isCurrent }"
+        class="tranche__tier"
+        :class="{ 'tranche__tier--current': fill.isCurrent }"
       >
-        <span class="tranche__step-bar"><span :style="{ width: `${fill.ratio * 100}%` }" /></span>
-        <span class="tranche__step-label">{{ fill.tier.name }} {{ fill.tier.baseMultiplier }}x</span>
+        <span class="tranche__tier-name">
+          {{ fill.tier.name }}
+          <span v-if="fill.isCurrent" class="tranche__tag tranche__tag--now">Filling now</span>
+          <span v-else-if="fill.ratio >= 1" class="tranche__tag">Full</span>
+        </span>
+        <span class="tranche__tier-range">{{ rangeLabel(fill) }}</span>
+        <span class="tranche__tier-mult">{{ fill.tier.baseMultiplier }}x</span>
+        <span class="tranche__tier-bar" aria-hidden="true">
+          <span :style="{ width: `${barWidth(fill)}%` }" />
+        </span>
       </li>
     </ol>
+
+    <p class="tranche__fade">
+      Bonuses fade: full in year one, half in year two, a quarter in year three, then 1x.
+    </p>
   </section>
 </template>
 
@@ -64,6 +77,14 @@ const props = defineProps<{ fills: TierFill[] }>();
 const currentIndex = computed(() => Math.max(props.fills.findIndex((fill) => fill.isCurrent), 0));
 const current = computed(() => props.fills[currentIndex.value]);
 const next = computed(() => props.fills[currentIndex.value + 1]);
+
+const rangeLabel = ({ startEth, tier }: TierFill) => {
+  if (!Number.isFinite(tier.capacityEth)) return `${formatInt(startEth)} ETH and up`;
+  if (startEth === 0) return `First ${formatInt(tier.capacityEth)} ETH`;
+  return `${formatInt(startEth)} to ${formatInt(startEth + tier.capacityEth)} ETH`;
+};
+
+const barWidth = (fill: TierFill) => (fill.isCurrent ? Math.max(fill.ratio * 100, 1.5) : fill.ratio * 100);
 </script>
 
 <style scoped lang="scss">
@@ -99,6 +120,7 @@ const next = computed(() => props.fills[currentIndex.value + 1]);
     font-family: $font-mono;
     font-size: $text-xs;
     color: $color-cyan;
+    white-space: nowrap;
   }
 
   &__pulse {
@@ -106,7 +128,6 @@ const next = computed(() => props.fills[currentIndex.value + 1]);
     height: 6px;
     border-radius: 50%;
     background: $color-cyan-raw;
-    box-shadow: 0 0 0 0 $color-cyan-glow;
     animation: tranche-pulse 2s ease-out infinite;
   }
 
@@ -145,32 +166,86 @@ const next = computed(() => props.fills[currentIndex.value + 1]);
     }
   }
 
-  &__note {
+  &__note,
+  &__fade {
     margin: 0;
     font-size: $text-sm;
     line-height: 1.5;
     color: $color-subtitle;
   }
 
-  &__steps {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.5rem;
-    margin: 0.25rem 0 0;
-    padding: 1rem 0 0;
-    border-top: 1px solid $color-line;
+  &__fade {
+    font-size: $text-xs;
+  }
+
+  &__tiers {
+    display: flex;
+    flex-direction: column;
+    margin: 0.5rem 0 0;
+    padding: 0;
     list-style: none;
   }
 
-  &__step {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-width: 0;
+  &__tier {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name mult"
+      "range mult"
+      "bar bar";
+    column-gap: 1rem;
+    row-gap: 0.25rem;
+    padding: 0.875rem 0;
+    border-top: 1px solid $color-line;
   }
 
-  &__step-bar {
+  &__tier-name {
+    grid-area: name;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: $text-sm;
+    font-weight: 600;
+    color: $color-title;
+  }
+
+  &__tag {
+    font-family: $font-mono;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-subtitle;
+
+    &--now {
+      color: $color-cyan;
+    }
+  }
+
+  &__tier-range {
+    grid-area: range;
+    font-family: $font-mono;
+    font-size: $text-xs;
+    color: $color-subtitle;
+  }
+
+  &__tier-mult {
+    grid-area: mult;
+    align-self: center;
+    font-family: $font-mono;
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: $color-subtitle;
+  }
+
+  &__tier--current &__tier-mult {
+    color: $color-title;
+  }
+
+  &__tier-bar {
+    grid-area: bar;
     height: 3px;
+    margin-top: 0.5rem;
     border-radius: 2px;
     background: var(--fill-2);
     overflow: hidden;
@@ -182,29 +257,12 @@ const next = computed(() => props.fills[currentIndex.value + 1]);
     }
   }
 
-  &__step--current &__step-bar span {
+  &__tier--current &__tier-bar span {
     background: $color-primary;
-  }
-
-  &__step-label {
-    font-family: $font-mono;
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    color: $color-subtitle;
-    white-space: nowrap;
-  }
-
-  &__step--current &__step-label {
-    color: $color-title;
   }
 
   @media (max-width: $screen-sm) {
     padding: 1.5rem 1.25rem;
-
-    &__steps {
-      grid-template-columns: repeat(2, 1fr);
-      row-gap: 0.875rem;
-    }
   }
 }
 

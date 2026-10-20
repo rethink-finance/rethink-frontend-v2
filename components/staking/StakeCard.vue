@@ -39,13 +39,13 @@
         <dd>{{ principal }} {{ token }}</dd>
       </div>
       <div class="stake__row">
-        <dt>Yield routed to treasury</dt>
-        <dd>100%</dd>
+        <dt>Yield</dt>
+        <dd>Reinvested</dd>
       </div>
       <div class="stake__row">
-        <dt>You receive</dt>
+        <dt>You earn</dt>
         <dd class="stake__accent">
-          REFI · per block
+          {{ multiplier }}x points
         </dd>
       </div>
       <div class="stake__row">
@@ -65,6 +65,11 @@
       <Icon icon="mdi:arrow-right" width="1.1rem" class="ms-2" />
     </v-btn>
 
+    <button type="button" class="stake__calc" @click="emit('calculate')">
+      <Icon icon="mdi:calculator-variant-outline" width="1.125rem" />
+      Estimate what you would earn
+    </button>
+
     <p class="stake__note">
       Non-custodial. Your deposit sits in a Rethink vault on a Safe smart
       account and you hold the share token.
@@ -83,6 +88,13 @@ const token = ref<StakeToken>("ETH");
 const amount = ref<string | number>("");
 const amountInput = ref<HTMLInputElement>();
 const toastStore = useToastStore();
+
+defineProps<{
+  /** The current tier's multiplier, which a deposit made now would earn. */
+  multiplier: number;
+}>();
+
+const emit = defineEmits<{ calculate: [] }>();
 
 const principal = computed(() => {
   const value = Number(amount.value);
@@ -242,6 +254,26 @@ defineExpose({ prefill });
     text-transform: none;
     letter-spacing: 0;
     font-weight: 600;
+  }
+
+  &__calc {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: -0.25rem;
+    font-size: $text-sm;
+    font-weight: 600;
+    color: $color-cyan;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 1px solid var(--accent-line);
+      outline-offset: 2px;
+    }
   }
 
   &__note {

@@ -5,11 +5,11 @@
     <div class="emission__figures">
       <div>
         <span class="emission__value">{{ formatCompact(schedule[0]) }}</span>
-        <span class="emission__label">REFI in month 1</span>
+        <span class="emission__label">points in month 1</span>
       </div>
       <div>
         <span class="emission__value">{{ formatCompact(yearOne) }}</span>
-        <span class="emission__label">REFI in year one</span>
+        <span class="emission__label">points in year one</span>
       </div>
       <div>
         <span class="emission__value">{{ formatRate(VENTURE_STAKING.monthlyDecay) }}</span>
@@ -68,7 +68,7 @@
           :style="pointStyle(hover)"
         >
           <strong>Month {{ hover + 1 }}</strong>
-          {{ formatInt(schedule[hover]) }} REFI
+          {{ formatInt(schedule[hover]) }} points
         </span>
       </template>
     </div>
@@ -102,7 +102,7 @@ const linePath = schedule
 const areaPath = `${linePath} L71,100 L0,100 Z`;
 
 const summary =
-  `Monthly REFI emission over ${VENTURE_STAKING.emissionMonths} months, starting at ` +
+  `Monthly points emission over ${VENTURE_STAKING.emissionMonths} months, starting at ` +
   `${formatInt(peak)} and decaying ${formatRate(VENTURE_STAKING.monthlyDecay)} a month.`;
 
 const pointStyle = (month: number) => ({
