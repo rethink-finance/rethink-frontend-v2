@@ -26,6 +26,8 @@ export interface VentureYieldSource {
   position: string;
   /** Share of the asset placed here, 0..1; an asset's sources sum to 1. */
   weight: number;
+  /** Yearly yield there, a snapshot as of VENTURE_YIELD_RATES_AS_OF. */
+  apy: number;
 }
 
 /** Where an asset's yield comes from. Shown on the staking page. */
@@ -132,39 +134,60 @@ export const VENTURE_STAKING_ASSETS: VentureAsset[] = [
  * staking vault is deployed; the calculator then falls back to the assumed
  * launch pool.
  */
+/** When the venue yields below were read (DefiLlama, Ethereum mainnet). */
+export const VENTURE_YIELD_RATES_AS_OF = "2026-10-20";
+
 /**
- * The yield strategy per asset: the most conservative source for each, no
- * leverage, no bridges, no restaking.
- * TODO: confirm venues and weights with the strategy owner before launch.
+ * The yield strategy per asset: the deepest blue-chip venues only, no
+ * leverage, no bridges, no restaking. No protocol holds more than about 40%
+ * of an asset, and each asset keeps a liquid slice so withdrawals at a
+ * settlement cycle never wait on an exit queue.
+ * TODO: confirm with the strategy owner before launch; re-read the rates.
  */
 export const VENTURE_STAKING_YIELD_STRATEGIES: Record<VentureAsset["symbol"], VentureYieldStrategy> = {
-  // TODO: the weights are illustrative; set them from the live allocation.
   ETH: {
     label: "Liquid staking",
     sources: [
-      { name: "Lido", logo: "lido", position: "stETH", weight: 0.4 },
-      { name: "Rocket Pool", logo: "rocket-pool", position: "rETH", weight: 0.25 },
-      { name: "Coinbase", logo: "coinbase-wrapped-staked-eth", position: "cbETH", weight: 0.2 },
-      { name: "Own validators", position: "Native ETH", weight: 0.15 },
+      // The deepest liquid staking token; held under 40% to spread operator risk.
+      { name: "Lido", logo: "lido", position: "stETH", weight: 0.35, apy: 0.0223 },
+      // A regulated operator on a different validator set.
+      { name: "Coinbase", logo: "coinbase-wrapped-staked-eth", position: "cbETH", weight: 0.2, apy: 0.0229 },
+      // The most decentralised operator set.
+      { name: "Rocket Pool", logo: "rocket-pool", position: "rETH", weight: 0.2, apy: 0.0189 },
+      // No protocol fee; estimated from Lido's gross rate before its 10% cut.
+      { name: "Own validators", position: "Native ETH", weight: 0.15, apy: 0.0245 },
+      // The liquid slice: pays out withdrawals without waiting on exit queues.
+      { name: "Aave v3", logo: "aave-v3", position: "aEthWETH", weight: 0.1, apy: 0.0131 },
     ],
   },
   WBTC: {
-    label: "Blue-chip lending",
+    // BTC lending pays almost nothing (few borrow BTC); a pegged BTC pair adds
+    // swap fees without price risk, at the cost of exposure to cbBTC.
+    label: "Pegged BTC liquidity",
     sources: [
-      { name: "Aave v3", logo: "aave-v3", position: "aEthWBTC", weight: 0.6 },
-      { name: "SparkLend", logo: "sparklend", position: "spWBTC", weight: 0.4 },
+      { name: "Fluid", logo: "fluid", position: "WBTC/cbBTC LP", weight: 0.6, apy: 0.0031 },
+      // The liquid slice.
+      { name: "Aave v3", logo: "aave-v3", position: "aEthWBTC", weight: 0.4, apy: 0.0001 },
     ],
   },
   USDC: {
     label: "Money market",
     sources: [
-      { name: "Spark Savings", logo: "spark-savings", position: "sUSDC", weight: 0.35 },
-      { name: "Aave v3", logo: "aave-v3", position: "aEthUSDC", weight: 0.3 },
-      { name: "Morpho", logo: "morpho-blue", position: "steakUSDC", weight: 0.2 },
-      { name: "Compound v3", logo: "compound-v3", position: "cUSDCv3", weight: 0.15 },
+      // Sky's savings rate, backed by T-bills and over-collateralised loans; instant exit.
+      { name: "Spark Savings", logo: "spark-savings", position: "sUSDC", weight: 0.35, apy: 0.038 },
+      // The deepest USDC lending market; the liquid slice.
+      { name: "Aave v3", logo: "aave-v3", position: "aEthUSDC", weight: 0.25, apy: 0.0379 },
+      // Steakhouse's curated vault: only blue-chip collateral.
+      { name: "Morpho", logo: "morpho-blue", position: "steakUSDC", weight: 0.25, apy: 0.0447 },
+      // The highest blue-chip rate; held smallest as the youngest venue.
+      { name: "Fluid", logo: "fluid", position: "fUSDC", weight: 0.15, apy: 0.0564 },
     ],
   },
 };
+
+/** An asset's yield across its venues, weighted by allocation. */
+export const blendedApy = (symbol: VentureAsset["symbol"]) =>
+  VENTURE_STAKING_YIELD_STRATEGIES[symbol].sources.reduce((sum, source) => sum + source.weight * source.apy, 0);
 
 export const VENTURE_STAKING_VAULT = {
   chainId: ChainId.ETHEREUM,

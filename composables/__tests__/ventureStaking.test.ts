@@ -13,6 +13,7 @@ import {
   VENTURE_STAKING,
   VENTURE_STAKING_ASSETS,
   VENTURE_STAKING_YIELD_STRATEGIES,
+  blendedApy,
 } from "../staking/ventureStakingConfig";
 import { buybackProjection, emissionShareInYear, revenueBreakdown } from "../staking/revenueShare";
 import { ribbonPath, yieldFlowBands } from "../staking/yieldFlow";
@@ -287,5 +288,16 @@ describe("buybacks", () => {
   it("returns null for empty inputs", () => {
     expect(buybackProjection({ startAumUsd: 0, growth: 0.5, fdvMillions: 40 })).toBeNull();
     expect(buybackProjection({ startAumUsd: 1e8, growth: NaN, fdvMillions: 40 })).toBeNull();
+  });
+});
+
+describe("blendedApy", () => {
+  it("weights each venue's rate by its allocation", () => {
+    for (const symbol of ["ETH", "WBTC", "USDC"] as const) {
+      const expected = VENTURE_STAKING_YIELD_STRATEGIES[symbol].sources
+        .reduce((sum, source) => sum + source.weight * source.apy, 0);
+      expect(blendedApy(symbol)).toBeCloseTo(expected);
+    }
+    expect(blendedApy("ETH")).toBeGreaterThan(blendedApy("WBTC"));
   });
 });

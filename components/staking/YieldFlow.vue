@@ -82,6 +82,7 @@
       >
         <strong>{{ rows[active].amountLabel }} {{ asset.symbol }}</strong>
         {{ formatUsdCompact(rows[active].usd) }} in {{ rows[active].source.name }}
+        <span>earning ~{{ formatRate(rows[active].source.apy) }} a year</span>
       </p>
     </div>
   </div>
@@ -91,6 +92,7 @@
 import {
   formatAmount,
   formatCompact,
+  formatRate,
   formatUsdCompact,
 } from "~/composables/staking/formatStaking";
 import type {
