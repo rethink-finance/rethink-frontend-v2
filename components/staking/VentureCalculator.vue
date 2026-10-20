@@ -9,139 +9,150 @@
     >
       <span class="calc__head-text">
         <span id="calc-title" class="calc__eyebrow">Venture staking calculator</span>
-        <span v-if="!isOpen" class="calc__teaser">{{ teaser }}</span>
+        <span class="calc__teaser">{{ teaser }}</span>
       </span>
-      <Icon :icon="isOpen ? 'mdi:chevron-up' : 'mdi:chevron-down'" width="1.25rem" class="calc__chevron" />
+      <span class="calc__head-action">
+        {{ isOpen ? "Close" : "Open" }}
+        <Icon :icon="isOpen ? 'mdi:chevron-up' : 'mdi:chevron-down'" width="1.25rem" />
+      </span>
     </button>
 
     <div v-show="isOpen" id="calc-body">
-      <div class="calc__inputs">
-        <div class="calc__field">
-          <label class="calc__label" for="calc-amount">
-            <span class="calc__step">01</span> I stake
-          </label>
-          <div class="calc__eth-row">
-            <input
-              id="calc-amount"
-              v-model="amountInput"
-              class="calc__eth"
-              type="number"
-              inputmode="decimal"
-              :min="asset.min"
-              :step="asset.step"
-            >
-            <div class="calc__assets" role="group" aria-label="Asset to stake">
-              <button
-                v-for="option in VENTURE_STAKING_ASSETS"
-                :key="option.symbol"
-                type="button"
-                class="calc__asset"
-                :class="{ 'calc__asset--active': option.symbol === asset.symbol }"
-                :aria-pressed="option.symbol === asset.symbol"
-                @click="selectAsset(option)"
+      <div class="calc__grid">
+        <div class="calc__inputs">
+          <div class="calc__field">
+            <label class="calc__label" for="calc-amount">
+              <span class="calc__step">01</span> I stake
+            </label>
+            <div class="calc__amount-row">
+              <input
+                id="calc-amount"
+                v-model="amountInput"
+                class="calc__amount"
+                type="number"
+                inputmode="decimal"
+                :min="asset.min"
+                :step="asset.step"
               >
-                {{ option.symbol }}
+              <div class="calc__assets" role="group" aria-label="Asset to stake">
+                <button
+                  v-for="option in VENTURE_STAKING_ASSETS"
+                  :key="option.symbol"
+                  type="button"
+                  class="calc__asset"
+                  :class="{ 'calc__asset--active': option.symbol === asset.symbol }"
+                  :aria-pressed="option.symbol === asset.symbol"
+                  @click="selectAsset(option)"
+                >
+                  {{ option.symbol }}
+                </button>
+              </div>
+            </div>
+            <!-- Keyed per asset: patching min/max after the value would clamp it
+                 against the previous asset's range. -->
+            <input
+              :key="asset.symbol"
+              v-model.number="slider"
+              class="calc__slider"
+              type="range"
+              :min="asset.sliderMin"
+              :max="asset.sliderMax"
+              :step="asset.sliderStep"
+              :aria-label="`${asset.symbol} to stake`"
+              :style="{ '--fill': sliderFill }"
+            >
+          </div>
+
+          <div class="calc__field">
+            <span id="calc-fdv" class="calc__label">
+              <span class="calc__step">02</span> FDV at TGE
+            </span>
+            <div class="calc__fdv" role="group" aria-labelledby="calc-fdv">
+              <button
+                v-for="scenario in VENTURE_STAKING.fdvScenarios"
+                :key="scenario.fdvMillions"
+                type="button"
+                class="calc__fdv-option"
+                :class="{ 'calc__fdv-option--active': scenario.fdvMillions === fdv }"
+                :aria-pressed="scenario.fdvMillions === fdv"
+                @click="fdv = scenario.fdvMillions"
+              >
+                <span class="calc__fdv-value">${{ scenario.fdvMillions }}M</span>
+                <span class="calc__fdv-label">{{ scenario.label }}</span>
               </button>
             </div>
           </div>
-          <!-- Keyed per asset: patching min/max after the value would clamp it
-               against the previous asset's range. -->
-          <input
-            :key="asset.symbol"
-            v-model.number="slider"
-            class="calc__slider"
-            type="range"
-            :min="asset.sliderMin"
-            :max="asset.sliderMax"
-            :step="asset.sliderStep"
-            :aria-label="`${asset.symbol} to stake`"
-            :style="{ '--fill': sliderFill }"
-          >
         </div>
 
-        <div class="calc__field">
-          <span id="calc-fdv" class="calc__label">
-            <span class="calc__step">02</span> FDV at TGE
-          </span>
-          <div class="calc__fdv" role="group" aria-labelledby="calc-fdv">
-            <button
-              v-for="scenario in VENTURE_STAKING.fdvScenarios"
-              :key="scenario.fdvMillions"
-              type="button"
-              class="calc__fdv-option"
-              :class="{ 'calc__fdv-option--active': scenario.fdvMillions === fdv }"
-              :aria-pressed="scenario.fdvMillions === fdv"
-              @click="fdv = scenario.fdvMillions"
+        <div class="calc__result" aria-live="polite">
+          <span class="calc__caption">Your REFI after the first year would be worth</span>
+          <div class="calc__hero">
+            {{ projection ? formatUsd(projection.valueUsd) : DASH }}
+          </div>
+          <p class="calc__subline">
+            <template v-if="projection">
+              You enter the <strong>{{ projection.tier.name }} tier at {{ projection.tier.baseMultiplier }}x</strong>.
+              In the ${{ fdv }}M scenario that is
+              <strong>{{ formatMultiple(projection.multipleVsYield) }}</strong>
+              the {{ asset.yieldLabel }} you give up.
+            </template>
+            <template v-else>
+              Enter how much {{ asset.symbol }} you would stake.
+            </template>
+          </p>
+
+          <div class="calc__stats">
+            <div class="calc__stat">
+              <span class="calc__stat-value">
+                {{ projection ? `${formatCompact(projection.refi12)} REFI` : DASH }}
+              </span>
+              <span class="calc__stat-label">REFI you earn</span>
+            </div>
+            <span class="calc__multiple">
+              {{ projection ? formatMultiple(projection.multipleVsYield) : DASH }}
+            </span>
+            <div class="calc__stat">
+              <span class="calc__stat-value">
+                <template v-if="projection">
+                  {{ formatAmount(projection.yieldRedirected, asset.displayDecimals) }} {{ asset.symbol }}
+                  · {{ formatUsd(projection.yieldRedirectedUsd) }}
+                </template>
+                <template v-else>
+                  {{ DASH }}
+                </template>
+              </span>
+              <span class="calc__stat-label">{{ asset.yieldLabel }} you redirect in a year</span>
+            </div>
+          </div>
+
+          <p class="calc__reassure">
+            <span class="calc__dot" aria-hidden="true" />
+            <span>
+              <strong>Your {{ asset.symbol }} never leaves your control.</strong>
+              It sits in a non-custodial vault you can exit at any time; only the yield moves.
+            </span>
+          </p>
+
+          <div class="calc__ctas">
+            <v-btn
+              color="primary"
+              size="large"
+              class="calc__btn"
+              @click="emit('stake', asset.symbol, amount)"
             >
-              <span class="calc__fdv-value">${{ scenario.fdvMillions }}M</span>
-              <span class="calc__fdv-label">{{ scenario.label }}</span>
-            </button>
+              Stake {{ asset.symbol }}
+            </v-btn>
+            <v-btn
+              variant="outlined"
+              size="large"
+              class="calc__btn calc__btn--ghost"
+              :href="VENTURE_STAKING_TERMS_URL"
+              target="_blank"
+              rel="noopener"
+            >
+              Read the full terms
+            </v-btn>
           </div>
-        </div>
-      </div>
-
-      <div class="calc__result" aria-live="polite">
-        <span class="calc__caption">Your REFI after the first year would be worth</span>
-        <div class="calc__hero">
-          {{ projection ? formatUsd(projection.valueUsd) : DASH }}
-        </div>
-        <p class="calc__subline">
-          <template v-if="projection">
-            You enter the <strong>{{ projection.tier.name }} tier at {{ projection.tier.baseMultiplier }}x</strong>.
-            In the ${{ fdv }}M scenario that is
-            <strong>{{ formatMultiple(projection.multipleVsYield) }}</strong>
-            the {{ asset.yieldLabel }} you give up.
-          </template>
-          <template v-else>
-            Enter how much {{ asset.symbol }} you would stake.
-          </template>
-        </p>
-
-        <div class="calc__stats">
-          <div class="calc__stat">
-            <span class="calc__stat-value">
-              {{ projection ? `${formatCompact(projection.refi12)} REFI` : DASH }}
-            </span>
-            <span class="calc__stat-label">REFI you earn</span>
-          </div>
-          <span class="calc__multiple">
-            {{ projection ? formatMultiple(projection.multipleVsYield) : DASH }}
-          </span>
-          <div class="calc__stat">
-            <span class="calc__stat-value">
-              <template v-if="projection">
-                {{ formatAmount(projection.yieldRedirected) }} {{ asset.symbol }} · {{ formatUsd(projection.yieldRedirectedUsd) }}
-              </template>
-              <template v-else>{{ DASH }}</template>
-            </span>
-            <span class="calc__stat-label">{{ asset.yieldLabel }} you redirect in a year</span>
-          </div>
-        </div>
-
-        <div class="calc__reassure">
-          <strong><span class="calc__dot" aria-hidden="true" />Your {{ asset.symbol }} never leaves your control.</strong>
-          <span>It sits in a non-custodial vault you can exit at any time; only the yield moves.</span>
-        </div>
-
-        <div class="calc__ctas">
-          <v-btn
-            color="primary"
-            size="large"
-            class="calc__btn"
-            @click="emit('stake', asset.symbol, amount)"
-          >
-            Stake {{ asset.symbol }}
-          </v-btn>
-          <v-btn
-            variant="outlined"
-            size="large"
-            class="calc__btn calc__btn--ghost"
-            :href="VENTURE_STAKING_TERMS_URL"
-            target="_blank"
-            rel="noopener"
-          >
-            Read the full terms
-          </v-btn>
         </div>
       </div>
 
@@ -171,7 +182,7 @@
           </div>
           <div v-if="asset.symbol !== 'ETH'" class="calc__breakdown-row">
             <dt>Counts toward the pool as</dt>
-            <dd>{{ projection ? `${formatEth(projection.ethEquivalent)} ETH` : DASH }}</dd>
+            <dd>{{ projection ? `${formatAmount(projection.ethEquivalent)} ETH` : DASH }}</dd>
           </div>
           <div class="calc__breakdown-row">
             <dt>Month-1 share</dt>
@@ -192,28 +203,6 @@
         </dl>
       </div>
 
-      <div class="calc__tranche">
-        <div class="calc__tranche-head">
-          <span>Founding tranche</span>
-          <span class="calc__tranche-count">
-            {{ formatInt(foundingFilled) }} / {{ formatInt(foundingCapacity) }} ETH
-          </span>
-        </div>
-        <div
-          class="calc__bar"
-          role="progressbar"
-          :aria-valuenow="foundingFilled"
-          aria-valuemin="0"
-          :aria-valuemax="foundingCapacity"
-          aria-label="Founding tranche filled"
-        >
-          <span :style="{ width: `${(foundingFilled / foundingCapacity) * 100}%` }" />
-        </div>
-        <span class="calc__tranche-note">
-          The first {{ formatInt(foundingCapacity) }} ETH earns {{ foundingMultiplier }}x for the first year.
-        </span>
-      </div>
-
       <p class="calc__fine">
         A projection, not a promise. Pool size: {{ poolSentence }}, held there for 12 months with no
         new deposits. ETH at {{ formatUsd(VENTURE_STAKING.ethPriceUsd) }} with a
@@ -222,16 +211,24 @@
           {{ asset.symbol }} at {{ formatUsd(asset.priceUsd) }} with a {{ formatRate(asset.yieldRate) }} yield,
           counted toward the ETH tiers at that value.
         </template>
-        Emissions start near
-        {{ formatInt(monthOneEmission()) }} REFI a month and decay {{ formatRate(VENTURE_STAKING.monthlyDecay) }}
-        monthly over {{ VENTURE_STAKING.emissionMonths }} months. Tier bonuses halve after month 12 and
-        end after month 36. REFI has no market price before TGE; the FDV scenarios are illustrations.
+        Emissions start near {{ formatInt(monthOneEmission()) }} REFI a month and decay
+        {{ formatRate(VENTURE_STAKING.monthlyDecay) }} monthly over {{ VENTURE_STAKING.emissionMonths }} months.
+        Tier bonuses halve after month 12 and end after month 36. REFI has no market price before TGE;
+        the FDV scenarios are illustrations.
       </p>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import {
+  DASH,
+  formatAmount,
+  formatCompact,
+  formatInt,
+  formatRate,
+  formatUsd,
+} from "~/composables/staking/formatStaking";
 import {
   monthOneEmission,
   projectVentureStake,
@@ -244,13 +241,11 @@ import {
 } from "~/composables/staking/ventureStakingConfig";
 
 const props = defineProps<{
-  /** ETH staked in the vault now; 0 before launch or when the read fails. */
-  livePoolEth: number;
+  /** ETH (at ETH value) in the pool now; 0 before launch or when the read fails. */
+  poolEth: number;
 }>();
 
 const emit = defineEmits<{ stake: [symbol: VentureAsset["symbol"], amount: number] }>();
-
-const DASH = "–";
 
 const isOpen = ref(false);
 const asset = ref<VentureAsset>(VENTURE_STAKING_ASSETS[0]);
@@ -290,74 +285,45 @@ const projection = computed(() =>
   projectVentureStake({
     asset: asset.value,
     amount: amount.value,
-    livePoolEth: props.livePoolEth,
+    livePoolEth: props.poolEth,
     fdvMillions: fdv.value,
   }),
 );
 
 const teaser = computed(() =>
   projection.value
-    ? `${formatAmount(amount.value)} ${asset.value.symbol} could earn ${formatUsd(projection.value.valueUsd)} of REFI in year one`
+    ? `${formatAmount(amount.value, asset.value.displayDecimals)} ${asset.value.symbol} could earn ` +
+      `${formatUsd(projection.value.valueUsd)} of REFI in year one`
     : "Project what your stake could earn in REFI",
 );
 
 const pricePerRefi = computed(() => (fdv.value * 1e6) / VENTURE_STAKING.supply);
 
-const founding = VENTURE_STAKING.tiers[0];
-const foundingCapacity = founding.capacityEth;
-const foundingMultiplier = founding.baseMultiplier;
-const foundingFilled = computed(() =>
-  Math.min(Math.max(props.livePoolEth || 0, 0), foundingCapacity),
-);
-
 const poolSentence = computed(() =>
-  props.livePoolEth > 0
-    ? `${formatInt(props.livePoolEth)} ETH staked so far`
+  props.poolEth > 0
+    ? `${formatInt(props.poolEth)} ETH staked so far`
     : `${formatInt(VENTURE_STAKING.assumedLaunchPoolEth)} ETH assumed at launch`,
 );
 
-const formatInt = (value: number) =>
-  Math.round(value).toLocaleString("en-US");
-
-const formatUsd = (value: number) =>
-  value >= 1e6
-    ? `$${(value / 1e6).toFixed(2)}M`
-    : `$${formatInt(value)}`;
-
 const formatPrice = (value: number) => `$${value.toFixed(2)}`;
-
-const formatCompact = (value: number) =>
-  new Intl.NumberFormat("en-US", {
-    notation: "compact",
-    maximumFractionDigits: 1,
-  }).format(value);
-
-const formatAmount = (value: number) =>
-  value.toLocaleString("en-US", { maximumFractionDigits: asset.value.displayDecimals });
-
-const formatEth = (value: number) =>
-  value.toLocaleString("en-US", { maximumFractionDigits: 3 });
-
-/** 0.035 -> "3.5%", without the float tail that `* 100` leaves. */
-const formatRate = (rate: number) => `${Number((rate * 100).toFixed(2))}%`;
 
 const formatShare = (share: number) =>
   `${(share * 100).toFixed(share < 0.01 ? 2 : 1)}%`;
 
 const formatMultiple = (multiple: number) =>
   `${multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)}x`;
+
+defineExpose({ open: () => { isOpen.value = true; } });
 </script>
 
 <style scoped lang="scss">
 .calc {
-  position: relative;
   display: flex;
   flex-direction: column;
   border: 1px solid $color-line;
   border-radius: $default-border-radius;
   background: $color-surface;
   box-shadow: var(--shadow-card);
-  overflow: hidden;
 
   &__head {
     display: flex;
@@ -373,8 +339,9 @@ const formatMultiple = (multiple: number) =>
       outline-offset: -2px;
     }
 
-    &:hover .calc__chevron {
+    &:hover .calc__head-action {
       color: $color-title;
+      border-color: $color-line-3;
     }
   }
 
@@ -385,15 +352,106 @@ const formatMultiple = (multiple: number) =>
     min-width: 0;
   }
 
+  &__eyebrow {
+    @include card-title;
+  }
+
   &__teaser {
     font-size: $text-sm;
     color: $color-subtitle;
   }
 
-  &__chevron {
+  &__head-action {
+    display: inline-flex;
     flex-shrink: 0;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.5rem 0.375rem 0.75rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    font-size: $text-sm;
     color: $color-subtitle;
-    transition: color $default-transition-time;
+    transition: color $default-transition-time, border-color $default-transition-time;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    border-top: 1px solid $color-line;
+
+    @media (max-width: $screen-lg) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  &__inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    padding: 1.875rem;
+    border-right: 1px solid $color-line;
+
+    @media (max-width: $screen-lg) {
+      border-right: 0;
+      border-bottom: 1px solid $color-line;
+    }
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    font-size: $text-md;
+    font-weight: 600;
+    color: $color-title;
+  }
+
+  &__step {
+    font-family: $font-mono;
+    font-size: 11px;
+    font-weight: 400;
+    color: $color-subtitle;
+  }
+
+  &__amount-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+  }
+
+  &__amount {
+    width: 11rem;
+    max-width: 100%;
+    // Out-states the global `:root input` height and padding.
+    min-height: 0;
+    height: auto;
+    padding: 0 0 0.375rem;
+    border-bottom: 1px solid $color-line-2;
+    font-family: $font-mono;
+    font-size: 2.5rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: $color-title;
+    outline: none;
+    -moz-appearance: textfield;
+    transition: border-color $default-transition-time;
+
+    &:focus {
+      border-color: $color-primary;
+    }
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
   }
 
   &__assets {
@@ -426,75 +484,6 @@ const formatMultiple = (multiple: number) =>
     &--active {
       background: var(--fill-2);
       color: $color-title;
-    }
-  }
-
-  &__eyebrow {
-    @include card-title;
-  }
-
-  &__inputs {
-    display: flex;
-    flex-direction: column;
-    gap: 1.75rem;
-    padding: 0 1.875rem 1.875rem;
-    border-bottom: 1px solid $color-line;
-  }
-
-  &__field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  &__label {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    font-size: $text-md;
-    font-weight: 600;
-    color: $color-title;
-  }
-
-  &__step {
-    font-family: $font-mono;
-    font-size: 11px;
-    font-weight: 400;
-    color: $color-subtitle;
-  }
-
-  &__eth-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 1rem;
-  }
-
-  &__eth {
-    width: 11rem;
-    max-width: 100%;
-    // Out-states the global `:root input` height and padding.
-    min-height: 0;
-    height: auto;
-    padding: 0 0 0.375rem;
-    border-bottom: 1px solid $color-line-2;
-    font-family: $font-mono;
-    font-size: 2.5rem;
-    font-weight: 600;
-    line-height: 1.1;
-    color: $color-title;
-    outline: none;
-    -moz-appearance: textfield;
-    transition: border-color $default-transition-time;
-
-    &:focus {
-      border-color: $color-primary;
-    }
-
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
     }
   }
 
@@ -598,7 +587,7 @@ const formatMultiple = (multiple: number) =>
 
   &__hero {
     font-family: $font-mono;
-    font-size: clamp(2.5rem, 7vw, 3.5rem);
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.02em;
@@ -621,7 +610,7 @@ const formatMultiple = (multiple: number) =>
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 1rem;
-    margin-top: 0.75rem;
+    margin-top: 0.5rem;
     padding: 1rem 1.25rem;
     border: 1px solid $color-line;
     border-radius: $default-border-radius;
@@ -655,37 +644,33 @@ const formatMultiple = (multiple: number) =>
   }
 
   &__reassure {
-    display: grid;
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
-    gap: 1rem;
-    margin-top: 0.5rem;
+    display: flex;
+    gap: 0.625rem;
+    margin: 0.25rem 0 0;
     font-size: $text-sm;
     line-height: 1.5;
+    color: $color-subtitle;
 
     strong {
       color: $color-title;
-    }
-
-    span {
-      color: $color-subtitle;
+      font-weight: 600;
     }
   }
 
   &__dot {
-    display: inline-block;
+    flex-shrink: 0;
     width: 6px;
     height: 6px;
-    margin: 0 0.625rem 0.125rem 0;
+    margin-top: 0.5rem;
     border-radius: 50%;
     background: $color-cyan-raw;
-    vertical-align: middle;
   }
 
   &__ctas {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
-    margin-top: 0.75rem;
+    margin-top: 0.5rem;
   }
 
   &__btn {
@@ -752,49 +737,10 @@ const formatMultiple = (multiple: number) =>
     color: $color-title;
   }
 
-  &__tranche {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 1.25rem 1.875rem;
-    border-top: 1px solid $color-line;
-    font-size: $text-sm;
-  }
-
-  &__tranche-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    color: $color-title;
-    font-weight: 600;
-  }
-
-  &__tranche-count {
-    font-family: $font-mono;
-    font-weight: 400;
-  }
-
-  &__bar {
-    height: 6px;
-    border-radius: 3px;
-    background: var(--fill-2);
-    overflow: hidden;
-
-    span {
-      display: block;
-      height: 100%;
-      background: $color-primary;
-    }
-  }
-
-  &__tranche-note {
-    font-size: $text-xs;
-    color: $color-subtitle;
-  }
-
   &__fine {
     margin: 0;
-    padding: 0 1.875rem 1.5rem;
+    padding: 1.25rem 1.875rem 1.5rem;
+    border-top: 1px solid $color-line;
     font-size: $text-xs;
     line-height: 1.6;
     color: $color-subtitle;
@@ -803,10 +749,15 @@ const formatMultiple = (multiple: number) =>
   @media (max-width: $screen-sm) {
     &__head,
     &__inputs,
-    &__result,
-    &__tranche {
+    &__result {
       padding-left: 1.25rem;
       padding-right: 1.25rem;
+    }
+
+    &__head-action {
+      font-size: 0;
+      padding: 0.375rem;
+      gap: 0;
     }
 
     &__toggle {
@@ -825,11 +776,6 @@ const formatMultiple = (multiple: number) =>
 
     &__multiple {
       order: -1;
-    }
-
-    &__reassure {
-      grid-template-columns: 1fr;
-      gap: 0.25rem;
     }
 
     &__btn {

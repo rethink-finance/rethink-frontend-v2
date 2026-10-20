@@ -167,3 +167,44 @@ export const projectVentureStaking = (
   },
   program,
 );
+
+/** REFI emitted in each month of the program, month 0 first. */
+export const emissionSchedule = (program: VentureStakingProgram = VENTURE_STAKING) => {
+  const e0 = monthOneEmission(program);
+  return Array.from(
+    { length: program.emissionMonths },
+    (_, month) => e0 * (1 - program.monthlyDecay) ** month,
+  );
+};
+
+export interface TierFill {
+  tier: VentureTier;
+  /** Pool position where the tier starts, in ETH. */
+  startEth: number;
+  filledEth: number;
+  /** 0..1; the open tier reads 0 until something lands in it, then 1. */
+  ratio: number;
+  isCurrent: boolean;
+}
+
+/** How full each tier is for a pool of `poolEth`, and which one a new deposit enters. */
+export const tierFills = (
+  poolEth: number,
+  program: VentureStakingProgram = VENTURE_STAKING,
+): TierFill[] => {
+  const pool = Number.isFinite(poolEth) && poolEth > 0 ? poolEth : 0;
+  const current = tierAt(pool, program);
+  let start = 0;
+  return program.tiers.map((tier) => {
+    const filledEth = Math.min(Math.max(pool - start, 0), tier.capacityEth);
+    const fill = {
+      tier,
+      startEth: start,
+      filledEth,
+      ratio: Number.isFinite(tier.capacityEth) ? filledEth / tier.capacityEth : filledEth > 0 ? 1 : 0,
+      isCurrent: tier === current,
+    };
+    start += tier.capacityEth;
+    return fill;
+  });
+};

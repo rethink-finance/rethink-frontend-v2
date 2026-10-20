@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   effectiveMultiplier,
+  emissionSchedule,
   monthOneEmission,
   projectVentureStake,
   projectVentureStaking,
   tierAt,
+  tierFills,
   weightedPool,
 } from "../staking/ventureStaking";
 import { VENTURE_STAKING, VENTURE_STAKING_ASSETS } from "../staking/ventureStakingConfig";
@@ -171,5 +173,31 @@ describe("projectVentureStake with WBTC and USDC", () => {
 
   it("returns null for an empty amount", () => {
     expect(projectVentureStake({ asset: usdc, amount: NaN, livePoolEth: 0, fdvMillions: 40 })).toBeNull();
+  });
+});
+
+describe("emissionSchedule", () => {
+  it("lists 72 decaying months that sum to the allocation", () => {
+    const schedule = emissionSchedule();
+    expect(schedule).toHaveLength(72);
+    near(schedule[0], 758_320);
+    expect(schedule[1] / schedule[0]).toBeCloseTo(0.965);
+    near(schedule.reduce((a, b) => a + b, 0), 20_000_000);
+  });
+});
+
+describe("tierFills", () => {
+  it("fills tiers in order and marks the one a new deposit enters", () => {
+    const fills = tierFills(2_400);
+    expect(fills.map((f) => f.filledEth)).toEqual([2_000, 400, 0, 0]);
+    expect(fills[1].ratio).toBeCloseTo(400 / 3_000);
+    expect(fills.map((f) => f.isCurrent)).toEqual([false, true, false, false]);
+    expect(fills[2].startEth).toBe(5_000);
+  });
+
+  it("treats an empty or failed read as a fresh pool", () => {
+    const fills = tierFills(NaN);
+    expect(fills[0].isCurrent).toBe(true);
+    expect(fills.every((f) => f.filledEth === 0)).toBe(true);
   });
 });

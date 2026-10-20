@@ -131,3 +131,23 @@ export const VENTURE_STAKING_VAULT = {
 } as const;
 
 export const VENTURE_STAKING_TERMS_URL = "https://docs.rethink.finance/rethink.finance";
+
+/**
+ * Sample figures the page shows while the vault is not deployed, so the
+ * design can be judged with numbers in it. Flagged as preview data in the UI
+ * and dropped automatically once VENTURE_STAKING_VAULT.address is set.
+ */
+export const VENTURE_STAKING_PREVIEW = {
+  /** Days since launch, which places the emission curve's marker. */
+  daysLive: 45,
+  holdings: { ETH: 1_050, WBTC: 3.1, USDC: 261_000 },
+  yieldGeneratedEth: 4.6,
+  refiDistributed: 1_123_400,
+  stakers: 214,
+  position: {
+    symbol: "ETH" as const,
+    amount: 12,
+    yieldRedirected: 0.044,
+    refiEarned: 10_842.37,
+  },
+};
