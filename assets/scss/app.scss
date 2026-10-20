@@ -87,6 +87,49 @@ a {
  * because the vault overview stacks half a dozen of these and they have to
  * agree on padding to the pixel.
  */
+/*
+ * A faint grid behind the top of a page, fading out before the content: the
+ * backdrop of vault pages. The --glow modifier adds a blue light on top, for
+ * the pages that should stand out (venture staking).
+ */
+.grid_backdrop {
+  position: relative;
+  isolation: isolate;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -4rem;
+    /* Exactly the window's width, from its left edge (the column is
+       centred), so it reaches both edges without overhanging either. */
+    left: calc(50% - 50vw);
+    width: 100vw;
+    z-index: -1;
+    height: 34rem;
+    background:
+      linear-gradient($color-line 1px, transparent 1px) 0 0 / 48px 48px,
+      linear-gradient(90deg, $color-line 1px, transparent 1px) 0 0 / 48px 48px;
+    mask-image: radial-gradient(60rem 26rem at 50% 30%, #000 30%, transparent 75%);
+    pointer-events: none;
+  }
+
+  &--glow::after {
+    content: "";
+    position: absolute;
+    top: -6rem;
+    /* Exactly the window's width, from its left edge (the column is
+       centred), so it reaches both edges without overhanging either. */
+    left: calc(50% - 50vw);
+    width: 100vw;
+    z-index: -1;
+    height: 40rem;
+    background:
+      radial-gradient(44rem 22rem at 70% 26%, var(--glow-blue), transparent 70%),
+      radial-gradient(28rem 16rem at 22% 6%, var(--glow-cyan), transparent 70%);
+    pointer-events: none;
+  }
+}
+
 .brand_card {
   padding: 1.75rem 1.875rem;
   border: 1px solid $color-line;
