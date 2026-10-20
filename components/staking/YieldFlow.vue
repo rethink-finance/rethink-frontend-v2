@@ -45,7 +45,7 @@
         type="button"
         class="flow__venue"
         :class="{ 'flow__venue--dim': active !== null && active !== index }"
-        :style="labelStyle(COLUMNS[1], bands[index].to)"
+        :style="{ ...labelStyle(COLUMNS[1], bands[index].to), maxWidth: `calc(${COLUMNS[2] - COLUMNS[1]}% - 22px)` }"
         :aria-label="`${row.source.name}: ${row.pct} of ${asset.symbol}, into ${row.source.position}`"
         @mouseenter="active = index"
         @focus="active = index"
@@ -113,7 +113,9 @@ const GAP = 10;
  */
 const canvas = ref<HTMLElement>();
 const isNarrow = ref(false);
-const COLUMNS = computed(() => (isNarrow.value ? [0, 30, 64] : [0, 38, 74]));
+// The last column holds short token names (stETH, steakUSDC), so it only
+// gets the room they need and the ribbons take the rest.
+const COLUMNS = computed(() => (isNarrow.value ? [0, 32, 70] : [0, 42, 84]));
 
 let observer: ResizeObserver | undefined;
 onMounted(() => {
@@ -250,7 +252,6 @@ const nodeClass = (index: number) => ({
     display: inline-flex;
     align-items: center;
     gap: 0.4375rem;
-    max-width: calc(34% - 18px);
     transform: translateY(-50%);
     font-size: $text-sm;
     color: $color-title;
