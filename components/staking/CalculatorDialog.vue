@@ -25,7 +25,12 @@
         </button>
       </div>
       <div class="brand_modal__body calc_dialog__body">
-        <StakingVentureCalculator :pool-usd="poolUsd" :pool-yield-weight="poolYieldWeight" @stake="onStake" />
+        <StakingVentureCalculator
+          :pool-usd="poolUsd"
+          :pool-yield-weight="poolYieldWeight"
+          :initial-symbol="selected"
+          @stake="onStake"
+        />
       </div>
     </div>
   </v-dialog>
@@ -38,6 +43,8 @@ defineProps<{
   modelValue: boolean;
   poolUsd: number;
   poolYieldWeight: number;
+  /** The asset picked in the deposit card; the calculator opens on it. */
+  selected: VentureAsset["symbol"];
 }>();
 
 const emit = defineEmits<{

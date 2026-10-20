@@ -82,6 +82,7 @@
       v-model="isCalculatorOpen"
       :pool-usd="poolUsd"
       :pool-yield-weight="poolYieldWeight"
+      :selected="selectedAsset"
       @stake="onCalculatorStake"
     />
   </div>
