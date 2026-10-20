@@ -18,6 +18,12 @@
       </div>
     </div>
 
+    <ul class="sources__guarantees" aria-label="Guarantees">
+      <li><Icon icon="mdi:scale-balance" width="1rem" />No leverage</li>
+      <li><Icon icon="mdi:link-variant-off" width="1rem" />No bridges</li>
+      <li><Icon icon="mdi:layers-off-outline" width="1rem" />No restaking</li>
+    </ul>
+
     <StakingYieldFlow :asset="asset" :amount="amount" :strategy="strategy" />
 
   </section>
@@ -67,6 +73,31 @@ const amountLabel = computed(() =>
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 0.75rem 1rem;
+  }
+
+  &__guarantees {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: -0.25rem 0 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 0.875rem 0.375rem 0.6875rem;
+      border: 1px solid $color-line-2;
+      border-radius: 999px;
+      font-size: $text-sm;
+      font-weight: 600;
+      color: $color-title;
+    }
+
+    :deep(svg) {
+      color: $color-cyan;
+    }
   }
 
   &__facts {

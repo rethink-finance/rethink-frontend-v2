@@ -6,11 +6,17 @@
         <strong>Deposit</strong> ETH, WBTC or USDC. Principal stays yours.
       </span>
     </li>
+    <li class="how__arrow" aria-hidden="true">
+      <Icon icon="mdi:arrow-right" width="1rem" />
+    </li>
     <li class="how__step">
       <span class="how__icon"><Icon icon="mdi:sprout-outline" width="1rem" /></span>
       <span class="how__text">
         <strong>Yield is reinvested</strong> in the Rethink ecosystem.
       </span>
+    </li>
+    <li class="how__arrow" aria-hidden="true">
+      <Icon icon="mdi:arrow-right" width="1rem" />
     </li>
     <li class="how__step how__step--accent">
       <span class="how__icon"><Icon icon="mdi:star-four-points-outline" width="1rem" /></span>
@@ -30,30 +36,24 @@ defineProps<{
 
 <style scoped lang="scss">
 .how {
-  position: relative;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   gap: 1rem;
   margin: 0;
   padding: 0;
   list-style: none;
 
-  // A thin rail joins the three steps.
-  &::before {
-    content: "";
-    position: absolute;
-    top: 1rem;
-    bottom: 1rem;
-    left: calc(1rem - 0.5px);
-    width: 1px;
-    background: $color-line-2;
+  @media (max-width: $screen-md) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
   }
 
   &__step {
-    position: relative;
     display: flex;
     align-items: center;
-    gap: 0.875rem;
+    gap: 0.75rem;
+    min-width: 0;
   }
 
   &__icon {
@@ -88,6 +88,16 @@ defineProps<{
       font-style: normal;
       font-weight: 600;
       color: $color-cyan;
+    }
+  }
+
+  &__arrow {
+    display: grid;
+    place-items: center;
+    color: $color-subtitle;
+
+    @media (max-width: $screen-md) {
+      display: none;
     }
   }
 }

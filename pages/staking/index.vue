@@ -1,38 +1,20 @@
 <template>
   <div class="staking page_shell">
     <section class="staking__hero">
-      <div class="staking__top">
-        <div class="staking__intro">
-          <div class="staking__title-row">
-            <h1 class="staking__title">
-              Venture Staking
-            </h1>
-            <span
-              v-if="isPreview"
-              class="staking__preview"
-              title="Sample figures until the staking vault is deployed"
-            >
-              Preview data
-            </span>
-          </div>
-          <ul class="staking__flex" aria-label="Program guarantees">
-            <li class="staking__flex-item">
-              <Icon icon="mdi:scale-balance" width="1rem" />No leverage
-            </li>
-            <li class="staking__flex-item">
-              <Icon icon="mdi:link-variant-off" width="1rem" />No bridges
-            </li>
-            <li class="staking__flex-item">
-              <Icon icon="mdi:layers-off-outline" width="1rem" />No restaking
-            </li>
-          </ul>
-        </div>
-
-        <StakingHowItWorks
-          class="staking__how"
-          :multiplier="currentTier.baseMultiplier"
-        />
+      <div class="staking__title-row">
+        <h1 class="staking__title">
+          Venture Staking
+        </h1>
+        <span
+          v-if="isPreview"
+          class="staking__preview"
+          title="Sample figures until the staking vault is deployed"
+        >
+          Preview data
+        </span>
       </div>
+
+      <StakingHowItWorks :multiplier="currentTier.baseMultiplier" />
     </section>
 
     <section class="staking__main">
@@ -135,7 +117,7 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 2.25rem;
+    gap: 1.5rem;
     padding: 2rem 0 0.5rem;
     isolation: isolate;
 
@@ -158,33 +140,6 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     }
   }
 
-  // Title and badges on the left; How it works centred in the space beside
-  // them, level with the middle of the block.
-  &__top {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 2rem 3rem;
-
-    @media (max-width: $screen-lg) {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-
-  &__how {
-    justify-self: center;
-    max-width: 26rem;
-
-    @media (max-width: $screen-lg) {
-      justify-self: start;
-    }
-  }
-
-  &__intro {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
 
   &__title-row {
     display: flex;
@@ -212,33 +167,6 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     letter-spacing: -0.02em;
     line-height: 1;
     color: $color-title;
-  }
-
-  &__flex {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin: 0.25rem 0 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  &__flex-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4375rem 0.875rem 0.4375rem 0.6875rem;
-    border: 1px solid $color-line-2;
-    border-radius: 999px;
-    background: $color-surface;
-    font-size: $text-sm;
-    font-weight: 600;
-    color: $color-title;
-
-    :deep(svg) {
-      color: $color-subtitle;
-    }
-
   }
 
 
