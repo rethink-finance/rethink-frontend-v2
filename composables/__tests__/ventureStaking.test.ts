@@ -14,6 +14,7 @@ import {
   VENTURE_STAKING_ASSETS,
   VENTURE_STAKING_YIELD_STRATEGIES,
 } from "../staking/ventureStakingConfig";
+import { revenueShare, stakedAprAt } from "../staking/revenueShare";
 import { ribbonPath, yieldFlowBands } from "../staking/yieldFlow";
 
 /** Within ±0.5% of the reference implementation's figure. */
@@ -236,5 +237,31 @@ describe("yieldFlowBands", () => {
     expect(ribbonPath(0, 100, [0, 10], [20, 30])).toBe(
       "M0.00,0.00 C50.00,0.00 50.00,20.00 100.00,20.00 L100.00,30.00 C50.00,30.00 50.00,10.00 0.00,10.00 Z",
     );
+  });
+});
+
+describe("revenueShare", () => {
+  const base = { aumUsd: 250_000_000, feeBps: 15, stakedShare: 0.2, fdvMillions: 40 };
+
+  it("distributes 15 bps of AUM to staked REFI", () => {
+    const r = revenueShare(base)!;
+    expect(r.feesUsd).toBeCloseTo(375_000);
+    // $375K over the $8M of REFI that is staked at a $40M FDV.
+    expect(r.stakedApr).toBeCloseTo(375_000 / 8_000_000);
+    expect(r.dailyBuyUsd).toBeCloseTo(375_000 / 365);
+    expect(r.supplyBoughtShare).toBeCloseTo(375_000 / 40_000_000);
+    expect(r.priceToFees).toBeCloseTo(40_000_000 / 375_000);
+  });
+
+  it("finds the AUM where staked REFI out-earns staked ETH", () => {
+    const r = revenueShare(base)!;
+    // 3% of $8M staked is $240K of fees, which is $160M of AUM at 15 bps.
+    expect(r.breakEvenAumUsd).toBeCloseTo(160_000_000);
+    expect(stakedAprAt(r.breakEvenAumUsd, base)).toBeCloseTo(0.03);
+  });
+
+  it("returns null for empty inputs", () => {
+    expect(revenueShare({ ...base, aumUsd: 0 })).toBeNull();
+    expect(revenueShare({ ...base, stakedShare: NaN })).toBeNull();
   });
 });

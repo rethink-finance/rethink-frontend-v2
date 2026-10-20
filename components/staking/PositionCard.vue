@@ -14,7 +14,8 @@
           <small>points</small>
         </span>
         <span class="position__caption">
-          Earned so far · +{{ formatInt(position.refiPerSecond * 86_400) }} a day at {{ position.tier.baseMultiplier }}x
+          +{{ formatInt(position.refiPerSecond * 86_400) }} a day at {{ position.tier.baseMultiplier }}x ·
+          {{ formatShare(position.share) }} of emissions
         </span>
       </div>
 
@@ -34,10 +35,6 @@
             {{ formatAmount(position.yieldRedirected) }} {{ position.symbol }}
             <span class="position__muted">· {{ formatUsd(position.yieldRedirectedUsd) }}</span>
           </dd>
-        </div>
-        <div class="position__row">
-          <dt>Share of emissions</dt>
-          <dd>{{ formatShare(position.share) }}</dd>
         </div>
       </dl>
     </template>
@@ -84,7 +81,7 @@ const formatShare = (share: number) =>
 .position {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.875rem;
 
   &__head {
     display: flex;

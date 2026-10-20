@@ -37,9 +37,15 @@
           :selected="selectedAsset"
         />
         <StakingYieldSources v-model:selected="selectedAsset" :holdings="program.holdings" />
+        <StakingRevenueShare />
         <StakingEmissionChart :current-month="program.currentMonth" />
       </div>
-      <aside class="staking__right" aria-label="Deposit and your position">
+      <aside
+        ref="aside"
+        class="staking__right"
+        aria-label="Deposit and your position"
+        :style="{ top: `${stickyTop}px` }"
+      >
         <StakingStakeCard
           ref="stakeCard"
           v-model:token="selectedAsset"
@@ -75,6 +81,32 @@ const isCalculatorOpen = ref(false);
 /** One asset is in focus across the page: the deposit card picks it. */
 const selectedAsset = ref<StakeSymbol>("ETH");
 const stakeCard = ref<{ prefill: (symbol: StakeSymbol, amount: number) => void; $el: HTMLElement }>();
+
+/**
+ * Sticky offset for the deposit column. It pins under the navbar when it
+ * fits the window; when it is taller, the offset goes negative so it scrolls
+ * until its bottom is in view and pins there. Nothing is ever cut off and the
+ * column never scrolls on its own.
+ */
+const NAVBAR_PX = 64;
+const STICKY_GAP_PX = 24;
+const aside = ref<HTMLElement>();
+const stickyTop = ref(NAVBAR_PX + STICKY_GAP_PX);
+const updateStickyTop = () => {
+  const height = aside.value?.offsetHeight ?? 0;
+  stickyTop.value = Math.min(NAVBAR_PX + STICKY_GAP_PX, window.innerHeight - height - STICKY_GAP_PX);
+};
+let asideObserver: ResizeObserver | undefined;
+onMounted(() => {
+  updateStickyTop();
+  asideObserver = new ResizeObserver(updateStickyTop);
+  if (aside.value) asideObserver.observe(aside.value);
+  window.addEventListener("resize", updateStickyTop);
+});
+onUnmounted(() => {
+  asideObserver?.disconnect();
+  window.removeEventListener("resize", updateStickyTop);
+});
 
 const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
   if (!stakeCard.value) return;
@@ -199,24 +231,18 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     min-width: 0;
   }
 
-  // The deposit stays in view while the left column scrolls. On a short
-  // window the column scrolls inside itself rather than losing its bottom.
+  // The deposit stays in view while the left column scrolls; the offset
+  // comes from updateStickyTop.
   &__right {
     position: sticky;
-    top: calc(#{$navbar-height} + 1.5rem);
     gap: 1.25rem;
-    max-height: calc(100vh - #{$navbar-height} - 3rem);
-    overflow-y: auto;
-    scrollbar-width: none;
 
-    &::-webkit-scrollbar {
-      display: none;
+    :deep(.brand_card) {
+      padding: 1.375rem 1.5rem;
     }
 
     @media (max-width: $screen-lg) {
       position: static;
-      max-height: none;
-      overflow: visible;
     }
   }
 

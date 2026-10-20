@@ -210,3 +210,20 @@ export const VENTURE_STAKING_PREVIEW = {
     refiEarned: 10_842.37,
   },
 };
+
+/**
+ * Revenue share: 100% of the fees Rethink Finance captures go to REFI
+ * holders who stake. The simulator's ranges and defaults live here.
+ * TODO: confirm the fee rate, the distribution mechanism (buy-back and
+ * distribute, or pay out in stables) and the starting AUM.
+ */
+export const VENTURE_REVENUE_SHARE = {
+  feeOptionsBps: [10, 15, 25],
+  defaultFeeBps: 15,
+  aumMinUsd: 10_000_000,
+  aumMaxUsd: 5_000_000_000,
+  defaultAumUsd: 250_000_000,
+  stakedShareMin: 0.05,
+  stakedShareMax: 0.8,
+  defaultStakedShare: 0.2,
+} as const;

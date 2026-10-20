@@ -36,14 +36,6 @@
 
     <dl class="stake__rows">
       <div class="stake__row">
-        <dt>Your principal</dt>
-        <dd>{{ principal }} {{ token }}</dd>
-      </div>
-      <div class="stake__row">
-        <dt>Yield</dt>
-        <dd>Reinvested</dd>
-      </div>
-      <div class="stake__row">
         <dt>You earn</dt>
         <dd class="stake__accent">
           {{ multiplier }}x points
@@ -67,8 +59,7 @@
     </v-btn>
 
     <p class="stake__note">
-      Non-custodial. Your deposit sits in a Rethink vault on a Safe smart
-      account and you hold the share token.
+      Non-custodial: a Rethink vault on a Safe. You hold the share token.
     </p>
   </section>
 </template>
@@ -92,14 +83,6 @@ defineProps<{
 
 const emit = defineEmits<{ calculate: [] }>();
 
-const principal = computed(() => {
-  const value = Number(amount.value);
-  if (!Number.isFinite(value) || value <= 0) return "0.00";
-  return value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  });
-});
 
 const stake = () => {
   // TODO: wire the deposit once the venture staking vault is deployed.
@@ -122,15 +105,15 @@ defineExpose({ prefill });
 .stake {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.875rem;
 
 
 
   &__deposit {
     display: flex;
     flex-direction: column;
-    gap: 0.625rem;
-    padding: 1.125rem 1.25rem;
+    gap: 0.375rem;
+    padding: 0.875rem 1.125rem;
     border: 1px solid $color-line;
     border-radius: $default-border-radius;
     background: var(--bg);
