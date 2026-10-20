@@ -1,4 +1,4 @@
-import { emissionSchedule, tierAt, weightedPool } from "./ventureStaking";
+import { emissionSchedule, tierAt, weightedPool, yieldWeight } from "./ventureStaking";
 import {
   VENTURE_STAKING,
   VENTURE_STAKING_ASSETS,
@@ -105,6 +105,16 @@ export const useVentureStats = () => {
   /** What fills the tiers and what the calculator projects against. */
   const poolUsd = computed(() => program.value.countedUsd);
 
+  /** The pool's yield per dollar against ETH's, from its asset mix. */
+  const poolYieldWeight = computed(() => {
+    const { countedByAsset, countedUsd } = program.value;
+    if (countedUsd <= 0) return 1;
+    return VENTURE_STAKING_ASSETS.reduce(
+      (sum, asset) => sum + (countedByAsset[asset.symbol] ?? 0) * yieldWeight(asset),
+      0,
+    ) / countedUsd;
+  });
+
   const position = computed<VenturePosition | null>(() => {
     // TODO: read the connected wallet's share balance once the vault exists.
     if (!isPreview) return null;
@@ -112,7 +122,9 @@ export const useVentureStats = () => {
     const amountUsd = amount * priceOf(symbol);
     // The sample position joined at the start, so it sits in the first tier.
     const tier = tierAt(0);
-    const share = (amountUsd * tier.baseMultiplier) / weightedPool(poolUsd.value, 0);
+    const asset = VENTURE_STAKING_ASSETS.find((option) => option.symbol === symbol)!;
+    const share = (amountUsd * yieldWeight(asset) * tier.baseMultiplier) /
+      (weightedPool(poolUsd.value, 0) * poolYieldWeight.value);
     return {
       symbol,
       amount,
@@ -126,5 +138,5 @@ export const useVentureStats = () => {
     };
   });
 
-  return { isPreview, program, poolUsd, position };
+  return { isPreview, program, poolUsd, poolYieldWeight, position };
 };

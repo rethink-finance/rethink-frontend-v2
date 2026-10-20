@@ -14,7 +14,7 @@ import {
   VENTURE_STAKING_ASSETS,
   VENTURE_STAKING_YIELD_STRATEGIES,
 } from "../staking/ventureStakingConfig";
-import { aumToBuyBack, buybackShareAt, buybacks, emissionShareInYear } from "../staking/revenueShare";
+import { buybackProjection, emissionShareInYear, revenueBreakdown } from "../staking/revenueShare";
 import { ribbonPath, yieldFlowBands } from "../staking/yieldFlow";
 
 /** Within ±0.5% of the reference implementation's figure. */
@@ -152,15 +152,26 @@ describe("projectVentureStake with WBTC and USDC", () => {
     return result;
   };
 
-  it("weighs a deposit at its ETH value", () => {
-    // $30,000 of USDC or WBTC earns the same REFI as 10 ETH at $3,000.
+  it("fills tiers by USD but shares points by the yield contributed", () => {
+    // $30,000 of each asset, into the assumed launch pool.
     const ten = stake(eth, 10);
     const dollars = stake(usdc, 30_000);
     const bitcoin = stake(wbtc, 30_000 / wbtc.priceUsd);
     expect(dollars.amountUsd).toBeCloseTo(30_000);
-    expect(dollars.refi12).toBeCloseTo(ten.refi12);
-    expect(bitcoin.refi12).toBeCloseTo(ten.refi12);
     expect(dollars.tier.name).toBe("Founding");
+    expect(dollars.yieldWeight).toBeCloseTo(5 / 3);
+    expect(bitcoin.yieldWeight).toBeCloseTo(1 / 3);
+    // A small deposit's points scale almost exactly with its yield weight.
+    expect(dollars.refi12 / ten.refi12).toBeCloseTo(5 / 3, 1);
+    expect(bitcoin.refi12 / ten.refi12).toBeCloseTo(1 / 3, 1);
+  });
+
+  it("dilutes against the pool's own yield weight", () => {
+    const allEth = stake(eth, 10, 3_000_000);
+    const yieldier = projectVentureStake({
+      asset: eth, amount: 10, livePoolUsd: 3_000_000, fdvMillions: 40, poolYieldWeight: 1.5,
+    })!;
+    expect(yieldier.refi12).toBeLessThan(allEth.refi12);
   });
 
   it("counts the yield the deposited asset gives up", () => {
@@ -241,15 +252,14 @@ describe("yieldFlowBands", () => {
 });
 
 describe("buybacks", () => {
-  const base = { aumUsd: 250_000_000, feeBps: 15, fdvMillions: 40 };
-
-  it("spends 15 bps of AUM buying REFI", () => {
-    const b = buybacks(base)!;
-    expect(b.yearlyUsd).toBeCloseTo(375_000);
-    expect(b.dailyUsd).toBeCloseTo(375_000 / 365);
-    // $375K at $0.40 a REFI.
-    expect(b.tokensPerYear).toBeCloseTo(937_500);
-    expect(b.supplyShare).toBeCloseTo(0.009375);
+  it("adds up the three revenue sources", () => {
+    const r = revenueBreakdown(250_000_000);
+    expect(r.platformUsd).toBeCloseTo(375_000);
+    // 5% of managers' assumed 1.5% of AUM.
+    expect(r.managersUsd).toBeCloseTo(187_500);
+    expect(r.referralsUsd).toBeCloseTo(75_000);
+    expect(r.totalUsd).toBeCloseTo(637_500);
+    expect(r.totalBps).toBeCloseTo(25.5);
   });
 
   it("knows each year's emissions as a share of supply", () => {
@@ -259,14 +269,23 @@ describe("buybacks", () => {
     near(all, 0.2);
   });
 
-  it("finds the AUM where buybacks outpace a year's emissions", () => {
-    const aum = aumToBuyBack(emissionShareInYear(1), base);
-    near(aum, 2_009_600_000);
-    expect(buybackShareAt(aum, base)).toBeCloseTo(emissionShareInYear(1));
+  it("projects buybacks as AUM compounds", () => {
+    const p = buybackProjection({ startAumUsd: 250_000_000, growth: 0.75, fdvMillions: 40 })!;
+    expect(p.years).toHaveLength(6);
+    expect(p.years[0].buybackShare).toBeCloseTo(637_500 / 40_000_000);
+    expect(p.years[2].aumUsd).toBeCloseTo(250_000_000 * 1.75 ** 2);
+    expect(p.years[0].priceToRevenue).toBeCloseTo(40_000_000 / 637_500);
+    // Year 3 buys back 4.9% against 3.2% emitted.
+    expect(p.netDeflationaryYear).toBe(3);
+  });
+
+  it("turns net deflationary later without growth, as emissions decay", () => {
+    expect(buybackProjection({ startAumUsd: 250_000_000, growth: 0, fdvMillions: 40 })!.netDeflationaryYear).toBe(5);
+    expect(buybackProjection({ startAumUsd: 10_000_000, growth: 0, fdvMillions: 40 })!.netDeflationaryYear).toBeNull();
   });
 
   it("returns null for empty inputs", () => {
-    expect(buybacks({ ...base, aumUsd: 0 })).toBeNull();
-    expect(buybacks({ ...base, fdvMillions: NaN })).toBeNull();
+    expect(buybackProjection({ startAumUsd: 0, growth: 0.5, fdvMillions: 40 })).toBeNull();
+    expect(buybackProjection({ startAumUsd: 1e8, growth: NaN, fdvMillions: 40 })).toBeNull();
   });
 });

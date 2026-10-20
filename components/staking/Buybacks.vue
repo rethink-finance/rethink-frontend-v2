@@ -9,10 +9,34 @@
       <span>of the revenue Rethink Finance earns <strong>buys back REFI</strong> on the open market.</span>
     </p>
 
+    <div class="bb__sources">
+      <div class="bb__sources-bar" aria-hidden="true">
+        <span
+          v-for="(source, index) in sources"
+          :key="source.label"
+          :style="{ width: `${(source.usd / revenue.totalUsd) * 100}%`, opacity: 1 - index * 0.32 }"
+        />
+      </div>
+      <ul class="bb__sources-list" aria-label="Revenue sources">
+        <li v-for="(source, index) in sources" :key="source.label">
+          <span class="bb__swatch" :style="{ opacity: 1 - index * 0.32 }" />
+          <span class="bb__source-text">
+            <strong>{{ source.label }}</strong>
+            <span>{{ source.basis }}</span>
+          </span>
+          <span class="bb__source-usd">{{ formatUsdCompact(source.usd) }}</span>
+        </li>
+      </ul>
+      <p class="bb__sources-total">
+        {{ formatUsdCompact(revenue.totalUsd) }} a year at {{ formatUsdCompact(aum) }} AUM, about
+        {{ revenue.totalBps.toFixed(1) }} bps, all of it spent buying REFI.
+      </p>
+    </div>
+
     <div class="bb__controls">
-      <label class="bb__control bb__control--wide">
+      <label class="bb__control">
         <span class="bb__control-top">
-          <span class="bb__control-label">Rethink AUM</span>
+          <span class="bb__control-label">Rethink AUM today</span>
           <span class="bb__control-value">{{ formatUsdCompact(aum) }}</span>
         </span>
         <input
@@ -22,26 +46,26 @@
           min="0"
           max="1000"
           step="1"
-          aria-label="Rethink assets under management"
+          aria-label="Rethink assets under management today"
           :style="{ '--fill': `${aumStep / 10}%` }"
         >
       </label>
-      <div class="bb__control">
-        <span id="bb-fee" class="bb__control-label">Protocol fee</span>
-        <div class="bb__segments" role="group" aria-labelledby="bb-fee">
-          <button
-            v-for="bps in BB.feeOptionsBps"
-            :key="bps"
-            type="button"
-            class="bb__segment"
-            :class="{ 'bb__segment--active': bps === feeBps }"
-            :aria-pressed="bps === feeBps"
-            @click="feeBps = bps"
-          >
-            {{ bps }} bps
-          </button>
-        </div>
-      </div>
+      <label class="bb__control">
+        <span class="bb__control-top">
+          <span class="bb__control-label">AUM growth a year</span>
+          <span class="bb__control-value">{{ Math.round(growthPct) }}%</span>
+        </span>
+        <input
+          v-model.number="growthPct"
+          class="bb__slider"
+          type="range"
+          min="0"
+          :max="BB.growthMax * 100"
+          step="5"
+          aria-label="Yearly growth in Rethink AUM"
+          :style="{ '--fill': `${(growthPct / (BB.growthMax * 100)) * 100}%` }"
+        >
+      </label>
       <div class="bb__control">
         <span id="bb-fdv" class="bb__control-label">FDV</span>
         <div class="bb__segments" role="group" aria-labelledby="bb-fdv">
@@ -60,127 +84,100 @@
       </div>
     </div>
 
-    <div class="bb__figures" aria-live="polite">
+    <div v-if="projection" class="bb__figures" aria-live="polite">
       <div>
-        <span class="bb__value bb__value--accent">{{ result ? formatUsdCompact(result.yearlyUsd) : DASH }}</span>
-        <span class="bb__label">of REFI bought back a year</span>
-      </div>
-      <div>
-        <span class="bb__value">{{ result ? formatUsdCompact(result.dailyUsd) : DASH }}</span>
-        <span class="bb__label">Buy pressure, every day</span>
-      </div>
-      <div>
-        <span class="bb__value">{{ result ? formatPct(result.supplyShare) : DASH }}</span>
-        <span class="bb__label">
-          of supply a year<template v-if="result">, {{ formatCompact(result.tokensPerYear) }} REFI</template>
+        <span class="bb__value bb__value--accent">
+          {{ projection.netDeflationaryYear ? `Year ${projection.netDeflationaryYear}` : "Beyond year 6" }}
         </span>
+        <span class="bb__label">REFI turns net deflationary</span>
       </div>
       <div>
-        <span class="bb__value">{{ formatUsdCompact(roundSig(crossings[0].aum)) }}</span>
-        <span class="bb__label">AUM to outpace year-{{ crossings[0].year }} emissions</span>
+        <span class="bb__value">
+          {{ formatPct(first.buybackShare) }} <small>to</small> {{ formatPct(last.buybackShare) }}
+        </span>
+        <span class="bb__label">of supply bought back a year, year 1 to {{ last.year }}</span>
+      </div>
+      <div>
+        <span class="bb__value">{{ formatPct(projection.totalBuybackShare) }}</span>
+        <span class="bb__label">of all REFI bought back over {{ last.year }} years</span>
+      </div>
+      <div>
+        <span class="bb__value">
+          {{ Math.round(first.priceToRevenue) }}x <small>to</small> {{ formatMultiple(last.priceToRevenue) }}
+        </span>
+        <span class="bb__label">Price to revenue at a flat price</span>
       </div>
     </div>
 
-    <div class="bb__chart">
-      <div class="bb__y" aria-hidden="true">
-        <span v-for="tick in Y_TICKS" :key="tick" :style="{ top: `${yPct(tick)}%` }">{{ tickLabel(tick) }}</span>
+    <div v-if="projection" class="bb__chart">
+      <div class="bb__legend" aria-hidden="true">
+        <span><span class="bb__key bb__key--buy" />REFI bought back</span>
+        <span><span class="bb__key bb__key--emit" />New REFI emitted</span>
       </div>
-      <div
-        ref="plot"
-        class="bb__plot"
-        role="img"
-        :aria-label="chartSummary"
-        @pointermove="onPointer"
-        @pointerleave="hoverX = null"
-      >
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <defs>
-            <linearGradient
-              id="bb-fill"
-              x1="0"
-              x2="0"
-              y1="0"
-              y2="1"
-            >
-              <stop offset="0" class="bb__stop-top" />
-              <stop offset="1" class="bb__stop-bottom" />
-            </linearGradient>
-          </defs>
-          <line
-            v-for="tick in Y_TICKS"
-            :key="tick"
-            class="bb__grid"
-            x1="0"
-            x2="100"
-            :y1="yPct(tick)"
-            :y2="yPct(tick)"
-          />
-          <path class="bb__area" :d="areaPath" fill="url(#bb-fill)" />
-          <path class="bb__line" :d="linePath" />
-          <line
-            v-for="crossing in crossings"
-            :key="crossing.year"
-            class="bb__emission"
-            x1="0"
-            x2="100"
-            :y1="yPct(crossing.share)"
-            :y2="yPct(crossing.share)"
-          />
-        </svg>
-
-        <span
-          v-for="crossing in crossings"
-          :key="`l${crossing.year}`"
-          class="bb__emission-label"
-          :style="{ top: `${yPct(crossing.share)}%` }"
-        >
-          Year-{{ crossing.year }} emissions {{ formatPct(crossing.share) }}
-        </span>
-        <span
-          v-for="crossing in visibleCrossings"
-          :key="`c${crossing.year}`"
-          class="bb__cross"
-          :style="{ left: `${xPct(crossing.aum)}%`, top: `${yPct(crossing.share)}%` }"
-        >
-          <span class="bb__cross-label">{{ formatUsdCompact(roundSig(crossing.aum)) }}</span>
-        </span>
-        <span class="bb__dot" :style="pointStyle(aum)" />
-
-        <template v-if="hoverX !== null">
-          <span class="bb__crosshair" :style="{ left: `${hoverX}%` }" />
+      <div class="bb__plot" role="img" :aria-label="chartSummary">
+        <div class="bb__y" aria-hidden="true">
+          <span v-for="tick in yTicks" :key="tick" :style="{ bottom: `${(tick / yMax) * 100}%` }">{{ formatPct(tick) }}</span>
+        </div>
+        <div class="bb__area">
           <span
-            class="bb__tip"
-            :class="{ 'bb__tip--left': hoverX > 60 }"
-            :style="pointStyle(aumAt(hoverX))"
+            v-for="tick in yTicks"
+            :key="`g${tick}`"
+            class="bb__gridline"
+            :style="{ bottom: `${(tick / yMax) * 100}%` }"
+          />
+          <svg
+            class="bb__emissions"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
           >
-            <strong>{{ formatUsdCompact(aumAt(hoverX)) }} AUM</strong>
-            buys back {{ formatPct(shareAt(aumAt(hoverX))) }} of supply a year
-          </span>
-        </template>
-      </div>
-      <div class="bb__x" aria-hidden="true">
-        <span v-for="tick in X_TICKS" :key="tick" :style="{ left: `${xPct(tick)}%` }">{{ formatUsdCompact(tick) }}</span>
+            <polyline :points="emissionPoints" />
+          </svg>
+          <div class="bb__bars">
+            <div
+              v-for="row in projection.years"
+              :key="row.year"
+              class="bb__col"
+              :class="{ 'bb__col--deflationary': row.buybackShare >= row.emissionShare }"
+              tabindex="0"
+              @mouseenter="hoverYear = row.year"
+              @mouseleave="hoverYear = null"
+              @focus="hoverYear = row.year"
+              @blur="hoverYear = null"
+            >
+              <span class="bb__bar" :style="{ height: `${(Math.min(row.buybackShare, yMax) / yMax) * 100}%` }" />
+              <span
+                class="bb__emit-dot"
+                :style="{ bottom: `${(row.emissionShare / yMax) * 100}%` }"
+              />
+              <span v-if="hoverYear === row.year" class="bb__tip" :class="{ 'bb__tip--left': row.year > 4 }">
+                <strong>Year {{ row.year }} · {{ formatUsdCompact(row.aumUsd) }} AUM</strong>
+                {{ formatUsdCompact(row.revenueUsd) }} buys {{ formatPct(row.buybackShare) }} of supply
+                <span>{{ formatPct(row.emissionShare) }} emitted</span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="bb__x" aria-hidden="true">
+          <span v-for="row in projection.years" :key="row.year">Year {{ row.year }}</span>
+        </div>
       </div>
     </div>
 
     <p class="bb__fine">
-      Where the blue line crosses an emissions line, buybacks take more REFI off the market than the program
-      adds that year. Priced at the FDV scenario. A simulation, not a forecast.
+      Bright bars are years when buybacks take more REFI off the market than the program adds. Bought at
+      the FDV scenario's price; a rising price buys fewer tokens. Manager earnings and referral fees are
+      assumptions. A simulation, not a forecast.
     </p>
   </section>
 </template>
 
 <script setup lang="ts">
-import { DASH, formatCompact, formatUsdCompact } from "~/composables/staking/formatStaking";
-import {
-  aumToBuyBack,
-  buybackShareAt,
-  buybacks,
-  emissionShareInYear,
-} from "~/composables/staking/revenueShare";
+import { formatUsdCompact } from "~/composables/staking/formatStaking";
+import { buybackProjection, revenueBreakdown } from "~/composables/staking/revenueShare";
 import { VENTURE_BUYBACKS as BB, VENTURE_STAKING } from "~/composables/staking/ventureStakingConfig";
 
-// The AUM slider runs on a log scale so $10M and $5B both get room.
+// The AUM slider runs on a log scale so $10M and $2B both get room.
 const logMin = Math.log10(BB.aumMinUsd);
 const logMax = Math.log10(BB.aumMaxUsd);
 const aumToStep = (aum: number) => Math.round(((Math.log10(aum) - logMin) / (logMax - logMin)) * 1000);
@@ -193,80 +190,71 @@ const stepToAum = (step: number) => {
 
 const aumStep = ref(aumToStep(BB.defaultAumUsd));
 const aum = computed(() => stepToAum(aumStep.value));
-const feeBps = ref<number>(BB.defaultFeeBps);
+const growthPct = ref(BB.defaultGrowth * 100);
 const fdv = ref<number>(VENTURE_STAKING.defaultFdvMillions);
 
-const params = computed(() => ({ feeBps: feeBps.value, fdvMillions: fdv.value }));
-const result = computed(() => buybacks({ aumUsd: aum.value, ...params.value }));
-const shareAt = (aumUsd: number) => buybackShareAt(aumUsd, params.value);
-
-const crossings = computed(() =>
-  BB.emissionYears.map((year) => {
-    const share = emissionShareInYear(year);
-    return { year, share, aum: aumToBuyBack(share, params.value) };
-  }),
-);
-const visibleCrossings = computed(() =>
-  crossings.value.filter((crossing) => crossing.aum >= BB.aumMinUsd && crossing.aum <= BB.aumMaxUsd),
-);
-
-// Both axes are logarithmic, which makes buybacks against AUM a straight line.
-const Y_MIN = 0.0001;
-const Y_MAX = 1;
-const Y_TICKS = [0.0001, 0.001, 0.01, 0.1, 1];
-const X_TICKS = [10_000_000, 100_000_000, 1_000_000_000, 5_000_000_000];
-
-const xPct = (aumUsd: number) => ((Math.log10(aumUsd) - logMin) / (logMax - logMin)) * 100;
-const aumAt = (x: number) => 10 ** (logMin + (x / 100) * (logMax - logMin));
-const yPct = (share: number) => {
-  const clamped = Math.min(Math.max(share, Y_MIN), Y_MAX);
-  return (1 - (Math.log10(clamped) - Math.log10(Y_MIN)) / (Math.log10(Y_MAX) - Math.log10(Y_MIN))) * 100;
-};
-
-const linePath = computed(() =>
-  [0, 100].map((x, i) => `${i ? "L" : "M"}${x},${yPct(shareAt(aumAt(x))).toFixed(2)}`).join(" "),
-);
-const areaPath = computed(() => `${linePath.value} L100,100 L0,100 Z`);
-
-const pointStyle = (aumUsd: number) => ({
-  left: `${xPct(aumUsd)}%`,
-  top: `${yPct(shareAt(aumUsd))}%`,
+const revenue = computed(() => revenueBreakdown(aum.value));
+const sources = computed(() => {
+  const model = BB.revenue;
+  return [
+    { label: "Platform fee", basis: `${model.platformFeeBps} bps of AUM`, usd: revenue.value.platformUsd },
+    {
+      label: "Manager share",
+      basis: `${model.managerShare * 100}% of manager fees (assumed ${model.managerEarningsBps / 100}% of AUM)`,
+      usd: revenue.value.managersUsd,
+    },
+    { label: "Referral fees", basis: `~${model.referralBps} bps of AUM (assumed)`, usd: revenue.value.referralsUsd },
+  ];
 });
 
-const plot = ref<HTMLElement>();
-const hoverX = ref<number | null>(null);
-const onPointer = (event: PointerEvent) => {
-  const rect = plot.value?.getBoundingClientRect();
-  if (!rect?.width) return;
-  hoverX.value = Math.min(Math.max(((event.clientX - rect.left) / rect.width) * 100, 0), 100);
-};
+const projection = computed(() =>
+  buybackProjection({ startAumUsd: aum.value, growth: growthPct.value / 100, fdvMillions: fdv.value }),
+);
+const first = computed(() => projection.value!.years[0]);
+const last = computed(() => projection.value!.years[projection.value!.years.length - 1]);
+
+/** A round top for the y axis that fits the tallest bar or emission. */
+const yMax = computed(() => {
+  const rows = projection.value?.years ?? [];
+  const peak = Math.max(0.01, ...rows.map((row) => Math.max(row.buybackShare, row.emissionShare)));
+  const steps = [0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 1];
+  return steps.find((step) => step >= peak * 1.05) ?? 1;
+});
+const yTicks = computed(() => [0, yMax.value / 2, yMax.value]);
+
+const emissionPoints = computed(() => {
+  const rows = projection.value?.years ?? [];
+  return rows
+    .map((row, i) => `${((i + 0.5) / rows.length) * 100},${100 - (row.emissionShare / yMax.value) * 100}`)
+    .join(" ");
+});
+
+const hoverYear = ref<number | null>(null);
 
 const formatPct = (value: number) => {
   const pct = value * 100;
+  if (pct === 0) return "0%";
   if (pct >= 10) return `${Math.round(pct)}%`;
   if (pct >= 1) return `${pct.toFixed(1)}%`;
   return `${pct.toFixed(2)}%`;
 };
-/** Two significant figures: $850M, $2B. */
-const roundSig = (value: number) => {
-  const magnitude = 10 ** (Math.floor(Math.log10(value)) - 1);
-  return Math.round(value / magnitude) * magnitude;
-};
+const formatMultiple = (value: number) => (value >= 10 ? `${Math.round(value)}x` : `${value.toFixed(1)}x`);
 
-const tickLabel = (tick: number) => `${Number((tick * 100).toPrecision(2))}%`;
-
-const chartSummary = computed(() =>
-  `Share of REFI supply bought back a year against Rethink AUM. At ${formatUsdCompact(aum.value)} it is ` +
-  `${result.value ? formatPct(result.value.supplyShare) : "unknown"}; buybacks outpace year-1 emissions from ` +
-  `${formatUsdCompact(crossings.value[0].aum)}.`,
-);
+const chartSummary = computed(() => {
+  const p = projection.value;
+  if (!p) return "REFI bought back against REFI emitted, by year.";
+  return (
+    `REFI bought back against REFI emitted over ${p.years.length} years. ` +
+    (p.netDeflationaryYear ? `Buybacks overtake emissions in year ${p.netDeflationaryYear}.` : "")
+  );
+});
 </script>
 
 <style scoped lang="scss">
 .bb {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.375rem;
 
   &__head {
     display: flex;
@@ -320,12 +308,90 @@ const chartSummary = computed(() =>
     color: transparent;
   }
 
+  &__sources {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.125rem;
+    border: 1px solid $color-line;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+  }
+
+  &__sources-bar {
+    display: flex;
+    gap: 2px;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      background: $color-primary;
+    }
+  }
+
+  &__sources-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: baseline;
+      gap: 0.625rem;
+    }
+  }
+
+  &__swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: $color-primary;
+  }
+
+  &__source-text {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.5rem;
+    font-size: $text-sm;
+    color: $color-subtitle;
+
+    strong {
+      font-weight: 600;
+      color: $color-title;
+    }
+
+    span {
+      font-size: $text-xs;
+    }
+  }
+
+  &__source-usd {
+    font-family: $font-mono;
+    font-size: $text-sm;
+    color: $color-title;
+  }
+
+  &__sources-total {
+    margin: 0;
+    padding-top: 0.625rem;
+    border-top: 1px solid $color-line;
+    font-size: $text-xs;
+    color: $color-subtitle;
+  }
+
   &__controls {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.25rem 2rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem 1.75rem;
 
-    @media (max-width: $screen-sm) {
+    @media (max-width: $screen-md) {
       grid-template-columns: minmax(0, 1fr);
     }
   }
@@ -334,10 +400,6 @@ const chartSummary = computed(() =>
     display: flex;
     flex-direction: column;
     gap: 0.625rem;
-
-    &--wide {
-      grid-column: 1 / -1;
-    }
   }
 
   &__control-top {
@@ -447,10 +509,17 @@ const chartSummary = computed(() =>
 
   &__value {
     font-family: $font-mono;
-    font-size: 1.5rem;
+    font-size: 1.375rem;
     font-weight: 600;
-    line-height: 1.1;
+    line-height: 1.15;
     color: $color-title;
+    white-space: nowrap;
+
+    small {
+      font-size: 0.6em;
+      font-weight: 400;
+      color: $color-subtitle;
+    }
 
     &--accent {
       color: $color-cyan;
@@ -463,9 +532,44 @@ const chartSummary = computed(() =>
   }
 
   &__chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__legend {
+    display: flex;
+    gap: 1.25rem;
+    font-size: $text-xs;
+    color: $color-subtitle;
+
+    > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  }
+
+  &__key {
+    display: inline-block;
+
+    &--buy {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      background: $color-primary;
+    }
+
+    &--emit {
+      width: 16px;
+      border-top: 2px dashed var(--text-faint);
+    }
+  }
+
+  &__plot {
     display: grid;
-    grid-template-columns: 2.75rem minmax(0, 1fr);
-    grid-template-rows: 12rem auto;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    grid-template-rows: 13rem auto;
     column-gap: 0.5rem;
   }
 
@@ -478,138 +582,95 @@ const chartSummary = computed(() =>
       font-family: $font-mono;
       font-size: 10px;
       color: $color-subtitle;
-      transform: translateY(-50%);
+      transform: translateY(50%);
     }
   }
 
-  &__plot {
+  &__area {
     position: relative;
-    cursor: crosshair;
-    touch-action: pan-y;
+  }
 
-    svg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      overflow: visible;
+  &__gridline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: $color-line;
+  }
+
+  &__emissions {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+
+    polyline {
+      fill: none;
+      stroke: var(--text-faint);
+      stroke-width: 2;
+      stroke-dasharray: 5 4;
+      vector-effect: non-scaling-stroke;
     }
   }
 
-  &__x {
+  &__bars {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  &__col {
     position: relative;
-    grid-column: 2;
-    height: 1.25rem;
-    margin-top: 0.375rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    outline: none;
 
-    span {
-      position: absolute;
-      font-family: $font-mono;
-      font-size: 10px;
-      color: $color-subtitle;
-      transform: translateX(-50%);
-      white-space: nowrap;
-
-      &:first-child {
-        transform: none;
-      }
-
-      &:last-child {
-        transform: translateX(-100%);
-      }
+    &:focus-visible {
+      background: var(--fill-1);
     }
   }
 
-  &__stop-top {
-    stop-color: var(--primary);
-    stop-opacity: 0.25;
+  &__bar {
+    width: 52%;
+    max-width: 3.5rem;
+    min-height: 2px;
+    border-radius: 4px 4px 0 0;
+    background: $color-primary;
+    opacity: 0.45;
+    transition: opacity $default-transition-time;
   }
 
-  &__stop-bottom {
-    stop-color: var(--primary);
-    stop-opacity: 0;
+  &__col--deflationary &__bar {
+    opacity: 1;
+    box-shadow: 0 0 24px var(--accent-soft);
   }
 
-  &__grid {
-    stroke: var(--line);
-    stroke-width: 1;
-    vector-effect: non-scaling-stroke;
+  &__col:hover &__bar {
+    opacity: 1;
   }
 
-  &__line {
-    fill: none;
-    stroke: var(--primary);
-    stroke-width: 2;
-    vector-effect: non-scaling-stroke;
-  }
-
-  &__emission {
-    stroke: var(--text-faint);
-    stroke-width: 1;
-    stroke-dasharray: 4 4;
-    vector-effect: non-scaling-stroke;
-  }
-
-  &__emission-label {
+  &__emit-dot {
     position: absolute;
-    left: 0.25rem;
-    font-family: $font-mono;
-    font-size: 10px;
-    color: $color-subtitle;
-    white-space: nowrap;
-    transform: translateY(calc(-100% - 3px));
-    pointer-events: none;
-  }
-
-  &__cross {
-    position: absolute;
-    z-index: 1;
-    width: 11px;
-    height: 11px;
-    border: 2px solid $color-cyan-raw;
-    border-radius: 50%;
-    background: $color-surface;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-  }
-
-  &__cross-label {
-    position: absolute;
-    top: calc(100% + 4px);
     left: 50%;
-    padding: 0 0.25rem;
-    border-radius: 2px;
-    background: $color-surface;
-    font-family: $font-mono;
-    font-size: 10px;
-    color: $color-cyan;
-    white-space: nowrap;
-    transform: translateX(-50%);
-  }
-
-  &__dot {
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    border: 2px solid $color-surface;
+    z-index: 3;
+    width: 8px;
+    height: 8px;
+    border: 2px solid var(--text-faint);
     border-radius: 50%;
-    background: $color-cyan-raw;
-    box-shadow: 0 0 0 4px $color-cyan-tint;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-  }
-
-  &__crosshair {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: $color-line-3;
-    pointer-events: none;
+    background: $color-surface;
+    transform: translate(-50%, 50%);
   }
 
   &__tip {
     position: absolute;
+    bottom: calc(100% - 0.5rem);
+    left: 50%;
+    z-index: 4;
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
@@ -622,9 +683,8 @@ const chartSummary = computed(() =>
     font-size: $text-xs;
     color: $color-subtitle;
     white-space: nowrap;
-    transform: translate(12px, -110%);
+    transform: translateX(-30%);
     pointer-events: none;
-    z-index: 2;
 
     strong {
       font-weight: 600;
@@ -632,7 +692,22 @@ const chartSummary = computed(() =>
     }
 
     &--left {
-      transform: translate(calc(-100% - 12px), -110%);
+      transform: translateX(-80%);
+    }
+  }
+
+  &__x {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin-top: 0.5rem;
+
+    span {
+      font-family: $font-mono;
+      font-size: 10px;
+      text-align: center;
+      color: $color-subtitle;
+      white-space: nowrap;
     }
   }
 

@@ -25,7 +25,7 @@
         </button>
       </div>
       <div class="brand_modal__body calc_dialog__body">
-        <StakingVentureCalculator :pool-usd="poolUsd" @stake="onStake" />
+        <StakingVentureCalculator :pool-usd="poolUsd" :pool-yield-weight="poolYieldWeight" @stake="onStake" />
       </div>
     </div>
   </v-dialog>
@@ -37,6 +37,7 @@ import type { VentureAsset } from "~/composables/staking/ventureStakingConfig";
 defineProps<{
   modelValue: boolean;
   poolUsd: number;
+  poolYieldWeight: number;
 }>();
 
 const emit = defineEmits<{

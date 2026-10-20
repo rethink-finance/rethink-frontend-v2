@@ -3,9 +3,10 @@
  * and what it is worth at a given FDV. Pure math, no framework imports, so
  * the staking flow can reuse it and the tests can pin it.
  *
- * Everything is measured in USD at deposit time: ETH, WBTC and USDC fill the
- * same tiers and weigh in the same pool by what they were worth when they
- * came in.
+ * Tiers fill by USD at deposit time: ETH, WBTC and USDC fill the same tiers
+ * by what they were worth when they came in. Points are shared by the yield a
+ * deposit contributes, not its size: a dollar of USDC (5%) earns 5/3 of a
+ * dollar of ETH (3%), a dollar of WBTC (1%) a third of one.
  */
 import {
   VENTURE_STAKING,
@@ -30,11 +31,18 @@ export interface VentureStakeInput {
   /** USD deposited so far (at deposit-time prices); 0 or unknown means pre-launch. */
   livePoolUsd: number;
   fdvMillions: number;
+  /**
+   * The pool's yield per dollar against ETH's, from its asset mix (1 when it
+   * is all ETH, and for the assumed launch pool).
+   */
+  poolYieldWeight?: number;
 }
 
 export interface VentureProjection {
-  /** The deposit at USD value; what the tiers and the pool weigh. */
+  /** The deposit at USD value; what fills the tiers. */
   amountUsd: number;
+  /** Yield per dollar against ETH's; scales the deposit's share of points. */
+  yieldWeight: number;
   tier: VentureTier;
   /** USD already deposited ahead of the visitor. */
   existingUsd: number;
@@ -64,6 +72,10 @@ export const monthlyEmission = (
   month: number,
   program: VentureStakingProgram = VENTURE_STAKING,
 ) => monthOneEmission(program) * (1 - program.monthlyDecay) ** month;
+
+/** Yield per dollar of `asset` against a dollar of staked ETH. */
+export const yieldWeight = (asset: VentureAsset, program: VentureStakingProgram = VENTURE_STAKING) =>
+  asset.yieldRate / program.stakingYield;
 
 /** The tier the dollar at `positionUsd` (0-based, in deposit order) falls into. */
 export const tierAt = (
@@ -112,7 +124,7 @@ export const weightedPool = (
  * Returns null for a missing or non-positive amount so the UI shows dashes.
  */
 export const projectVentureStake = (
-  { asset, amount, livePoolUsd, fdvMillions }: VentureStakeInput,
+  { asset, amount, livePoolUsd, fdvMillions, poolYieldWeight = 1 }: VentureStakeInput,
   program: VentureStakingProgram = VENTURE_STAKING,
 ): VentureProjection | null => {
   if (
@@ -128,12 +140,14 @@ export const projectVentureStake = (
     : livePoolUsd;
   const tier = tierAt(existingUsd, program);
   const e0 = monthOneEmission(program);
+  const weight = yieldWeight(asset, program);
+  const poolWeight = isAssumedPool ? 1 : poolYieldWeight;
 
   let refi12 = 0;
   let monthOneShare = 0;
   for (let k = 0; k < program.horizonMonths; k++) {
-    const mine = amountUsd * effectiveMultiplier(tier, k, program);
-    const share = mine / (weightedPool(existingUsd, k, program) + mine);
+    const mine = amountUsd * weight * effectiveMultiplier(tier, k, program);
+    const share = mine / (weightedPool(existingUsd, k, program) * poolWeight + mine);
     if (k === 0) monthOneShare = share;
     refi12 += share * e0 * (1 - program.monthlyDecay) ** k;
   }
@@ -145,6 +159,7 @@ export const projectVentureStake = (
 
   return {
     amountUsd,
+    yieldWeight: weight,
     tier,
     existingUsd,
     isAssumedPool,

@@ -16,9 +16,6 @@
           <h1 class="staking__title">
             Staking
           </h1>
-          <p class="staking__lede">
-            The earlier you stake, the more points you earn.
-          </p>
           <ul class="staking__flex" aria-label="Program guarantees">
             <li class="staking__flex-item staking__flex-item--accent">
               <Icon icon="mdi:fire" width="1rem" />100% of revenue buys back REFI
@@ -73,6 +70,7 @@
     <StakingCalculatorDialog
       v-model="isCalculatorOpen"
       :pool-usd="poolUsd"
+      :pool-yield-weight="poolYieldWeight"
       @stake="onCalculatorStake"
     />
   </div>
@@ -87,7 +85,7 @@ import type { VentureAsset } from "~/composables/staking/ventureStakingConfig";
 type StakeSymbol = VentureAsset["symbol"];
 
 const accountStore = useAccountStore();
-const { isPreview, program, poolUsd, position } = useVentureStats();
+const { isPreview, program, poolUsd, poolYieldWeight, position } = useVentureStats();
 const fills = computed(() => tierFills(poolUsd.value));
 const currentTier = computed(() => (fills.value.find((fill) => fill.isCurrent) ?? fills.value[0]).tier);
 
@@ -143,7 +141,7 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     display: flex;
     flex-direction: column;
     gap: 2.25rem;
-    padding: 3rem 0 0.5rem;
+    padding: 2rem 0 0.5rem;
     isolation: isolate;
 
     // A brand glow and a faint grid behind the hero, fading out at the edges.
@@ -165,10 +163,12 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     }
   }
 
+  // Title and badges on the left; How it works centred in the space beside
+  // them, level with the middle of the block.
   &__top {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
-    align-items: end;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
     gap: 2rem 3rem;
 
     @media (max-width: $screen-lg) {
@@ -177,7 +177,12 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
   }
 
   &__how {
-    padding-bottom: 0.25rem;
+    justify-self: center;
+    max-width: 26rem;
+
+    @media (max-width: $screen-lg) {
+      justify-self: start;
+    }
   }
 
   &__intro {
@@ -211,10 +216,11 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
 
   &__title {
     margin: 0;
-    font-size: clamp(3.25rem, 9vw, 6rem);
+    // The same size as Discover's "On-chain vaults".
+    font-size: clamp(30px, 3.4vw, 44px);
     font-weight: 700;
-    letter-spacing: -0.04em;
-    line-height: 0.95;
+    letter-spacing: -0.02em;
+    line-height: 1;
     color: $color-title;
   }
 
@@ -256,13 +262,6 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
     }
   }
 
-  &__lede {
-    max-width: 34rem;
-    margin: 0;
-    font-size: 1.0625rem;
-    line-height: 1.6;
-    color: $color-subtitle;
-  }
 
   &__main {
     display: grid;

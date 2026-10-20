@@ -212,16 +212,28 @@ export const VENTURE_STAKING_PREVIEW = {
 };
 
 /**
- * Buybacks: 100% of the revenue Rethink Finance earns buys back REFI. The
- * simulator's ranges and defaults live here.
- * TODO: confirm the fee rate and the starting AUM.
+ * Buybacks: 100% of the revenue Rethink Finance earns buys back REFI.
+ * Revenue has three sources; the two marked "assumed" are estimates.
+ * TODO: confirm the manager-fee and referral assumptions and the starting AUM.
  */
 export const VENTURE_BUYBACKS = {
-  feeOptionsBps: [10, 15, 25],
-  defaultFeeBps: 15,
+  revenue: {
+    /** Platform fee on AUM. */
+    platformFeeBps: 15,
+    /** Assumed: what managers earn a year (management plus performance), on AUM. */
+    managerEarningsBps: 150,
+    /** Rethink's cut of what managers earn. */
+    managerShare: 0.05,
+    /** Assumed: referral fees from the venues vaults route through, on AUM. */
+    referralBps: 3,
+  },
   aumMinUsd: 10_000_000,
-  aumMaxUsd: 5_000_000_000,
+  aumMaxUsd: 2_000_000_000,
   defaultAumUsd: 250_000_000,
-  /** Program years whose emissions the chart compares buybacks against. */
-  emissionYears: [1, 3],
+  growthMax: 2,
+  defaultGrowth: 0.75,
+  /** Years projected; the program emits over six. */
+  years: 6,
 } as const;
+
+export type VentureRevenueModel = typeof VENTURE_BUYBACKS.revenue;

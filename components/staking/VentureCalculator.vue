@@ -175,6 +175,10 @@
               </template>
             </dd>
           </div>
+          <div v-if="asset.symbol !== 'ETH'" class="calc__breakdown-row">
+            <dt>Points weight, by yield</dt>
+            <dd>{{ projection ? `${projection.yieldWeight.toFixed(2)}x a dollar of ETH` : DASH }}</dd>
+          </div>
           <div class="calc__breakdown-row">
             <dt>Counts toward the tiers as</dt>
             <dd>{{ projection ? formatUsd(projection.amountUsd) : DASH }}</dd>
@@ -204,7 +208,9 @@
         {{ formatRate(VENTURE_STAKING.stakingYield) }} staking yield.
         <template v-if="asset.symbol !== 'ETH'">
           {{ asset.symbol }} at {{ formatUsd(asset.priceUsd) }} with a {{ formatRate(asset.yieldRate) }} yield,
-          counted toward the tiers at its USD value.
+          counted toward the tiers at its USD value. Points follow the yield a deposit contributes, so a
+          dollar of {{ asset.symbol }} earns {{ (asset.yieldRate / VENTURE_STAKING.stakingYield).toFixed(2) }}x
+          what a dollar of ETH does.
         </template>
         Emissions start near {{ formatInt(monthOneEmission()) }} REFI a month and decay
         {{ formatRate(VENTURE_STAKING.monthlyDecay) }} monthly over {{ VENTURE_STAKING.emissionMonths }} months.
@@ -239,6 +245,8 @@ import {
 const props = defineProps<{
   /** USD deposited so far at deposit-time value; 0 before launch or when the read fails. */
   poolUsd: number;
+  /** The pool's yield per dollar against ETH's (1 for an all-ETH pool). */
+  poolYieldWeight?: number;
 }>();
 
 const emit = defineEmits<{ stake: [symbol: VentureAsset["symbol"], amount: number] }>();
@@ -281,6 +289,7 @@ const projection = computed(() =>
     asset: asset.value,
     amount: amount.value,
     livePoolUsd: props.poolUsd,
+    poolYieldWeight: props.poolYieldWeight,
     fdvMillions: fdv.value,
   }),
 );
