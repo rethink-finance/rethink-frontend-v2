@@ -1,5 +1,5 @@
 <template>
-  <div class="stake_page page_shell">
+  <div class="stake_page page_shell grid_backdrop">
     <div class="stake_topbar">
       <NuxtLink to="/" class="stake_topbar__back">
         <Icon icon="mdi:arrow-left" width="0.8125rem" />
@@ -82,6 +82,7 @@
       v-model="isCalculatorOpen"
       :pool-usd="poolUsd"
       :pool-yield-weight="poolYieldWeight"
+      :selected="selectedAsset"
       @stake="onCalculatorStake"
     />
   </div>
@@ -117,29 +118,7 @@ const onCalculatorStake = (symbol: StakeSymbol, amount: number) => {
 
 <style scoped lang="scss">
 .stake_page {
-  position: relative;
   padding-bottom: 2rem;
-  isolation: isolate;
-  // The glow bleeds past the container; never into a sideways scroll.
-  overflow-x: clip;
-
-  // A brand glow and a faint grid behind the top of the page, fading out
-  // before the cards.
-  &::before {
-    content: "";
-    position: absolute;
-    top: -4rem;
-    right: -50vw;
-    left: -50vw;
-    z-index: -1;
-    height: 34rem;
-    background:
-      radial-gradient(40rem 20rem at 70% 30%, $color-accent-soft, transparent 70%),
-      linear-gradient($color-line 1px, transparent 1px) 0 0 / 48px 48px,
-      linear-gradient(90deg, $color-line 1px, transparent 1px) 0 0 / 48px 48px;
-    mask-image: radial-gradient(60rem 26rem at 50% 30%, #000 30%, transparent 75%);
-    pointer-events: none;
-  }
 }
 
 // The vault page's "All vaults" row.

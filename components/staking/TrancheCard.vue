@@ -1,15 +1,11 @@
 <template>
-  <section class="tranche" aria-labelledby="tranche-title">
-    <div class="tranche__head">
-      <span id="tranche-title" class="tranche__eyebrow">
-        <span class="tranche__pulse" aria-hidden="true" />Now staked
-      </span>
-    </div>
-
+  <section class="tranche" aria-label="Current points stage">
     <div class="tranche__offer">
       <span class="tranche__mult">{{ current.tier.baseMultiplier }}x</span>
       <span class="tranche__offer-text">points if you stake now</span>
-      <span class="tranche__stage">{{ current.tier.name }} stage</span>
+      <span class="tranche__stage">
+        <span class="tranche__pulse" aria-hidden="true" />{{ current.tier.name }} stage
+      </span>
     </div>
 
     <template v-if="hasCapacity">
@@ -130,19 +126,7 @@ const assetRows = computed(() =>
   background: $color-surface;
   box-shadow: var(--shadow-card);
 
-  &__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
 
-  &__eyebrow {
-    @include card-title;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.625rem;
-  }
 
   &__pulse {
     width: 6px;
@@ -176,6 +160,9 @@ const assetRows = computed(() =>
   }
 
   &__stage {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     margin-left: auto;
     font-size: $text-sm;
     color: $color-subtitle;

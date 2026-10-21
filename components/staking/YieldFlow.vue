@@ -45,7 +45,7 @@
         type="button"
         class="flow__venue"
         :class="{ 'flow__venue--dim': active !== null && active !== index }"
-        :style="labelStyle(COLUMNS[1], bands[index].to)"
+        :style="{ ...labelStyle(COLUMNS[1], bands[index].to), maxWidth: `calc(${COLUMNS[2] - COLUMNS[1]}% - 22px)` }"
         :aria-label="`${row.source.name}: ${row.pct} of ${asset.symbol}, into ${row.source.position}`"
         @mouseenter="active = index"
         @focus="active = index"
@@ -82,6 +82,7 @@
       >
         <strong>{{ rows[active].amountLabel }} {{ asset.symbol }}</strong>
         {{ formatUsdCompact(rows[active].usd) }} in {{ rows[active].source.name }}
+        <span>earning ~{{ formatRate(rows[active].source.apy) }} a year</span>
       </p>
     </div>
   </div>
@@ -91,6 +92,7 @@
 import {
   formatAmount,
   formatCompact,
+  formatRate,
   formatUsdCompact,
 } from "~/composables/staking/formatStaking";
 import type {
@@ -112,17 +114,40 @@ const GAP = 10;
  * last two in so the position labels keep room on the right.
  */
 const canvas = ref<HTMLElement>();
-const isNarrow = ref(false);
-const COLUMNS = computed(() => (isNarrow.value ? [0, 30, 64] : [0, 38, 74]));
+const canvasWidth = ref(0);
+const positionWidth = ref(0);
+
+/** Width of the longest position name (stETH, steakUSDC) now on screen. */
+const measurePositions = () => {
+  const labels = canvas.value?.querySelectorAll<HTMLElement>(".flow__position") ?? [];
+  positionWidth.value = Math.max(0, ...[...labels].map((label) => label.scrollWidth));
+};
+
+/**
+ * Left edge of each column, in percent of the width. The last column sits
+ * so its longest name ends at the card's edge, giving the ribbons all the
+ * room the short names do not need; the middle column halves what is left.
+ */
+const COLUMNS = computed(() => {
+  const width = canvasWidth.value;
+  if (!width || !positionWidth.value) return [0, 42, 84];
+  const last = ((width - positionWidth.value - 14 - 2) / width) * 100;
+  const clamped = Math.min(Math.max(last, 60), 94);
+  return [0, clamped / 2, clamped];
+});
 
 let observer: ResizeObserver | undefined;
 onMounted(() => {
   observer = new ResizeObserver(([entry]) => {
-    isNarrow.value = entry.contentRect.width < 560;
+    canvasWidth.value = entry.contentRect.width;
   });
   if (canvas.value) observer.observe(canvas.value);
+  measurePositions();
 });
 onUnmounted(() => observer?.disconnect());
+
+// Another asset brings other names; measure once they are on screen.
+watch(() => props.strategy, () => nextTick(measurePositions));
 
 const active = ref<number | null>(null);
 watch(() => props.asset.symbol, () => { active.value = null; });
@@ -250,7 +275,6 @@ const nodeClass = (index: number) => ({
     display: inline-flex;
     align-items: center;
     gap: 0.4375rem;
-    max-width: calc(34% - 18px);
     transform: translateY(-50%);
     font-size: $text-sm;
     color: $color-title;

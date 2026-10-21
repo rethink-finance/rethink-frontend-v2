@@ -1,212 +1,156 @@
 <template>
   <div class="calc">
-    <div>
-      <div class="calc__grid">
-        <div class="calc__inputs">
-          <div class="calc__field">
-            <label class="calc__label" for="calc-amount">
-              <span class="calc__step">01</span> I stake
-            </label>
-            <div class="calc__amount-row">
-              <input
-                id="calc-amount"
-                v-model="amountInput"
-                class="calc__amount"
-                type="number"
-                inputmode="decimal"
-                :min="asset.min"
-                :step="asset.step"
-              >
-              <div class="calc__assets" role="group" aria-label="Asset to stake">
-                <button
-                  v-for="option in VENTURE_STAKING_ASSETS"
-                  :key="option.symbol"
-                  type="button"
-                  class="calc__asset"
-                  :class="{ 'calc__asset--active': option.symbol === asset.symbol }"
-                  :aria-pressed="option.symbol === asset.symbol"
-                  @click="selectAsset(option)"
-                >
-                  {{ option.symbol }}
-                </button>
-              </div>
-            </div>
-            <!-- Keyed per asset: patching min/max after the value would clamp it
-                 against the previous asset's range. -->
+    <div class="calc__grid">
+      <div class="calc__inputs">
+        <div class="calc__field">
+          <label class="calc__label" for="calc-amount">How much do you want to stake?</label>
+          <div class="calc__amount-row">
             <input
-              :key="asset.symbol"
-              v-model.number="slider"
-              class="calc__slider"
-              type="range"
-              :min="asset.sliderMin"
-              :max="asset.sliderMax"
-              :step="asset.sliderStep"
-              :aria-label="`${asset.symbol} to stake`"
-              :style="{ '--fill': sliderFill }"
+              id="calc-amount"
+              v-model="amountInput"
+              class="calc__amount"
+              type="number"
+              inputmode="decimal"
+              :min="asset.min"
+              :step="asset.step"
             >
+            <StakingAssetTabs v-model="symbol" size="small" />
           </div>
+          <!-- Keyed per asset: patching min/max after the value would clamp it
+               against the previous asset's range. -->
+          <input
+            :key="asset.symbol"
+            v-model.number="slider"
+            class="calc__slider"
+            type="range"
+            :min="asset.sliderMin"
+            :max="asset.sliderMax"
+            :step="asset.sliderStep"
+            :aria-label="`${asset.symbol} to stake`"
+            :style="{ '--fill': sliderFill }"
+          >
+        </div>
 
-          <div class="calc__field">
-            <span id="calc-fdv" class="calc__label">
-              <span class="calc__step">02</span> Fully Diluted Valuation at Token Launch
+        <div class="calc__field">
+          <span id="calc-fdv" class="calc__label">REFI valuation at launch</span>
+          <div class="calc__options" role="group" aria-labelledby="calc-fdv">
+            <button
+              v-for="scenario in VENTURE_STAKING.fdvScenarios"
+              :key="scenario.fdvMillions"
+              type="button"
+              class="calc__option"
+              :class="{ 'calc__option--active': scenario.fdvMillions === fdv }"
+              :aria-pressed="scenario.fdvMillions === fdv"
+              @click="fdv = scenario.fdvMillions"
+            >
+              <span class="calc__option-price">{{ formatPrice(priceAt(scenario.fdvMillions)) }}</span>
+              <span class="calc__option-sub">per REFI · ${{ scenario.fdvMillions }}M</span>
+              <span class="calc__option-name">{{ scenario.label }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="calc__result" aria-live="polite">
+        <span class="calc__caption">After one year</span>
+
+        <div class="calc__rows">
+          <div class="calc__row">
+            <span class="calc__row-icon"><Icon icon="mdi:shield-check-outline" width="1.25rem" /></span>
+            <span class="calc__row-label">You keep</span>
+            <span class="calc__row-value">
+              {{ projection ? `${formatAmount(amount, asset.displayDecimals)} ${asset.symbol}` : DASH }}
             </span>
-            <div class="calc__fdv" role="group" aria-labelledby="calc-fdv">
-              <button
-                v-for="scenario in VENTURE_STAKING.fdvScenarios"
-                :key="scenario.fdvMillions"
-                type="button"
-                class="calc__fdv-option"
-                :class="{ 'calc__fdv-option--active': scenario.fdvMillions === fdv }"
-                :aria-pressed="scenario.fdvMillions === fdv"
-                @click="fdv = scenario.fdvMillions"
-              >
-                <span class="calc__fdv-value">${{ scenario.fdvMillions }}M</span>
-                <span class="calc__fdv-label">{{ scenario.label }}</span>
-              </button>
-            </div>
+            <span class="calc__row-note">{{ projection ? formatUsd(projection.amountUsd) : "" }}</span>
+          </div>
+          <div class="calc__row calc__row--earn">
+            <span class="calc__row-icon"><StakingRefiMark :size="22" /></span>
+            <span class="calc__row-label">You earn</span>
+            <span class="calc__row-value calc__row-value--earn">
+              {{ projection ? formatUsd(projection.valueUsd) : DASH }}
+            </span>
+            <span class="calc__row-note">{{ projection ? `${formatCompact(projection.refi12)} REFI` : "" }}</span>
           </div>
         </div>
 
-        <div class="calc__result" aria-live="polite">
-          <span class="calc__caption">After one year you have</span>
-
-          <div class="calc__ledger">
-            <div class="calc__line calc__line--principal">
-              <span class="calc__line-icon"><Icon icon="mdi:shield-check-outline" width="1.375rem" /></span>
-              <div class="calc__line-body">
-                <span class="calc__line-label">Your principal, untouched</span>
-                <span class="calc__line-value">
-                  <template v-if="projection">
-                    {{ formatAmount(amount, asset.displayDecimals) }} {{ asset.symbol }}
-                    <small>{{ formatUsd(projection.amountUsd) }}</small>
-                  </template>
-                  <template v-else>
-                    {{ DASH }}
-                  </template>
-                </span>
-                <span class="calc__line-note">100% stays yours. Withdraw it any settlement cycle.</span>
-              </div>
-              <span class="calc__tag">Kept</span>
-            </div>
-
-            <div class="calc__plus" aria-hidden="true">
-              <Icon icon="mdi:plus" width="1rem" />
-            </div>
-
-            <div class="calc__line calc__line--bonus">
-              <span class="calc__line-icon"><StakingRefiMark :size="26" /></span>
-              <div class="calc__line-body">
-                <span class="calc__line-label">Your REFI after the first year would be worth</span>
-                <span class="calc__hero">
-                  {{ projection ? formatUsd(projection.valueUsd) : DASH }}
-                </span>
-                <span class="calc__line-note">
-                  <template v-if="projection">
-                    {{ formatCompact(projection.refi12) }} REFI in the ${{ fdv }}M scenario,
-                    {{ projection.tier.name }} tier at {{ projection.tier.baseMultiplier }}x
-                  </template>
-                  <template v-else>
-                    Enter how much {{ asset.symbol }} you would stake.
-                  </template>
-                </span>
-              </div>
-              <span class="calc__tag calc__tag--bonus">On top</span>
-            </div>
+        <div v-if="projection" class="calc__compare">
+          <span class="calc__compare-title">
+            <strong>{{ formatMultiple(projection.multipleVsYield) }}</strong> the {{ asset.yieldLabel }} you give up
+          </span>
+          <div class="calc__bar-row">
+            <span class="calc__bar-label">{{ capitalize(asset.yieldLabel) }}</span>
+            <span class="calc__bar calc__bar--yield" :style="{ width: barWidth(projection.yieldRedirectedUsd) }" />
+            <span class="calc__bar-value">{{ formatUsd(projection.yieldRedirectedUsd) }}</span>
           </div>
-
-          <p class="calc__trade">
-            <template v-if="projection">
-              The only thing you give up is the {{ asset.yieldLabel }}:
-              <strong>
-                {{ formatAmount(projection.yieldRedirected, asset.displayDecimals) }} {{ asset.symbol }}
-                ({{ formatUsd(projection.yieldRedirectedUsd) }}) a year.
-              </strong>
-              Your REFI is worth <strong class="calc__multiple">{{ formatMultiple(projection.multipleVsYield) }}</strong> that.
-            </template>
-            <template v-else>
-              The only thing you give up is the {{ asset.yieldLabel }}.
-            </template>
-          </p>
-
-          <div class="calc__ctas">
-            <v-btn
-              color="primary"
-              size="large"
-              class="calc__btn"
-              @click="emit('stake', asset.symbol, amount)"
-            >
-              Stake {{ asset.symbol }}
-            </v-btn>
-            <v-btn
-              variant="outlined"
-              size="large"
-              class="calc__btn calc__btn--ghost"
-              :href="VENTURE_STAKING_TERMS_URL"
-              target="_blank"
-              rel="noopener"
-            >
-              Read the full terms
-            </v-btn>
+          <div class="calc__bar-row">
+            <span class="calc__bar-label">REFI</span>
+            <span class="calc__bar calc__bar--refi" :style="{ width: barWidth(projection.valueUsd) }" />
+            <span class="calc__bar-value">{{ formatUsd(projection.valueUsd) }}</span>
           </div>
         </div>
-      </div>
 
-      <div class="calc__details">
-        <button
-          type="button"
-          class="calc__toggle"
-          :aria-expanded="showBreakdown"
-          aria-controls="calc-breakdown"
-          @click="showBreakdown = !showBreakdown"
-        >
-          How this is calculated
-          <Icon :icon="showBreakdown ? 'mdi:chevron-up' : 'mdi:chevron-down'" width="1.1rem" />
-        </button>
-        <dl v-show="showBreakdown" id="calc-breakdown" class="calc__breakdown">
-          <div class="calc__breakdown-row">
-            <dt>Tier entered</dt>
-            <dd>
-              <template v-if="projection">
-                {{ projection.tier.name }} ({{ projection.tier.baseMultiplier }}x),
-                {{ formatUsdCompact(projection.existingUsd) }} deposited ahead of you
-              </template>
-              <template v-else>
-                {{ DASH }}
-              </template>
-            </dd>
-          </div>
-          <div v-if="asset.symbol !== 'ETH'" class="calc__breakdown-row">
-            <dt>Points weight, by yield</dt>
-            <dd>{{ projection ? `${projection.yieldWeight.toFixed(2)}x a dollar of ETH` : DASH }}</dd>
-          </div>
-          <div class="calc__breakdown-row">
-            <dt>Counts toward the tiers as</dt>
-            <dd>{{ projection ? formatUsd(projection.amountUsd) : DASH }}</dd>
-          </div>
-          <div class="calc__breakdown-row">
-            <dt>Month-1 share</dt>
-            <dd>{{ projection ? formatShare(projection.monthOneShare) : DASH }}</dd>
-          </div>
-          <div class="calc__breakdown-row">
-            <dt>REFI over 12 months</dt>
-            <dd>{{ projection ? formatInt(projection.refi12) : DASH }}</dd>
-          </div>
-          <div class="calc__breakdown-row">
-            <dt>Scenario price per REFI</dt>
-            <dd>{{ formatPrice(pricePerRefi) }}</dd>
-          </div>
-          <p v-if="projection" class="calc__equation">
-            {{ formatInt(projection.refi12) }} × {{ formatPrice(projection.pricePerRefi) }}
-            = {{ formatUsd(projection.valueUsd) }}
-          </p>
-        </dl>
+        <div class="calc__ctas">
+          <v-btn
+            color="primary"
+            size="large"
+            class="calc__btn"
+            :disabled="!projection"
+            @click="emit('stake', asset.symbol, amount)"
+          >
+            Stake {{ projection ? `${formatAmount(amount, asset.displayDecimals)} ` : "" }}{{ asset.symbol }}
+          </v-btn>
+          <a
+            class="calc__terms"
+            :href="VENTURE_STAKING_TERMS_URL"
+            target="_blank"
+            rel="noopener"
+          >
+            Read the full terms
+          </a>
+        </div>
       </div>
-
-      <p class="calc__fine">
-        A projection at the chosen valuation at token launch, with the pool ({{ poolSentence }}) held flat.
-        Points follow the yield a deposit contributes; REFI has no market price before TGE.
-      </p>
     </div>
+
+    <div class="calc__details">
+      <button
+        type="button"
+        class="calc__toggle"
+        :aria-expanded="showBreakdown"
+        aria-controls="calc-breakdown"
+        @click="showBreakdown = !showBreakdown"
+      >
+        How this is calculated
+        <Icon :icon="showBreakdown ? 'mdi:chevron-up' : 'mdi:chevron-down'" width="1.1rem" />
+      </button>
+      <dl v-show="showBreakdown" id="calc-breakdown" class="calc__breakdown">
+        <div class="calc__breakdown-row">
+          <dt>Stage you enter</dt>
+          <dd>
+            {{ projection ? `${projection.tier.name}, ${projection.tier.baseMultiplier}x points` : DASH }}
+          </dd>
+        </div>
+        <div class="calc__breakdown-row">
+          <dt>Staked ahead of you</dt>
+          <dd>{{ projection ? formatUsdCompact(projection.existingUsd) : DASH }}</dd>
+        </div>
+        <div v-if="asset.symbol !== 'ETH'" class="calc__breakdown-row">
+          <dt>Points weight, by yield</dt>
+          <dd>{{ projection ? `${projection.yieldWeight.toFixed(2)}x a dollar of ETH` : DASH }}</dd>
+        </div>
+        <div class="calc__breakdown-row">
+          <dt>Your share of month-1 points</dt>
+          <dd>{{ projection ? formatShare(projection.monthOneShare) : DASH }}</dd>
+        </div>
+        <p v-if="projection" class="calc__equation">
+          {{ formatInt(projection.refi12) }} REFI × {{ formatPrice(projection.pricePerRefi) }}
+          = {{ formatUsd(projection.valueUsd) }}
+        </p>
+      </dl>
+    </div>
+
+    <p class="calc__fine">
+      A projection, not a promise: {{ poolSentence }}, held flat for a year. REFI has no price before launch.
+    </p>
   </div>
 </template>
 
@@ -227,16 +171,23 @@ import {
   type VentureAsset,
 } from "~/composables/staking/ventureStakingConfig";
 
+type AssetSymbol = VentureAsset["symbol"];
+
 const props = defineProps<{
   /** USD deposited so far at deposit-time value; 0 before launch or when the read fails. */
   poolUsd: number;
   /** The pool's yield per dollar against ETH's (1 for an all-ETH pool). */
   poolYieldWeight?: number;
+  /** The asset picked in the deposit card; the calculator opens on it. */
+  initialSymbol?: AssetSymbol;
 }>();
 
-const emit = defineEmits<{ stake: [symbol: VentureAsset["symbol"], amount: number] }>();
+const emit = defineEmits<{ stake: [symbol: AssetSymbol, amount: number] }>();
 
-const asset = ref<VentureAsset>(VENTURE_STAKING_ASSETS[0]);
+const assetFor = (symbol?: AssetSymbol) =>
+  VENTURE_STAKING_ASSETS.find((option) => option.symbol === symbol) ?? VENTURE_STAKING_ASSETS[0];
+
+const asset = ref<VentureAsset>(assetFor(props.initialSymbol));
 const amountInput = ref<string | number>(asset.value.defaultAmount);
 const slider = ref<number>(asset.value.defaultAmount);
 const fdv = ref<number>(VENTURE_STAKING.defaultFdvMillions);
@@ -253,6 +204,16 @@ const selectAsset = (option: VentureAsset) => {
   amountInput.value = option.defaultAmount;
   slider.value = option.defaultAmount;
 };
+
+/** The asset switch speaks symbols; the calculator keeps the whole asset. */
+const symbol = computed({
+  get: () => asset.value.symbol,
+  set: (value: AssetSymbol) => selectAsset(assetFor(value)),
+});
+
+watch(() => props.initialSymbol, (value) => {
+  if (value) selectAsset(assetFor(value));
+});
 
 // The slider follows the field only while the field is inside its range.
 watch(amount, (value) => {
@@ -279,12 +240,19 @@ const projection = computed(() =>
   }),
 );
 
+const priceAt = (fdvMillions: number) => (fdvMillions * 1e6) / VENTURE_STAKING.supply;
 
-const pricePerRefi = computed(() => (fdv.value * 1e6) / VENTURE_STAKING.supply);
+/** Both comparison bars share one scale: the larger of the two fills it. */
+const barWidth = (usd: number) => {
+  const p = projection.value;
+  if (!p) return "0%";
+  const max = Math.max(p.valueUsd, p.yieldRedirectedUsd);
+  return `${Math.max((usd / max) * 100, 1.5)}%`;
+};
 
 const poolSentence = computed(() =>
   props.poolUsd > 0
-    ? `${formatUsdCompact(props.poolUsd)} deposited so far`
+    ? `${formatUsdCompact(props.poolUsd)} staked so far`
     : `${formatUsdCompact(VENTURE_STAKING.assumedLaunchPoolUsd)} assumed at launch`,
 );
 
@@ -296,6 +264,7 @@ const formatShare = (share: number) =>
 const formatMultiple = (multiple: number) =>
   `${multiple >= 10 ? Math.round(multiple) : multiple.toFixed(1)}x`;
 
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 </script>
 
 <style scoped lang="scss">
@@ -303,14 +272,9 @@ const formatMultiple = (multiple: number) =>
   display: flex;
   flex-direction: column;
 
-
-
-
-
-
   &__grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 
     @media (max-width: $screen-lg) {
       grid-template-columns: minmax(0, 1fr);
@@ -320,8 +284,8 @@ const formatMultiple = (multiple: number) =>
   &__inputs {
     display: flex;
     flex-direction: column;
-    gap: 1.75rem;
-    padding: 1.875rem;
+    gap: 2rem;
+    padding: 1.75rem;
     border-right: 1px solid $color-line;
 
     @media (max-width: $screen-lg) {
@@ -333,35 +297,26 @@ const formatMultiple = (multiple: number) =>
   &__field {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.875rem;
   }
 
   &__label {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
     font-size: $text-md;
     font-weight: 600;
     color: $color-title;
   }
 
-  &__step {
-    font-family: $font-mono;
-    font-size: 11px;
-    font-weight: 400;
-    color: $color-subtitle;
-  }
-
   &__amount-row {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-end;
+    align-items: center;
+    justify-content: space-between;
     gap: 1rem;
   }
 
   &__amount {
-    width: 11rem;
-    max-width: 100%;
+    flex: 1 1 8rem;
+    min-width: 0;
     // Out-states the global `:root input` height and padding.
     min-height: 0;
     height: auto;
@@ -387,51 +342,14 @@ const formatMultiple = (multiple: number) =>
     }
   }
 
-  &__assets {
-    display: flex;
-    gap: 0.25rem;
-    margin-bottom: 0.375rem;
-    padding: 0.1875rem;
-    border: 1px solid $color-line;
-    border-radius: $default-border-radius;
-    background: $color-card-background;
-  }
-
-  &__asset {
-    padding: 0.3125rem 0.625rem;
-    border-radius: $default-border-radius;
-    font-family: $font-mono;
-    font-size: $text-xs;
-    letter-spacing: 0.08em;
-    color: $color-subtitle;
-    transition: background $default-transition-time, color $default-transition-time;
-
-    &:hover {
-      color: $color-title;
-    }
-
-    &:focus-visible {
-      outline: 1px solid var(--accent-line);
-    }
-
-    &--active {
-      background: var(--fill-2);
-      color: $color-title;
-    }
-  }
-
   &__slider {
     width: 100%;
     height: 6px;
     min-height: 0;
     padding: 0;
-    margin: 0.5rem 0 0;
+    margin: 0.25rem 0 0;
     border-radius: 3px;
-    background: linear-gradient(
-      to right,
-      $color-primary var(--fill),
-      var(--fill-2) var(--fill)
-    );
+    background: linear-gradient(to right, $color-primary var(--fill), var(--fill-2) var(--fill));
     appearance: none;
     cursor: pointer;
 
@@ -458,23 +376,22 @@ const formatMultiple = (multiple: number) =>
     }
   }
 
-  &__fdv {
+  &__options {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.5rem;
   }
 
-  &__fdv-option {
+  &__option {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.875rem 0.5rem;
+    align-items: flex-start;
+    gap: 0.125rem;
+    padding: 0.75rem 0.875rem;
     border: 1px solid $color-line-2;
     border-radius: $default-border-radius;
     background: $color-card-background;
-    font-family: $font-mono;
-    color: $color-subtitle;
+    text-align: left;
     transition: border-color $default-transition-time, background $default-transition-time;
 
     &:hover {
@@ -489,25 +406,37 @@ const formatMultiple = (multiple: number) =>
     &--active {
       border-color: $color-primary;
       background: $color-accent-soft;
-      color: $color-blue-bright;
     }
   }
 
-  &__fdv-value {
-    font-size: $text-sm;
+  &__option-price {
+    font-family: $font-mono;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: $color-title;
   }
 
-  &__fdv-label {
+  &__option-sub {
+    font-family: $font-mono;
     font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    color: $color-subtitle;
+  }
+
+  &__option-name {
+    margin-top: 0.25rem;
+    font-size: $text-xs;
+    color: $color-subtitle;
+  }
+
+  &__option--active &__option-name {
+    color: $color-blue-bright;
   }
 
   &__result {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 1.875rem;
+    gap: 1.25rem;
+    padding: 1.75rem;
   }
 
   &__caption {
@@ -518,16 +447,7 @@ const formatMultiple = (multiple: number) =>
     color: $color-subtitle;
   }
 
-
-
-
-
-
-
-
-
-
-  &__ledger {
+  &__rows {
     display: flex;
     flex-direction: column;
     border: 1px solid $color-line-2;
@@ -535,143 +455,139 @@ const formatMultiple = (multiple: number) =>
     background: $color-card-background;
   }
 
-  &__line {
+  &__row {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 1rem;
-    padding: 1.25rem;
+    grid-template-areas:
+      "icon label note"
+      "icon value value";
+    align-items: center;
+    column-gap: 0.875rem;
+    row-gap: 0.125rem;
+    padding: 1rem 1.125rem;
 
-    &--bonus {
+    &--earn {
       border-top: 1px solid $color-line;
       border-radius: 0 0 $default-border-radius $default-border-radius;
       background: $color-cyan-tint;
     }
   }
 
-  &__line-icon {
+  &__row-icon {
+    grid-area: icon;
     display: grid;
     place-items: center;
     width: 2.5rem;
     height: 2.5rem;
     border: 1px solid $color-line-2;
-    border-radius: $default-border-radius;
+    border-radius: 50%;
     color: $color-title;
   }
 
-  &__line--bonus &__line-icon {
+  &__row--earn &__row-icon {
     border-color: $color-cyan-line;
-    color: $color-cyan;
   }
 
-  &__line-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-    min-width: 0;
-  }
-
-  &__line-label {
-    font-family: $font-mono;
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+  &__row-label {
+    grid-area: label;
+    font-size: $text-sm;
     color: $color-subtitle;
   }
 
-  &__line-value {
+  &__row-value {
+    grid-area: value;
     font-family: $font-mono;
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: 600;
-    line-height: 1.1;
+    line-height: 1.15;
     color: $color-title;
 
-    small {
-      margin-left: 0.5rem;
-      font-size: $text-sm;
-      font-weight: 400;
-      color: $color-subtitle;
-    }
-  }
-
-  &__hero {
-    font-family: $font-mono;
-    font-size: clamp(2.25rem, 5vw, 3rem);
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: -0.02em;
-    color: $color-title;
-  }
-
-  &__line-note {
-    font-size: $text-xs;
-    line-height: 1.5;
-    color: $color-subtitle;
-  }
-
-  &__tag {
-    padding: 0.1875rem 0.5rem;
-    border: 1px solid $color-line-2;
-    border-radius: 999px;
-    font-family: $font-mono;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-title;
-    white-space: nowrap;
-
-    &--bonus {
-      border-color: $color-cyan-line;
+    &--earn {
+      font-size: 2.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
       color: $color-cyan;
     }
   }
 
-  // The "+" sits on the seam between what you keep and what you gain.
-  &__plus {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    place-items: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    margin: -0.875rem 0 -0.875rem 1.6rem;
-    border: 1px solid $color-cyan-line;
-    border-radius: 50%;
-    background: $color-surface;
-    color: $color-cyan;
+  &__row-note {
+    grid-area: note;
+    font-family: $font-mono;
+    font-size: $text-xs;
+    color: $color-subtitle;
   }
 
-  &__trade {
-    margin: 0.25rem 0 0;
+  &__compare {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__compare-title {
     font-size: $text-sm;
-    line-height: 1.5;
     color: $color-subtitle;
 
     strong {
-      color: $color-title;
-      font-weight: 600;
+      font-family: $font-mono;
+      font-weight: 700;
+      color: $color-cyan;
     }
   }
 
-  &__multiple {
+  &__bar-row {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: $text-xs;
+    color: $color-subtitle;
+  }
+
+  &__bar {
+    display: block;
+    height: 8px;
+    border-radius: 4px;
+
+    &--yield {
+      background: var(--fill-3);
+      box-shadow: inset 0 0 0 1px $color-line-3;
+    }
+
+    &--refi {
+      background: $gradient-brand;
+    }
+  }
+
+  &__bar-label {
+    white-space: nowrap;
+  }
+
+  &__bar-value {
     font-family: $font-mono;
-    color: $color-cyan !important;
+    color: $color-title;
   }
 
   &__ctas {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
+    align-items: center;
+    gap: 1rem 1.25rem;
+    margin-top: 0.25rem;
   }
 
   &__btn {
     text-transform: none;
     letter-spacing: 0;
     font-weight: 600;
+  }
 
-    &--ghost {
-      border-color: $color-line-2;
+  &__terms {
+    font-size: $text-sm;
+    color: $color-subtitle;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+
+    &:hover {
       color: $color-title;
     }
   }
@@ -685,7 +601,7 @@ const formatMultiple = (multiple: number) =>
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 1rem 1.875rem;
+    padding: 1rem 1.75rem;
     font-size: $text-sm;
     font-weight: 600;
     color: $color-title;
@@ -700,7 +616,7 @@ const formatMultiple = (multiple: number) =>
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding: 0 1.875rem 1.25rem;
+    padding: 0 1.75rem 1.25rem;
     font-size: $text-sm;
   }
 
@@ -731,7 +647,7 @@ const formatMultiple = (multiple: number) =>
 
   &__fine {
     margin: 0;
-    padding: 1.25rem 1.875rem 1.5rem;
+    padding: 1rem 1.75rem 1.25rem;
     border-top: 1px solid $color-line;
     font-size: $text-xs;
     line-height: 1.6;
@@ -741,10 +657,8 @@ const formatMultiple = (multiple: number) =>
   @media (max-width: $screen-sm) {
     &__inputs,
     &__result {
-      padding-left: 1.25rem;
-      padding-right: 1.25rem;
+      padding: 1.25rem;
     }
-
 
     &__toggle {
       padding: 1rem 1.25rem;
@@ -756,24 +670,24 @@ const formatMultiple = (multiple: number) =>
       padding-right: 1.25rem;
     }
 
+    &__option {
+      padding: 0.625rem;
+    }
 
+    &__option-price {
+      font-size: 1rem;
+    }
+
+    &__option-sub {
+      font-size: 10px;
+    }
+
+    &__bar-row {
+      grid-template-columns: 5rem minmax(0, 1fr) auto;
+    }
 
     &__btn {
       flex: 1 1 100%;
-    }
-
-    &__line {
-      grid-template-columns: auto minmax(0, 1fr);
-      padding: 1rem;
-    }
-
-    // The labels already say it; the pill would squeeze the figures.
-    &__tag {
-      display: none;
-    }
-
-    &__plus {
-      margin-left: 1.375rem;
     }
   }
 }
