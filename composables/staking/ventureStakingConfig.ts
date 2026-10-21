@@ -135,39 +135,38 @@ export const VENTURE_STAKING_ASSETS: VentureAsset[] = [
  * launch pool.
  */
 /** When the venue yields below were read (DefiLlama, Ethereum mainnet). */
-export const VENTURE_YIELD_RATES_AS_OF = "2026-10-20";
+export const VENTURE_YIELD_RATES_AS_OF = "2026-10-21";
 
 /**
  * The yield strategy per asset: the deepest blue-chip venues only, no
- * leverage, no bridges, no restaking. No protocol holds more than about 40%
- * of an asset, and each asset keeps a liquid slice so withdrawals at a
- * settlement cycle never wait on an exit queue.
+ * leverage, no bridges, no restaking, and no protocol holding more than 40%
+ * of an asset.
  * TODO: confirm with the strategy owner before launch; re-read the rates.
  */
 export const VENTURE_STAKING_YIELD_STRATEGIES: Record<VentureAsset["symbol"], VentureYieldStrategy> = {
   ETH: {
     label: "Liquid staking",
     sources: [
-      // The deepest liquid staking token; held under 40% to spread operator risk.
-      { name: "Lido", logo: "lido", position: "stETH", weight: 0.35, apy: 0.0223 },
+      // The deepest liquid staking token; held at 40% to spread operator risk.
+      { name: "Lido", logo: "lido", position: "stETH", weight: 0.4, apy: 0.0223 },
       // A regulated operator on a different validator set.
-      { name: "Coinbase", logo: "coinbase-wrapped-staked-eth", position: "cbETH", weight: 0.2, apy: 0.0229 },
-      // The most decentralised operator set.
-      { name: "Rocket Pool", logo: "rocket-pool", position: "rETH", weight: 0.2, apy: 0.0189 },
+      { name: "Coinbase", logo: "coinbase-wrapped-staked-eth", position: "cbETH", weight: 0.35, apy: 0.0229 },
       // No protocol fee; estimated from Lido's gross rate before its 10% cut.
-      { name: "Own validators", position: "Native ETH", weight: 0.15, apy: 0.0245 },
-      // The liquid slice: pays out withdrawals without waiting on exit queues.
-      { name: "Aave v3", logo: "aave-v3", position: "aEthWETH", weight: 0.1, apy: 0.0131 },
+      { name: "Own validators", position: "Native ETH", weight: 0.25, apy: 0.0245 },
     ],
   },
   WBTC: {
-    // BTC lending pays almost nothing (few borrow BTC); a pegged BTC pair adds
-    // swap fees without price risk, at the cost of exposure to cbBTC.
+    // BTC lending pays almost nothing (few borrow BTC). Liquidity in pegged
+    // WBTC/cbBTC pools earns swap fees with no price risk between two BTCs,
+    // at the cost of holding part of the position as Coinbase's cbBTC.
+    // Capacity is the limit: the fees are set by volume, so the rate falls as
+    // the deposit grows past a few million dollars.
     label: "Pegged BTC liquidity",
     sources: [
-      { name: "Fluid", logo: "fluid", position: "WBTC/cbBTC LP", weight: 0.6, apy: 0.0031 },
-      // The liquid slice.
-      { name: "Aave v3", logo: "aave-v3", position: "aEthWBTC", weight: 0.4, apy: 0.0001 },
+      // 0.01% fee tier, kept in a tight range around the peg; the best rate.
+      { name: "Uniswap v3", logo: "uniswap-v3", position: "WBTC/cbBTC LP", weight: 0.5, apy: 0.0136 },
+      // The deepest pegged BTC pool by volume; no range to manage.
+      { name: "Fluid", logo: "fluid", position: "WBTC/cbBTC LP", weight: 0.5, apy: 0.0052 },
     ],
   },
   USDC: {
