@@ -70,16 +70,10 @@ defineProps<{
       position: absolute;
       top: 50%;
       left: calc(var(--how-gap) / -2);
-      display: grid;
-      place-items: center;
-      width: 1.375rem;
-      height: 1.375rem;
-      border: 1px solid $color-line-2;
-      border-radius: 50%;
-      background: var(--bg);
-      font-size: 0.75rem;
+      font-size: 0.9375rem;
       line-height: 1;
       color: $color-subtitle;
+      opacity: 0.7;
       transform: translate(-50%, -50%);
 
       @media (max-width: $screen-md) {
