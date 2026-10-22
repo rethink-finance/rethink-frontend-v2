@@ -346,7 +346,7 @@ const headers: any = computed(() => [
     value: (v: IFund) => v.baseToken?.symbol || "",
     sortable: true,
     width: 125,
-    align: "start",
+    align: "center",
   },
   {
     title: "Chain",
@@ -576,13 +576,16 @@ const navigateFundDetails = (event: any, row: any) => {
       border-color: $color-line !important;
     }
 
-    /* Curator (3rd) and Base asset (4th) columns sit a touch further right:
-       Curator for breathing room after the right-aligned NAV figures, Base
-       asset so its left-aligned mark and symbol are not crowded against the
-       curator names. */
+    /* Curator column (3rd) sits a touch further right for breathing
+       room after the right-aligned NAV figures. */
     thead th:nth-child(3),
-    tbody td:nth-child(3),
-    thead th:nth-child(4),
+    tbody td:nth-child(3) {
+      padding-left: 28px;
+    }
+
+    /* Base asset (4th): the header stays centred over the column, while each
+       row's mark and symbol start from a shared left edge, set in a little
+       so they are not crowded against the curator names. */
     tbody td:nth-child(4) {
       padding-left: 28px;
     }
