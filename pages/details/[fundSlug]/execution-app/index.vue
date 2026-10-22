@@ -8,6 +8,11 @@
     <ExecutionSciEthConsole v-else-if="isSciEthVault" />
     <ExecutionIndefiConsole v-else-if="isIndefiVault" />
 
+    <!-- Any other HyperEVM vault: its Hyperliquid account — API wallets and
+         the RETHINK referral — set up here instead of by script. The
+         CarrotFunding console above does the same for its own vault. -->
+    <ExecutionHyperliquidSetup v-if="isHyperEvmVault && !hasGuidedConsole" />
+
     <!-- The raw transfer / raw-calldata / performance-fee tools. A vault with
          a console of its own does not get them: everything they reach is
          already offered there in terms the operator can check, and a free-text
@@ -292,6 +297,7 @@ const isIndefiVault = computed(
     fundStore.selectedFundChain === "0x2105",
 );
 const hasGuidedConsole = computed(() => isCrtV2Vault.value || isCrtVault.value || isDocVault.value || isSciEthVault.value || isIndefiVault.value);
+const isHyperEvmVault = computed(() => fundStore.selectedFundChain === "0x3e7");
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
 const submitRawTXNEntry = reactive({
