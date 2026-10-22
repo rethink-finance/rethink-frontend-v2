@@ -278,6 +278,7 @@
 </template>
 
 <script lang="ts" setup>
+import { svgMarkup } from "~/composables/walletModules";
 import { useAccountStore } from "~/store/account/account.store";
 import {
   useSettingsStore,
@@ -375,18 +376,16 @@ const computedRoutes = computed(() => {
 const activeAccount = computed(() => truncateAddress(accountStore.activeAccount?.address));
 const connectingWallet = computed(() => accountStore.connectingWallet);
 const connectedWallet = computed(() => accountStore.connectedWallet);
+// Inline SVG markup when the wallet hands one over (cut from its `<svg`, as
+// many open with an XML prolog), else the icon's URL.
 const connectedWalletIcon = computed(() => {
-  if (!accountStore?.connectedWallet) return "";
   const iconStr = accountStore.connectedWallet?.icon || "";
-  return iconStr.replace(/\n+/g, " ").trim();
+  return svgMarkup(iconStr) ?? iconStr.trim();
 });
 
-
-const isWalletIconSvg = computed(() => {
-  const iconStr = connectedWalletIcon.value;
-  if (!iconStr) return false;
-  return iconStr.startsWith("<svg") && iconStr.endsWith("</svg>");
-});
+const isWalletIconSvg = computed(
+  () => !!svgMarkup(accountStore.connectedWallet?.icon || ""),
+);
 
 onMounted(() => {
   currentRoute.value = route.path;
@@ -585,6 +584,9 @@ const disconnect = async () => {
       width: 1.5rem;
       height: 1.5rem;
       margin-right: 0.5rem;
+      // Safe's and Trezor's icons paint in Web3-Onboard's theme text colour,
+      // which its dark theme sets near-white page-wide; follow the app's ink.
+      --w3o-text-color: #{$color-white};
 
       :deep(svg) {
         width: 1.5rem;
@@ -720,6 +722,7 @@ const disconnect = async () => {
     width: 1.75rem;
     height: 1.75rem;
     flex: none;
+    --w3o-text-color: #{$color-white};
 
     :deep(svg) {
       width: 100%;
