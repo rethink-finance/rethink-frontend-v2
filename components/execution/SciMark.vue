@@ -15,7 +15,7 @@
     v-else-if="kind === 'eth' && ethIcon"
     :src="ethIcon"
     alt="ETH"
-    class="sci_mark"
+    class="sci_mark mark_ring"
     :style="box"
   >
   <ExecutionTokenMark

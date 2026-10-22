@@ -15,7 +15,7 @@
       :aria-selected="option.symbol === modelValue"
       @click="emit('update:modelValue', option.symbol)"
     >
-      <IconChain v-if="option.symbol === 'ETH'" class="token_ring" chain-short="eth" :size="iconSize" />
+      <IconChain v-if="option.symbol === 'ETH'" chain-short="eth" :size="iconSize" />
       <IconBaseAsset v-else :symbol="option.symbol" :size="iconSize" />
       {{ option.symbol }}
     </button>

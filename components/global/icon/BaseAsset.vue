@@ -1,7 +1,7 @@
 <template>
   <img
     v-if="designIcon"
-    class="base_asset_icon token_ring"
+    class="base_asset_icon mark_ring"
     :src="designIcon"
     :alt="symbol"
     :style="{ '--base-asset-icon-size': `${size}px` }"
@@ -12,7 +12,7 @@
        placeholder disc beside it only repeats the symbol already there. -->
   <Icon
     v-else-if="assetIcon"
-    class="token_ring"
+    class="mark_ring"
     :icon="assetIcon.name"
     :width="size"
     :height="size"
@@ -92,7 +92,7 @@ const assetIcon = computed(
   width: var(--base-asset-icon-size);
   height: var(--base-asset-icon-size);
   /* Every token mark in the set is drawn on its own round field, so it needs
-     no chip of its own (the ring is .token_ring, outside it), only a guard
+     no chip of its own (the ring is .mark_ring, outside it), only a guard
      against a future one being off-square. */
   object-fit: contain;
   border-radius: 999px;

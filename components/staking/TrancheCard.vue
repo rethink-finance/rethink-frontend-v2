@@ -58,7 +58,7 @@
         :class="{ 'tranche__asset--active': row.symbol === selected }"
       >
         <span class="tranche__swatch" :style="{ background: `var(--asset-${row.symbol.toLowerCase()})` }" />
-        <IconChain v-if="row.symbol === 'ETH'" class="token_ring" chain-short="eth" :size="16" />
+        <IconChain v-if="row.symbol === 'ETH'" chain-short="eth" :size="16" />
         <IconBaseAsset v-else :symbol="row.symbol" :size="16" />
         <span class="tranche__asset-amount">{{ row.amountLabel }} {{ row.symbol }}</span>
         <span class="tranche__asset-usd">{{ formatUsdCompact(row.usd) }}</span>
