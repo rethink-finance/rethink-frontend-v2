@@ -114,6 +114,13 @@ a {
     pointer-events: none;
   }
 
+  /* Vault details: the same grid moved up, so it is at its fullest behind
+     the top bar and the vault title and has faded out by the chart. The part
+     above the page runs under the navbar, which is opaque. */
+  &--raised::before {
+    top: -12rem;
+  }
+
   /* Discover: the grid sits behind the page title only. It fades out to the
      right before the TVL figures, and downwards before the table, or before
      the figures where the header wraps them under the title on a phone. A
