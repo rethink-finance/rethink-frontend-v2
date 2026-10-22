@@ -1,5 +1,5 @@
 <template>
-  <div class="fund_description grid_backdrop__clear">
+  <div class="fund_description">
     <p v-if="fund?.description" class="fund_description__text">
       {{ fundDescriptionText }}
       <UiShowMoreButton v-if="isDescriptionTooLong" v-model="showMore" />
