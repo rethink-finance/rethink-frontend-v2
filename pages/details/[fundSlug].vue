@@ -9,7 +9,7 @@
     <v-skeleton-loader type="card" />
     <v-skeleton-loader type="card" />
   </div>
-  <div v-else-if="fund?.address" class="page_shell grid_backdrop grid_backdrop--raised">
+  <div v-else-if="fund?.address" class="page_shell page_shell--tall_head">
     <FundSEOMetadata
       :fund-name="fund?.title"
       :symbol="fund?.fundToken?.symbol"

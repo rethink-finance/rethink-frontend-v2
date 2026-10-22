@@ -1,6 +1,6 @@
 <template>
   <div class="fund_insights">
-    <div class="fund_stats grid_backdrop__clear">
+    <div class="fund_stats">
       <div class="fund_stats__item fund_stats__item--primary">
         <div class="fund_stats__label fund_stats__label--accent">
           Current NAV

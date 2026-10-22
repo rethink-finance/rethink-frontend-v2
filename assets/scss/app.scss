@@ -37,7 +37,40 @@ a {
  * page that needs a narrower measure of its own.
  */
 .page_shell {
+  position: relative;
+  isolation: isolate;
   width: 100%;
+
+  /* A faint grid behind the page title, on every page. It fades out to the
+     right before whatever sits beside the title (Discover's TVL figures, the
+     vault's deposit rail) and downwards before the content, so no line runs
+     through a figure or a card's edge. The part above the page runs under the
+     navbar, which is opaque. */
+  &::before {
+    content: "";
+    position: absolute;
+    top: -4rem;
+    /* Exactly the window's width, from its left edge (the column is
+       centred), so it reaches both edges without overhanging either. */
+    left: calc(50% - 50vw);
+    width: 100vw;
+    z-index: -1;
+    height: 9rem;
+    background:
+      linear-gradient($color-line 1px, transparent 1px) 0 0 / 48px 48px,
+      linear-gradient(90deg, $color-line 1px, transparent 1px) 0 0 / 48px 48px;
+    mask-image:
+      linear-gradient(90deg, #000 20%, transparent 55%),
+      linear-gradient(#000 50%, transparent);
+    mask-composite: intersect;
+    pointer-events: none;
+  }
+
+  /* Pages whose header is an avatar, title and a meta line under a back link
+     (vault details, /stake): a deeper band, so it reaches the title. */
+  &--tall_head::before {
+    height: 12rem;
+  }
 }
 
 /* Components */
@@ -87,79 +120,6 @@ a {
  * because the vault overview stacks half a dozen of these and they have to
  * agree on padding to the pixel.
  */
-/*
- * A faint grid behind the top of a page, fading out before the content: the
- * backdrop of Discover and the vault pages, venture staking included. It
- * runs the full width and deep enough to frame the deposit rail; the cards
- * on top are opaque.
- */
-.grid_backdrop {
-  position: relative;
-  isolation: isolate;
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: -4rem;
-    /* Exactly the window's width, from its left edge (the column is
-       centred), so it reaches both edges without overhanging either. */
-    left: calc(50% - 50vw);
-    width: 100vw;
-    z-index: -1;
-    height: 40rem;
-    background:
-      linear-gradient($color-line 1px, transparent 1px) 0 0 / 48px 48px,
-      linear-gradient(90deg, $color-line 1px, transparent 1px) 0 0 / 48px 48px;
-    mask-image: linear-gradient(#000 40%, transparent);
-    pointer-events: none;
-  }
-
-  /* Vault details and /stake: the same grid moved up, so it is at its
-     fullest behind the top bar and the title and has faded out by the bottom
-     of the deposit card. The part
-     above the page runs under the navbar, which is opaque. */
-  &--raised::before {
-    top: -12rem;
-  }
-
-  /* Discover: the grid sits behind the page title only. It fades out to the
-     right before the TVL figures, and downwards before the table, or before
-     the figures where the header wraps them under the title on a phone. A
-     patch behind the figures read as a hole in the grid there. */
-  &--title::before {
-    height: 9rem;
-    mask-image:
-      linear-gradient(90deg, #000 20%, transparent 55%),
-      linear-gradient(#000 50%, transparent);
-    mask-composite: intersect;
-  }
-
-  /*
-   * Put on a stat strip to clear the grid behind it: grid lines running
-   * through the figures and next to the strip's own dividers read as
-   * strike-throughs and underlines. The patch is the page's background,
-   * feathered at its edges so the grid fades out around the strip rather
-   * than stopping on a hard line. It belongs to the strip, so it follows it
-   * however long the vault description above it runs.
-   */
-  &__clear {
-    position: relative;
-
-    &::before {
-      content: "";
-      position: absolute;
-      inset: -1.5rem -2.5rem;
-      z-index: -1;
-      background: $color-background;
-      mask-image:
-        linear-gradient(90deg, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent),
-        linear-gradient(transparent, #000 1.5rem, #000 calc(100% - 1.5rem), transparent);
-      mask-composite: intersect;
-      pointer-events: none;
-    }
-  }
-}
-
 .brand_card {
   padding: 1.75rem 1.875rem;
   border: 1px solid $color-line;
