@@ -58,7 +58,7 @@
 
         <!-- The vault page's stat strip: the headline figure at display size,
              the derived ones a step down beside it. -->
-        <div class="stake_stats">
+        <div class="stake_stats grid_backdrop__clear">
           <div class="stake_stats__item">
             <span class="stake_stats__label stake_stats__label--accent">Total staked</span>
             <div class="stake_stats__value_row">
