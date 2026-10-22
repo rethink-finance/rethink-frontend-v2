@@ -1,5 +1,5 @@
 <template>
-  <div class="discover page_shell">
+  <div class="discover page_shell grid_backdrop">
     <div
       v-if="isErrorFetchFundsData"
       class="w-100 d-flex justify-center flex-column"

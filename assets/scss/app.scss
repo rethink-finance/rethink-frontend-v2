@@ -89,8 +89,9 @@ a {
  */
 /*
  * A faint grid behind the top of a page, fading out before the content: the
- * backdrop of vault pages, venture staking included. It runs the full width
- * and deep enough to frame the deposit rail; the cards on top are opaque.
+ * backdrop of Discover and the vault pages, venture staking included. It
+ * runs the full width and deep enough to frame the deposit rail; the cards
+ * on top are opaque.
  */
 .grid_backdrop {
   position: relative;
@@ -115,7 +116,7 @@ a {
 
   /*
    * Put on text that sits on the page to clear the grid behind it (the stat
-   * strips, the vault description): grid lines running through figures and
+   * strips, Discover's TVL figures, the vault description): grid lines running through figures and
    * prose, and next to the strip's own dividers, read as strike-throughs and
    * underlines. The patch is the page's background, feathered at its edges
    * so the grid fades out around the text rather than stopping on a hard
