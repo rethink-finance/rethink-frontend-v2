@@ -18,8 +18,9 @@ import type { IRoleCall } from "~/composables/permissions/useRoleExecution";
  * - Registering an API wallet is a HyperEVM transaction: the manager sends
  *   CoreWriter.sendRawAction(addApiWallet(address, name)) through the
  *   vault's Roles modifier, and the registry's `delegate` permission lets
- *   through only the addresses the vault was launched with (or the zero
- *   address, which empties a slot). HyperCore applies it a few seconds after
+ *   through only the address the vault was launched with (or the zero
+ *   address, which empties a slot) — any address for an admin whose role
+ *   may rotate API wallets. HyperCore applies it a few seconds after
  *   the block and refuses silently — an account that was never activated,
  *   say — so the result is confirmed on Hyperliquid itself.
  * - The referral has no CoreWriter action. Only a key that acts for the

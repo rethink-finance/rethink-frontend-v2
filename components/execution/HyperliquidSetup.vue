@@ -72,9 +72,11 @@
       </UiHeader>
       <p class="hl_setup__lead">
         API wallets trade this account through Hyperliquid's API: they place
-        and cancel orders, and can never withdraw. Only the addresses entered
-        in the vault's Hyperliquid permission can be registered, for
-        {{ API_WALLET_MIN_DAYS }} to {{ API_WALLET_MAX_DAYS }} days at a time.
+        and cancel orders, and can never withdraw. The manager can register
+        the API wallet entered in the vault's Hyperliquid permission; an admin
+        whose role may rotate API wallets can register any address. Each
+        registration lasts {{ API_WALLET_MIN_DAYS }} to
+        {{ API_WALLET_MAX_DAYS }} days.
       </p>
 
       <div class="hl_setup__slots">

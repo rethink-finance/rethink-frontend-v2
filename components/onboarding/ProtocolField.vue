@@ -225,6 +225,22 @@
       >
     </template>
 
+    <!-- A schema boolean: the label and its switch on one line, what it
+         means in the note below. -->
+    <template v-else-if="group.control === 'switch'">
+      <div class="field__switch">
+        <span class="field__label">{{ group.label }}</span>
+        <OnboardingToggle
+          :model-value="view.selected.includes('true')"
+          :label="group.label"
+          @update:model-value="(on: boolean) => setGroup(on ? ['true'] : [])"
+        />
+      </div>
+      <p v-if="group.warning" class="field__warning">
+        {{ group.warning }}
+      </p>
+    </template>
+
     <p v-else class="field__unsupported">
       The registry offers a “{{ group.label }}” setting this interface
       cannot render yet, so it stays unset.
@@ -570,6 +586,14 @@ const scopeAssetList = (assets: string[]): string => {
       align-items: center;
       margin-bottom: 0.75rem;
     }
+  }
+
+  /* A switch reads like the card's action rows: label left, switch right. */
+  &__switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
   }
 
   &__label {

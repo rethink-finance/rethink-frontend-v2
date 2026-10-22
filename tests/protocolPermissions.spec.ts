@@ -13,6 +13,8 @@ import {
   initProtocolSelections,
   applyGroupSelection,
   applyValueScopes,
+  isAdminOnlyGroup,
+  isAdminRoleKey,
   isSecondaryGroup,
   normalizeActionEnablement,
   viewValueScopes,
@@ -22,6 +24,11 @@ import {
   viewGroup,
   type IProtocolSelectionState,
 } from "../composables/permissions/protocolPermissions";
+import {
+  ADMIN_ROLE_KEY_V2,
+  DEFAULT_ROLE_KEY_V2,
+  toRoleKeyBytes32,
+} from "../composables/nav/generateNAVPermission";
 
 const rolesInterface = new ethers.Interface((RolesFullV2 as any).abi);
 const ETHEREUM = "0x1" as any;
@@ -370,6 +377,32 @@ describe("action metadata", () => {
   });
 });
 
+const HYPEREVM = "0x3e7" as any;
+const API_WALLET = "0x1111111111111111111111111111111111111111";
+
+/** Hyperliquid on HyperEVM, its delegate action switched on and empty. */
+const hyperliquidDelegate = () => {
+  const protocols = getRegistryProtocols(HYPEREVM);
+  const hyperliquid = protocols.find((p) => p.protocol === "hyperliquid")!;
+  const groupOf = (key: string) =>
+    hyperliquid.groups.find((g) =>
+      g.members.some((m) => m.action === "delegate" && m.key === key),
+    )!;
+  const seeded = initProtocolSelections(protocols)
+    .filter((entry) => entry.protocol === "hyperliquid")
+    .map((entry) => ({
+      ...entry,
+      enabled: true,
+      actions: entry.actions.map((a) =>
+        a.action === "delegate" ? { ...a, enabled: true } : a,
+      ),
+    }))[0];
+  return { protocols, hyperliquid, groupOf, seeded };
+};
+
+const delegateParams = (entry: IProtocolSelectionState) =>
+  entry.actions.find((a) => a.action === "delegate")!.params;
+
 describe("field groups", () => {
   const groupsOf = (chain: any, protocol: string) =>
     getRegistryProtocols(chain).find((p) => p.protocol === protocol)!.groups;
@@ -445,51 +478,74 @@ describe("field groups", () => {
   });
 
   it("never merges two fields of one action, so each reaches its own parameter", () => {
-    // Hyperliquid's delegate takes an API wallet and an optional backup,
-    // both addresses. Folded into one input, a typed address reached only
-    // the backup, and the required wallet failed as "Delegate: Required".
-    const HYPEREVM = "0x3e7" as any;
-    const API_WALLET = "0x1111111111111111111111111111111111111111";
-    const protocols = getRegistryProtocols(HYPEREVM);
-    const hyperliquid = protocols.find((p) => p.protocol === "hyperliquid")!;
-    const delegateGroups = hyperliquid.groups.filter((g) =>
-      g.members.some((m) => m.action === "delegate"),
-    );
+    // Hyperliquid's delegate once had two address fields; folded into one
+    // input, a typed address reached only the second and the required one
+    // failed as "Delegate: Required". Its fields now are the API wallet and
+    // the rotation switch — still two controls, the address still lands.
+    const { protocols, hyperliquid, groupOf, seeded } = hyperliquidDelegate();
     expect(
-      delegateGroups.map((g) => [
-        g.label,
-        g.members.map((m) => `${m.action}.${m.key}`).join("+"),
-      ]),
+      hyperliquid.groups
+        .filter((g) => g.members.some((m) => m.action === "delegate"))
+        .map((g) => [g.label, g.members.map((m) => `${m.action}.${m.key}`).join("+")]),
     ).toEqual([
       ["API wallet", "delegate.agent"],
-      ["Backup API wallet", "delegate.backupAgent"],
+      ["Rotate API wallets", "delegate.rotate"],
     ]);
 
-    const seeded = initProtocolSelections(protocols).map((entry) =>
-      entry.protocol === "hyperliquid"
-        ? {
-          ...entry,
-          enabled: true,
-          actions: entry.actions.map((a) =>
-            a.action === "delegate" ? { ...a, enabled: true } : a,
-          ),
-        }
-        : entry,
+    const picked = applyGroupSelection(hyperliquid, seeded, groupOf("agent"), [API_WALLET]);
+    expect(delegateParams(picked).agent).toBe(API_WALLET);
+    expect(validateProtocolSelections(HYPEREVM, [picked], protocols)).toEqual([]);
+  });
+
+  it("renders a schema boolean as a switch that writes true and false", () => {
+    const { protocols, hyperliquid, groupOf, seeded } = hyperliquidDelegate();
+    const rotate = groupOf("rotate");
+    expect(rotate.control).toBe("switch");
+    expect(rotate.note).toContain("any new API wallet");
+    expect(viewGroup(seeded, rotate).selected).toEqual([]);
+
+    // On: no address needed.
+    const on = applyGroupSelection(hyperliquid, seeded, rotate, ["true"]);
+    expect(delegateParams(on).rotate).toBe(true);
+    expect(viewGroup(on, rotate).selected).toEqual(["true"]);
+    expect(validateProtocolSelections(HYPEREVM, [on], protocols)).toEqual([]);
+
+    // Off again: the API wallet is required once more.
+    const off = applyGroupSelection(hyperliquid, on, rotate, []);
+    expect(delegateParams(off).rotate).toBe(false);
+    expect(viewGroup(off, rotate).selected).toEqual([]);
+    const issues = validateProtocolSelections(HYPEREVM, [off], protocols);
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain("enter the API wallet's address");
+  });
+
+  it("offers rotation to the admin role only, and never grants it to another", () => {
+    const { hyperliquid, groupOf, seeded } = hyperliquidDelegate();
+    expect(isAdminOnlyGroup(groupOf("rotate"))).toBe(true);
+    expect(isAdminOnlyGroup(groupOf("agent"))).toBe(false);
+    expect(isAdminRoleKey(ADMIN_ROLE_KEY_V2)).toBe(true);
+    expect(isAdminRoleKey(toRoleKeyBytes32(ADMIN_ROLE_KEY_V2))).toBe(true);
+    expect(isAdminRoleKey(DEFAULT_ROLE_KEY_V2)).toBe(false);
+    expect(isAdminRoleKey(undefined)).toBe(false);
+
+    // The same selection, rotation on beside an address, for two roles.
+    const withAddress = applyGroupSelection(hyperliquid, seeded, groupOf("agent"), [API_WALLET]);
+    const rotating = applyGroupSelection(hyperliquid, withAddress, groupOf("rotate"), ["true"]);
+    const build = (selections: IProtocolSelectionState[], roleKey: string) =>
+      buildProtocolPermissionEntries({
+        chainId: HYPEREVM,
+        rolesModAddress: ROLES_MOD,
+        selections,
+        roleKey,
+      }).entries;
+    // The admin gets rotation: a different grant than the address alone.
+    expect(build([rotating], ADMIN_ROLE_KEY_V2)).not.toEqual(
+      build([withAddress], ADMIN_ROLE_KEY_V2),
     );
-    const picked = applyGroupSelection(
-      hyperliquid,
-      seeded.find((entry) => entry.protocol === "hyperliquid")!,
-      delegateGroups[0],
-      [API_WALLET],
+    // Any other role gets exactly the address, as if rotation were off.
+    expect(build([rotating], DEFAULT_ROLE_KEY_V2)).toEqual(
+      build([withAddress], DEFAULT_ROLE_KEY_V2),
     );
-    expect(
-      picked.actions.find((a) => a.action === "delegate")!.params.agent,
-    ).toBe(API_WALLET);
-    // The backup left empty is no problem: it is optional.
-    const selections = seeded.map((entry) =>
-      entry.protocol === "hyperliquid" ? picked : entry,
-    );
-    expect(validateProtocolSelections(HYPEREVM, selections, protocols)).toEqual([]);
   });
 
   it("keeps the lending family on nesting, so markets never join assets", () => {

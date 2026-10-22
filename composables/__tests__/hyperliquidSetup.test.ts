@@ -110,16 +110,15 @@ describe("the calls the manager sends", () => {
     expect(name).toBe("main");
   });
 
-  // The registry's own `delegate` permission, generated for a vault with two
-  // API wallets, read back through the app's own byte-pattern reader: what
-  // the panel sends must pass it, and an address the vault never named must
-  // not.
-  it("fits the vault's Hyperliquid permission, and only for its addresses", () => {
+  /**
+   * Whether the registry's own `delegate` permission, generated for
+   * `params`, lets `call` through — read back through the app's own
+   * byte-pattern reader.
+   */
+  const delegateAllows = (params: Record<string, unknown>) => {
     const { targets } = compile({
       chainId: 999,
-      selections: [
-        { protocol: "hyperliquid", action: "delegate", params: { agent: AGENT, backupAgent: BACKUP } },
-      ],
+      selections: [{ protocol: "hyperliquid", action: "delegate", params }],
     });
     const target: any = targets.find((t: any) => t.address.toLowerCase() === CORE_WRITER);
     const scope = target.functions.find(
@@ -136,19 +135,33 @@ describe("the calls the manager sends", () => {
     // Matches over the call's one parameter, the instruction bytes.
     const patterns = patternsOf(toNode(scope.condition.children[0]))!;
     expect(patterns.length).toBeGreaterThan(0);
-    const allows = (data: string) => {
-      const bytes = ethers.getBytes(payloadOf(data));
+    return (call: { data: string }) => {
+      const bytes = ethers.getBytes(payloadOf(call.data));
       return patterns.some((pattern) =>
         [...pattern].every(
           ([offset, { mask, value }]) => offset < bytes.length && (bytes[offset] & mask) === value,
         ),
       );
     };
+  };
 
-    expect(allows(registerApiWalletCall(AGENT, "main", NOW).data)).toBe(true);
-    expect(allows(registerApiWalletCall(BACKUP, "backup", NOW).data)).toBe(true);
-    expect(allows(removeApiWalletCall("main").data)).toBe(true);
-    expect(allows(registerApiWalletCall(STRANGER, "main", NOW).data)).toBe(false);
+  // What the panel sends must pass the manager's permission for the one
+  // address the vault was launched with, and nothing else.
+  it("fits the manager's Hyperliquid permission, and only for its address", () => {
+    const allows = delegateAllows({ agent: AGENT });
+    expect(allows(registerApiWalletCall(AGENT, "main", NOW))).toBe(true);
+    expect(allows(removeApiWalletCall("main"))).toBe(true);
+    expect(allows(registerApiWalletCall(BACKUP, "backup", NOW))).toBe(false);
+    expect(allows(registerApiWalletCall(STRANGER, "main", NOW))).toBe(false);
+  });
+
+  // With rotation — the admin's — any address the panel registers passes.
+  it("fits the admin's rotation permission for any address", () => {
+    const allows = delegateAllows({ rotate: true });
+    for (const address of [AGENT, BACKUP, STRANGER]) {
+      expect(allows(registerApiWalletCall(address, "main", NOW))).toBe(true);
+    }
+    expect(allows(removeApiWalletCall("main"))).toBe(true);
   });
 });
 
