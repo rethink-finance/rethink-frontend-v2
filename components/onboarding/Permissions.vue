@@ -143,6 +143,23 @@
       :roles-mod-address="roleModAddress"
       roles-v2
     />
+
+    <!-- A save too big for a standard HyperEVM block: switching to big
+         blocks and back are steps of their own, around it. -->
+    <OnboardingTransactionRailDialog
+      v-model="isPermissionsRailOpen"
+      eyebrow="Permissions"
+      title="Save the permissions"
+      :intro="BIG_BLOCKS_INTRO"
+      :steps="permissionsRail.steps"
+      :step-number="permissionsRail.stepNumber"
+      :is-running="permissionsRail.isRunning"
+      :is-done="permissionsRail.isDone"
+      :error="permissionsRail.error"
+      :note="permissionsRail.note"
+      done-text="Permissions stored, and your wallet is back on standard blocks."
+      @retry="permissionsRail.run()"
+    />
   </div>
 </template>
 
@@ -183,6 +200,13 @@ import {
 } from "~/composables/permissions/roleScopeLogs";
 import { warnIfOversized } from "~/composables/permissions/useCuratorExecution";
 import { fetchRoleMembers, planCallGas } from "~/composables/permissions/useRoleExecution";
+import {
+  AGENT_LEFT_WARNING,
+  BIG_BLOCKS_INTRO,
+  planBigBlocks,
+  withBigBlockSwitch,
+} from "~/composables/hyperevm/bigBlocks";
+import { sendAndWait, useTransactionRail } from "~/composables/useTransactionRail";
 import { useAccountStore } from "~/store/account/account.store";
 import { useVaultCustomRoles } from "~/composables/permissions/useVaultCustomRoles";
 import {
@@ -227,6 +251,9 @@ const ADMIN_OFF_TEXT =
 const legacyRef = ref<any>(null);
 
 const loading = ref(false);
+// The save, when it needs HyperEVM's big blocks (see storePermissions).
+const permissionsRail = reactive(useTransactionRail());
+const isPermissionsRailOpen = ref(false);
 // Raw calldata pasted on the card, submitted verbatim at the end of the
 // batch. Every raw call names its own role, so there is one queue for the
 // step rather than one per role. Removing something saved queues its revoke
@@ -831,7 +858,66 @@ const storePermissions = async () => {
         .encodeABI(),
     })
     : undefined;
-  warnIfOversized(fundChainId.value, gasPlan);
+
+  /** What a stored batch changes on this page, whichever way it was sent. */
+  const onPermissionsSaved = (receipt: any) => {
+    toastStore.successToast("Permissions stored successfully.");
+    // The freshness floor for the next read of the role's state: a log
+    // source that has not indexed this block yet is stale by proof.
+    recordPermissionsSaveBlock(
+      fundChainId.value,
+      rolesModifierAddress,
+      Number(receipt.blockNumber),
+    );
+    // The queued members and raw calls are on the vault now; what is
+    // stored is read again so the page shows them there instead of
+    // still waiting here.
+    pendingMembers.value = {};
+    rawPermissionCodeEntries.value = [];
+    savedCount.value++;
+    loadSaved();
+  };
+
+  // A batch bigger than a standard HyperEVM block is only mined on big
+  // blocks: the sender is switched there for the save and back afterwards,
+  // as steps of their own (bigBlocks.ts). A sender already on big blocks
+  // needs no word about it; one the app cannot switch still gets the warning.
+  const bigBlocks = await planBigBlocks(
+    fundChainId.value,
+    sender,
+    !!gasPlan?.exceedsBlockLimit,
+  );
+  const provider = useAccountStore().connectedWallet?.provider;
+  if (bigBlocks === "switch" && sender && provider) {
+    permissionsRail.load(
+      withBigBlockSwitch(
+        [
+          {
+            label: "Save the permissions",
+            run: async (submitted) => {
+              onPermissionsSaved(
+                await sendAndWait(
+                  fundFactoryContract,
+                  "submitPermissions",
+                  gasPlan ? { gas: gasPlan.gas } : {},
+                  [proposalData.encodedRoleModEntries],
+                  submitted,
+                ),
+              );
+            },
+          },
+        ],
+        provider,
+        sender,
+        () => toastStore.warningToast(AGENT_LEFT_WARNING, 20000),
+      ),
+    );
+    isPermissionsRailOpen.value = true;
+    await permissionsRail.run();
+    loading.value = false;
+    return;
+  }
+  if (bigBlocks !== "already-on") warnIfOversized(fundChainId.value, gasPlan);
 
   await fundFactoryContract
     .send(
@@ -848,21 +934,7 @@ const storePermissions = async () => {
     .on("receipt", (receipt: any) => {
       console.log("receipt: ", receipt);
       if (receipt.status) {
-        toastStore.successToast("Permissions stored successfully.");
-        // The freshness floor for the next read of the role's state: a log
-        // source that has not indexed this block yet is stale by proof.
-        recordPermissionsSaveBlock(
-          fundChainId.value,
-          rolesModifierAddress,
-          Number(receipt.blockNumber),
-        );
-        // The queued members and raw calls are on the vault now; what is
-        // stored is read again so the page shows them there instead of
-        // still waiting here.
-        pendingMembers.value = {};
-        rawPermissionCodeEntries.value = [];
-        savedCount.value++;
-        loadSaved();
+        onPermissionsSaved(receipt);
       } else {
         toastStore.errorToast(
           "Storing permissions has failed. Please contact the Rethink Finance support.",

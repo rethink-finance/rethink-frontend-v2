@@ -245,6 +245,10 @@
         </h2>
       </template>
 
+      <p v-if="storeUsesBigBlocks" class="nav_store__intro">
+        {{ BIG_BLOCKS_INTRO }}
+      </p>
+
       <OnboardingTransactionSteps :steps="storeSteps" />
 
       <div class="nav_store__foot">
@@ -305,8 +309,17 @@ import {
 import {
   detectRolesVersion,
   fetchRoleMembers,
+  planCallGas,
 } from "~/composables/permissions/useRoleExecution";
+import {
+  AGENT_LEFT_WARNING,
+  BIG_BLOCKS_INTRO,
+  planBigBlocks,
+  withBigBlockSwitch,
+} from "~/composables/hyperevm/bigBlocks";
+import type { IRailStep } from "~/composables/useTransactionRail";
 import { useAccountStore } from "~/store/account/account.store";
+import { ChainId } from "~/types/enums/chain_id";
 import { RolesVersion } from "~/types/enums/roles_version";
 import type { ITransactionStep } from "~/components/onboarding/TransactionSteps.vue";
 
@@ -408,8 +421,14 @@ watch(isAddDialogOpen, (open) => {
 
 // The transactions a save takes, as the dialog's rail shows them: storing the
 // methods, and, with the switch above on, letting the manager keep updating
-// NAV. Each is sent on its own; the second only once the first is in.
+// NAV. Each is sent on its own; the second only once the first is in. On
+// HyperEVM, when one of them outgrows a standard block, switching the wallet
+// to big blocks and back are steps of their own around them (bigBlocks.ts).
 const storeSteps = ref<ITransactionStep[]>([]);
+// The work behind each row of storeSteps, set together with it.
+let storeRail: IRailStep[] = [];
+const grantsNavPermission = ref(false);
+const storeUsesBigBlocks = ref(false);
 const isStoreDialogOpen = ref(false);
 const isStoring = ref(false);
 // The moment between the click and the rail: the permission check below.
@@ -527,15 +546,21 @@ const storeStepNumber = computed(() => {
   return index === -1 ? storeSteps.value.length : index + 1;
 });
 const storeNote = computed(() => {
-  const live = storeSteps.value[storeStepNumber.value - 1];
+  const index = storeStepNumber.value - 1;
+  const live = storeSteps.value[index];
+  const hint =
+    live?.state === "wallet" || live?.state === "confirming"
+      ? storeRail[index]?.hint?.[live.state]
+      : undefined;
+  if (hint) return hint;
   if (live?.state === "confirming") return "Sent. Waiting for it to be confirmed.";
-  if (storeSteps.value.length > 1) return "Confirm each transaction in your wallet as it opens.";
+  if (storeSteps.value.length > 1) return "Confirm each step in your wallet as it opens.";
   return isNavPermissionHeld.value
     ? "Confirm the transaction in your wallet. The manager can already update NAV, so one transaction is all it takes."
     : "Confirm the transaction in your wallet.";
 });
 const storeDoneText = computed(() => {
-  if (storeSteps.value.length > 1) return "NAV methods stored, and the manager can keep updating NAV.";
+  if (grantsNavPermission.value) return "NAV methods stored, and the manager can keep updating NAV.";
   return isNavPermissionHeld.value
     ? "NAV methods stored. The manager can already update NAV."
     : "NAV methods stored.";
@@ -627,14 +652,89 @@ const handleClickStoreNavMethods = async () => {
     }
   }
 
-  storeSteps.value = [
-    { label: "Store the NAV methods", state: "waiting" },
-    ...(grantsPermission
-      ? [{ label: "Allow the manager to keep updating NAV", state: "waiting" as const }]
-      : []),
-  ];
+  // Encoded before the rail opens, since the gas they need decides which
+  // steps it has.
+  let calls: { label: string; method: string; args: any[] }[];
+  try {
+    const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
+    calls = [
+      {
+        label: "Store the NAV methods",
+        // storeNAV(address navExecutorAddr, bytes calldata data)
+        method: "storeNAV",
+        args: [
+          getNAVExecutorBeaconProxyAddress(fundChainId.value),
+          encodeUpdateNavMethods(navMethods.value, fundSettings?.value?.baseDecimals),
+        ],
+      },
+      ...(grantsPermission
+        ? [{
+          label: "Allow the manager to keep updating NAV",
+          method: "submitPermissions",
+          args: [navPermissionCalldatas],
+        }]
+        : []),
+    ];
+  } catch (error: any) {
+    console.error("Failed encoding the NAV methods", error);
+    return toastStore.errorToast("Could not encode the NAV methods: " + error.message);
+  }
+  const transactions: IRailStep[] = calls.map(({ label, method, args }) => ({
+    label,
+    run: (submitted) => {
+      console.log(method, JSON.stringify(args, null, 2));
+      return sendAndConfirm(method, args, submitted);
+    },
+  }));
+
+  isPreparingStore.value = true;
+  try {
+    storeRail = await withBigBlocksWhenNeeded(calls, transactions);
+  } finally {
+    isPreparingStore.value = false;
+  }
+  grantsNavPermission.value = grantsPermission;
+  storeUsesBigBlocks.value = storeRail.length > transactions.length;
+  storeSteps.value = storeRail.map(({ label }) => ({ label, state: "waiting" as const }));
   isStoreDialogOpen.value = true;
   runStoreFlow();
+};
+
+/**
+ * `transactions` between a switch to HyperEVM's big blocks and back, when
+ * one of them outgrows a standard block and the wallet is not on big blocks
+ * already (bigBlocks.ts); otherwise `transactions` as they are. Gas is only
+ * planned on HyperEVM: no other chain has two block sizes.
+ */
+const withBigBlocksWhenNeeded = async (
+  calls: { method: string; args: any[] }[],
+  transactions: IRailStep[],
+): Promise<IRailStep[]> => {
+  const sender = accountStore.activeAccountAddress;
+  const provider = accountStore.connectedWallet?.provider;
+  if (fundChainId.value !== ChainId.HYPEREVM || !sender || !provider) return transactions;
+
+  try {
+    const plans = await Promise.all(
+      calls.map(({ method, args }) =>
+        planCallGas(fundChainId.value, sender, {
+          to: fundFactoryContract.value.options.address,
+          data: fundFactoryContract.value.methods[method](...args).encodeABI(),
+        }),
+      ),
+    );
+    const needsBigBlocks = plans.some((plan) => plan?.exceedsBlockLimit);
+    if ((await planBigBlocks(fundChainId.value, sender, needsBigBlocks)) !== "switch") {
+      return transactions;
+    }
+  } catch (error) {
+    // Not knowing is no reason to hold the save back: it goes as before.
+    console.warn("Could not work out whether the save needs big blocks", error);
+    return transactions;
+  }
+  return withBigBlockSwitch(transactions, provider, sender, () =>
+    toastStore.warningToast(AGENT_LEFT_WARNING, 20000),
+  );
 };
 
 /**
@@ -646,28 +746,11 @@ const runStoreFlow = async () => {
   isStoring.value = true;
   storeError.value = "";
 
-  const transactions: (() => [string, any[]])[] = [
-    () => {
-      const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
-      // storeNAV(address navExecutorAddr, bytes calldata data)
-      return [
-        "storeNAV",
-        [
-          getNAVExecutorBeaconProxyAddress(fundChainId.value),
-          encodeUpdateNavMethods(navMethods.value, fundSettings?.value?.baseDecimals),
-        ],
-      ];
-    },
-    () => ["submitPermissions", [navPermissionCalldatas]],
-  ];
-
   for (let index = 0; index < storeSteps.value.length; index++) {
     if (storeSteps.value[index].state === "done") continue;
     setStepState(index, "wallet");
     try {
-      const [method, args] = transactions[index]();
-      console.log(method, JSON.stringify(args, null, 2));
-      await sendAndConfirm(method, args, () => setStepState(index, "confirming"));
+      await storeRail[index].run(() => setStepState(index, "confirming"));
       setStepState(index, "done");
     } catch (error: any) {
       console.error(`Failed: ${storeSteps.value[index].label}`, error);
@@ -1096,6 +1179,13 @@ defineExpose({
 
   &__title {
     margin-top: 0.375rem;
+  }
+
+  &__intro {
+    margin-bottom: 1.5rem;
+    font-size: $text-sm;
+    line-height: 1.5;
+    color: $color-steel-blue;
   }
 
   &__foot {
