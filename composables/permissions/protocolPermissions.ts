@@ -836,11 +836,19 @@ const buildFieldGroups = (
           : { defaultValue: field.defaultValue }),
       };
       const family = familyOf(action.action);
+      // Merging is for one choice that several actions share. Two fields of
+      // the SAME action are two parameters, and a merged control writes one
+      // value per action (applyGroupSelection), so one of them would never
+      // be filled: Hyperliquid's delegate takes an API wallet and a backup,
+      // both addresses, and folded into one input the required wallet
+      // stayed empty ("Delegate: Required").
       const target = family
         ? groups.find(
           (group) =>
-            group.members.every((existing) =>
-              family.actions.has(existing.action),
+            group.members.every(
+              (existing) =>
+                family.actions.has(existing.action) &&
+                existing.action !== action.action,
             ) && fieldsDescribeSameChoice(group, field, family.match),
         )
         : undefined;
