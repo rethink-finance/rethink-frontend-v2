@@ -259,6 +259,24 @@
         </section>
       </UiConfirmDialog>
 
+      <!-- Initialize on HyperEVM when it needs big blocks: switching there and
+           back are steps of their own, around the transaction. -->
+      <OnboardingTransactionRailDialog
+        :model-value="isInitRailOpen"
+        eyebrow="Initialize vault"
+        title="Create the vault"
+        :intro="BIG_BLOCKS_INTRO"
+        :steps="initRail.steps"
+        :step-number="initRail.stepNumber"
+        :is-running="initRail.isRunning"
+        :is-done="initRail.isDone"
+        :error="initRail.error"
+        :note="initRail.note"
+        done-text="Vault created, and your wallet is back on standard blocks."
+        @update:model-value="closeInitRail"
+        @retry="runInitRail"
+      />
+
       <UiConfirmDialog
         v-model="isClearCacheDialogOpen"
         title="Heads up"
@@ -284,6 +302,17 @@ import {
 } from "~/composables/formatters";
 import { useAccountStore } from "~/store/account/account.store";
 import { isSelfGoverned, toVoteUnits } from "~/composables/fund/governanceVoteUnits";
+import {
+  AGENT_LEFT_WARNING,
+  BIG_BLOCKS_INTRO,
+  HYPEREVM_BIG_BLOCK_TOGGLE_URL,
+  exceedsStandardBlock,
+  planBigBlocks,
+  withBigBlockSwitch,
+} from "~/composables/hyperevm/bigBlocks";
+import { standardBlockGasLimit } from "~/composables/permissions/useRoleExecution";
+import { sendAndWait, useTransactionRail } from "~/composables/useTransactionRail";
+import type { CustomContract } from "~/store/web3/customContract";
 import { fetchBaseTokenDetails } from "~/store/create-fund/actions/fetchFundInitCache.action";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
@@ -1392,19 +1421,16 @@ const formatInitializeData = (proposalThresholdUnits: bigint) => {
  * call rather than returning a number, so there is nothing to estimate from.
  *
  * Necessary but not sufficient: the sender must also have opted into big blocks
- * on Hyperliquid (evmUserModify, usingBigBlocks), which no frontend setting can
- * substitute for. Without that the transaction is routed to a 3M block and
- * reverts with no reason string, which reads as a contract failure rather than a
- * gas ceiling.
+ * on Hyperliquid (evmUserModify, usingBigBlocks). Without that the transaction
+ * is routed to a 3M block and reverts with no reason string, which reads as a
+ * contract failure rather than a gas ceiling. initializeOnBigBlocks does the
+ * opting in, and out again, as steps of their own.
  *
  * Chains absent from this map keep the normal estimation path.
  */
 const INIT_CREATE_FUND_GAS: Partial<Record<ChainId, number>> = {
   [ChainId.HYPEREVM]: 6_000_000,
 };
-
-/** Opts an address into HyperEVM's 30,000,000-gas big blocks. */
-const HYPEREVM_BIG_BLOCK_TOGGLE_URL = "https://hyperevm-block-toggle.vercel.app/";
 
 /**
  * Explain a failed initCreateFund.
@@ -1518,6 +1544,13 @@ const initializeFund = async() => {
     const formattedData = formatInitializeData(proposalThresholdUnits);
     const gasLimit = INIT_CREATE_FUND_GAS[fundChainId];
 
+    if (
+      gasLimit &&
+      (await initializeOnBigBlocks(fundChainId, fundFactoryContract, formattedData, gasLimit))
+    ) {
+      return;
+    }
+
     await fundFactoryContract
       .send("initCreateFund", gasLimit ? { gas: gasLimit } : {}, ...formattedData)
       .on("transactionHash", (hash: any) => {
@@ -1551,6 +1584,74 @@ const initializeFund = async() => {
   } finally {
     isInitializeDialogOpen.value = false;
     isInitializeLoading.value = false;
+  }
+};
+
+/* ---- Initialize on big blocks ---------------------------------------------- */
+
+const initRail = reactive(useTransactionRail());
+const isInitRailOpen = ref(false);
+// Set once initCreateFund is mined on the rail: the vault then exists,
+// whatever becomes of the switch back after it.
+let isVaultCreatedOnRail = false;
+
+/**
+ * Send initCreateFund on a rail that switches the sender to HyperEVM's big
+ * blocks first and back afterwards, when its gas limit outgrows a standard
+ * block and the sender is not on big blocks already (bigBlocks.ts). Returns
+ * false, having sent nothing, when no switch is needed or possible — the
+ * sender chose big blocks themselves, or is a Safe that cannot sign for
+ * Hyperliquid — and the caller sends as it always has.
+ */
+const initializeOnBigBlocks = async (
+  chainId: ChainId,
+  contract: CustomContract,
+  formattedData: unknown[],
+  gasLimit: number,
+): Promise<boolean> => {
+  const sender = accountStore.activeAccountAddress;
+  const provider = accountStore.connectedWallet?.provider;
+  if (!sender || !provider) return false;
+
+  const needsBigBlocks = exceedsStandardBlock(gasLimit, await standardBlockGasLimit(chainId));
+  if ((await planBigBlocks(chainId, sender, needsBigBlocks)) !== "switch") return false;
+
+  isInitializeDialogOpen.value = false;
+  isVaultCreatedOnRail = false;
+  initRail.load(
+    withBigBlockSwitch(
+      [
+        {
+          label: "Initialize the vault",
+          run: async (submitted) => {
+            await sendAndWait(contract, "initCreateFund", { gas: gasLimit }, formattedData, submitted);
+            isVaultCreatedOnRail = true;
+          },
+        },
+      ],
+      provider,
+      sender,
+      () => toastStore.warningToast(AGENT_LEFT_WARNING, 20000),
+    ),
+  );
+  isInitRailOpen.value = true;
+  await runInitRail();
+  return true;
+};
+
+/** Runs the rail from where it stopped, and leaves it once it is all done. */
+const runInitRail = async () => {
+  if (await initRail.run()) closeInitRail(false);
+};
+
+const closeInitRail = (open: boolean) => {
+  if (open || initRail.isRunning) return;
+  isInitRailOpen.value = false;
+  // The vault exists even when switching back failed: carry on to it.
+  if (isVaultCreatedOnRail) {
+    isVaultCreatedOnRail = false;
+    toastStore.successToast("Fund initialization was successful. Wait for node to sync and go to next step.");
+    repeatUntilFundInitCacheExists(20, 1000);
   }
 };
 
