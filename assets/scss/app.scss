@@ -57,8 +57,8 @@ a {
     z-index: -1;
     height: 9rem;
     background:
-      linear-gradient($color-line 1px, transparent 1px) 0 0 / 48px 48px,
-      linear-gradient(90deg, $color-line 1px, transparent 1px) 0 0 / 48px 48px;
+      linear-gradient($color-backdrop-grid 1px, transparent 1px) 0 0 / 48px 48px,
+      linear-gradient(90deg, $color-backdrop-grid 1px, transparent 1px) 0 0 / 48px 48px;
     mask-image:
       linear-gradient(90deg, #000 20%, transparent 55%),
       linear-gradient(#000 50%, transparent);
