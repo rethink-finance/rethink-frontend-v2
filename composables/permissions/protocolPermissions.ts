@@ -52,6 +52,7 @@ const PROTOCOL_LABELS: Record<string, string> = {
   compound_v3: "Compound v3",
   morphoMarkets: "Morpho Blue markets",
   morphoVaults: "Morpho vaults",
+  hyperlend: "HyperLend",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -113,6 +114,21 @@ const ACTION_HINTS: Record<string, string> = {
     "Deposit into the selected Morpho vaults and withdraw back to the " +
     "vault Safe. Each vault is run by its own curator with its own market " +
     "allocation. Payouts are pinned to the Safe.",
+  "hyperliquid.deposit":
+    "Move USDC between the vault Safe and the Safe's own Hyperliquid " +
+    "account: into HyperCore, between spot and perps, and back to the Safe. " +
+    "Every route ends in the Safe's own account.",
+  "hyperliquid.delegate":
+    "Appoint the API wallets entered here to trade the vault's Hyperliquid " +
+    "account through Hyperliquid's API. They can place and cancel orders " +
+    "but never withdraw, and no builder fee can be approved.",
+  "felix.deposit":
+    "Deposit into the selected Felix vaults and withdraw or redeem back to " +
+    "the vault Safe. Payouts are pinned to the Safe.",
+  "hyperlend.deposit":
+    "Supply the selected assets to HyperLend's Core Pool and withdraw them " +
+    "back to the vault Safe. Supplies credit only the Safe and withdrawals " +
+    "pay out only to it.",
 };
 
 /**
@@ -123,15 +139,23 @@ const ACTION_HINTS: Record<string, string> = {
  * Delegation: the registry pins the permission to exactly the delegatee
  * entered, but WHICH address is the creator's free choice, so the schema
  * marks the action governance-sensitive and asks the frontend to present it
- * accordingly. Spark deposit: the schema documents each savings target as
- * expanding to a whole contract cluster — vault plus PSM/migration wrappers
- * — so one chip grants more than the one vault it names.
+ * accordingly. Hyperliquid's delegate is not voting power: it appoints API
+ * wallets that trade the vault's HyperCore account (the registry's
+ * HYPERLIQUID.md), so it carries a trading warning of its own. Spark
+ * deposit: the schema documents each savings target as expanding to a whole
+ * contract cluster — vault plus PSM/migration wrappers — so one chip grants
+ * more than the one vault it names.
  */
 const ACTION_WARNINGS: Record<string, string> = {
   delegate:
     "Governance-sensitive: the permission pins delegation to exactly the " +
     "delegatee address entered here, but that address is your own choice and " +
     "the registry cannot vet it. Verify it before granting.",
+  "hyperliquid.delegate":
+    "Trading-sensitive: an API wallet has full trading discretion over the " +
+    "vault's Hyperliquid account. It cannot withdraw, but it can lose money " +
+    "by trading. Only the addresses entered here can be appointed: generate " +
+    "fresh keys for this vault and never reuse a wallet that holds funds.",
   "spark.deposit":
     "Each DSR_ and SKY_ target grants a cluster of contracts, not a single " +
     "vault, including Sky's PSM wrappers, which convert between the " +
@@ -165,6 +189,9 @@ const FIELD_LABELS: Record<string, string> = {
   "morphoMarkets.deposit.targets": "Markets",
   "morphoMarkets.borrow.targets": "Markets",
   "morphoVaults.deposit.targets": "Vaults",
+  "felix.deposit.targets": "Vaults",
+  "hyperliquid.delegate.agent": "API wallet",
+  "hyperliquid.delegate.backupAgent": "Backup API wallet",
 };
 
 const getFieldLabel = (
