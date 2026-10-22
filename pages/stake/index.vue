@@ -30,7 +30,7 @@
             <span class="stake_header__curator">by rethink.finance DAO</span>
             <span class="stake_header__sep" />
             <span v-for="symbol in ASSET_SYMBOLS" :key="symbol" class="stake_header__chip">
-              <IconChain v-if="symbol === 'ETH'" chain-short="eth" />
+              <IconChain v-if="symbol === 'ETH'" class="token_ring" chain-short="eth" />
               <IconBaseAsset v-else :symbol="symbol" />
               {{ symbol }}
             </span>
