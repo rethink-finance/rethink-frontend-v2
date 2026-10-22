@@ -576,10 +576,14 @@ const navigateFundDetails = (event: any, row: any) => {
       border-color: $color-line !important;
     }
 
-    /* Curator column (3rd) sits a touch further right for breathing
-       room after the right-aligned NAV figures. */
+    /* Curator (3rd) and Base asset (4th) columns sit a touch further right:
+       Curator for breathing room after the right-aligned NAV figures, Base
+       asset so its left-aligned mark and symbol are not crowded against the
+       curator names. */
     thead th:nth-child(3),
-    tbody td:nth-child(3) {
+    tbody td:nth-child(3),
+    thead th:nth-child(4),
+    tbody td:nth-child(4) {
       padding-left: 28px;
     }
 
