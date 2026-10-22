@@ -126,6 +126,45 @@ a {
     mask-composite: intersect;
     pointer-events: none;
   }
+
+  /* The vault overview at desktop width: the deposit rail's column holds only
+     opaque cards, so the grid can come in from the right margin and sit around
+     the rail. That gives laptops, whose margins are a cell or two wide, more
+     of it. The right side is drawn from the layout rather than the page so it
+     starts level with the rail however tall the top bar is (manage mode adds
+     a row of links there), and the page's own grid keeps to the left. */
+  @include xl {
+    &:has(.fund_layout--split)::before {
+      mask-image:
+        linear-gradient(90deg, #000 calc(50% - 50cqw - 4rem), transparent calc(50% - 50cqw + 0.5rem)),
+        linear-gradient(#000 30%, transparent 90%);
+    }
+
+    .fund_layout--split {
+      position: relative;
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        /* From the gap before the rail out to the window's right edge. */
+        left: calc(100% - 380px - 1.375rem);
+        width: calc(380px + 1.375rem + 50vw - 50cqw);
+        z-index: -1;
+        height: 36rem;
+        background:
+          linear-gradient($color-line 1px, transparent 1px) 0 0 / 48px 48px,
+          linear-gradient(90deg, $color-line 1px, transparent 1px) 0 0 / 48px 48px;
+        /* Fades in across the gap so it is whole by the rail's edge, in from
+           the top so it doesn't start on a hard line, and out at the bottom. */
+        mask-image:
+          linear-gradient(90deg, transparent, #000 1.375rem),
+          linear-gradient(transparent, #000 3rem, #000 40%, transparent);
+        mask-composite: intersect;
+        pointer-events: none;
+      }
+    }
+  }
 }
 
 .brand_card {
