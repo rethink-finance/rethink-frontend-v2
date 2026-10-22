@@ -1,5 +1,5 @@
 <template>
-  <div class="total_tvl_stats grid_backdrop__clear">
+  <div class="total_tvl_stats">
     <div class="total_tvl">
       <div class="total_tvl__value">
         <!-- The last known figure is served from cache while the request is
