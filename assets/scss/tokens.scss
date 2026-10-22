@@ -49,6 +49,8 @@
   --line-2: rgba(255, 255, 255, 0.11);
   --line-3: rgba(255, 255, 255, 0.17);
   --border-light: #808898;
+  /* The grid behind page titles: the hairline, in dark. */
+  --backdrop-grid: rgba(255, 255, 255, 0.06);
 
   /* Text */
   --text: #eceef4;
@@ -158,6 +160,9 @@
   --line-2: rgba(10, 14, 26, 0.14);
   --line-3: rgba(10, 14, 26, 0.22);
   --border-light: #a6adbe;
+  /* Lighter than the hairline: ink on white reads stronger than white on
+     near-black at the same alpha. */
+  --backdrop-grid: rgba(10, 14, 26, 0.045);
 
   /* Text — near-black, not pure black */
   --text: #12141b;
