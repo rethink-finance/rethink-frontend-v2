@@ -13,12 +13,18 @@ import { type ChainId } from "~/types/enums/chain_id";
 interface IState {
   web3Onboard?: any;
   isSwitchingNetworks: boolean;
+  isConnectModalOpen: boolean;
 }
+
+// Settles the promise `connectWallet` waits on when the connect modal closes.
+// Kept out of state: a function has no business being reactive.
+let resolveConnectModal: (() => void) | undefined;
 
 export const useAccountStore = defineStore("accounts", {
   state: (): IState => ({
     web3Onboard: undefined as any | undefined,
     isSwitchingNetworks: false,
+    isConnectModalOpen: false,
   }),
   getters: {
     web3Store() {
@@ -171,19 +177,33 @@ export const useAccountStore = defineStore("accounts", {
         // check the last used chainId in the local storage.
         const lastUsedChainId = localStorage.getItem("lastUsedChainId");
 
-        const wallet = await this.web3Onboard?.connectWallet();
-        // check the last used chainId on the connected wallet.
-        const connectedChainId = wallet?.chains[0]?.id || "";
+        // The app's own modal (components/global/WalletConnectModal.vue)
+        // replaces Web3-Onboard's; it settles once it closes, connected or not.
+        await this.openConnectModal();
+        if (!this.connectedWallet) return;
 
         // if the last used chainId (from localstorage) is different from the connected wallet chainId,
         // switch the chain to the last used chainId.
-        const chainToUse = connectedChainId || lastUsedChainId;
-        if (chainToUse !== connectedChainId) {
-          await this.setActiveChain(chainToUse);
+        if (lastUsedChainId) {
+          await this.setActiveChain(lastUsedChainId as ChainId);
         }
       } catch (error) {
         console.error("Error connecting wallet:", error);
       }
+    },
+    openConnectModal(): Promise<void> {
+      // A second call releases the first caller, which then finds no new
+      // wallet and stops; only the latest caller acts on the outcome.
+      resolveConnectModal?.();
+      this.isConnectModalOpen = true;
+      return new Promise((resolve) => {
+        resolveConnectModal = resolve;
+      });
+    },
+    closeConnectModal() {
+      this.isConnectModalOpen = false;
+      resolveConnectModal?.();
+      resolveConnectModal = undefined;
     },
     async disconnectWallet() {
       const { provider, label } = this.web3Onboard?.connectedWallet || {};

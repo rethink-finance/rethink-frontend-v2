@@ -1,11 +1,19 @@
 import { defineNuxtPlugin } from "#app"
+import coinbaseWalletModule from "@web3-onboard/coinbase"
 import enkrypt from "@web3-onboard/enkrypt"
 import safeModule from "@web3-onboard/gnosis"
 import injectedModule from "@web3-onboard/injected-wallets"
 import ledgerModule from "@web3-onboard/ledger"
+import trezorModule from "@web3-onboard/trezor"
 import { init } from "@web3-onboard/vue"
 import walletConnectModule from "@web3-onboard/walletconnect"
 import logoSVG from "@/assets/images/logo_mobile.svg"
+import {
+  connectByLabel,
+  LAST_CONNECTED_WALLET_KEY,
+  readLastConnectedWallet,
+  withInterfaceErrors,
+} from "~/composables/walletModules"
 import { networksMap } from "~/store/web3/networksMap"
 import { ChainId } from "~/types/enums/chain_id"
 
@@ -54,8 +62,38 @@ export default defineNuxtPlugin(() => {
     projectId: runtimeConfig.public.WALLET_CONNECT_PROJECT_ID || "1",
   })
 
-  init({
-    wallets: [injected, safe, walletConnect, ledger, enkryptModule],
+  // Coinbase's SDK: its smart wallet (passkey, nothing to install) and its
+  // mobile app. The injected list comes first, so with the Coinbase extension
+  // installed that entry wins the shared "Coinbase Wallet" label.
+  const coinbase = coinbaseWalletModule({ supportedWalletType: "all" })
+
+  // Trezor Connect asks every app for a contact and its URL (its manifest).
+  const trezor = trezorModule({
+    email: "admin@rethink.finance",
+    appUrl: `https://${baseDomain}`,
+  })
+
+  const wallets = [
+    withInterfaceErrors(injected, { extension: true }),
+    withInterfaceErrors(safe),
+    withInterfaceErrors(walletConnect),
+    withInterfaceErrors(coinbase),
+    withInterfaceErrors(ledger),
+    withInterfaceErrors(trezor),
+    withInterfaceErrors(enkryptModule, { extension: true }),
+  ]
+
+  // Web3-Onboard reconnects the last wallet inside init(), out of sight of
+  // the app's connect modal; one still waiting there (a locked MetaMask)
+  // would hold up every pick in the modal. So its key is held back for init
+  // and the same reconnect is run below, through the tracked path.
+  const lastWallet = readLastConnectedWallet()
+  localStorage.removeItem(LAST_CONNECTED_WALLET_KEY)
+
+  // The core API is handed to the app's own connect modal, which lists the
+  // wallet modules and connects one by label with Web3-Onboard's modals off.
+  const onboard = init({
+    wallets,
     // rpcUrl is what wallets are registered with and what WalletConnect and
     // Ledger sessions read through; it lives in networksMap so the hint shown
     // when a wallet's own node fails names the same URL.
@@ -97,10 +135,11 @@ export default defineNuxtPlugin(() => {
       icon: logoSVG,
       logo: logoSVG,
       description: "Powering the transition to decentralised and non-custodial asset management.",
+      // The connect modal's "Get a wallet" list: browser wallets someone
+      // without one can install, not ways to connect one they already have.
       recommendedInjectedWallets: [
         { name: "MetaMask", url: "https://metamask.io" },
-        { name: "WalletConnect", url: "https://cloud.walletconnect.com/sign-in" },
-        { name: "Safe", url: "https://app.safe.global/welcome" },
+        { name: "Rabby", url: "https://rabby.io" },
       ],
     },
     connect: {
@@ -114,5 +153,14 @@ export default defineNuxtPlugin(() => {
       mobile: { enabled: false },
     },
   })
+
+  if (lastWallet) {
+    // As Web3-Onboard does: the list is cut to the wallet being reconnected,
+    // and connecting it (autoConnectLastWallet stays on) records it again.
+    localStorage.setItem(LAST_CONNECTED_WALLET_KEY, JSON.stringify([lastWallet]))
+    connectByLabel(onboard.connectWallet, lastWallet)
+  }
+
+  return { provide: { onboard, onboardWallets: wallets } }
 });
 

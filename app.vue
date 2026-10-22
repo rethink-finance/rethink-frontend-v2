@@ -52,6 +52,7 @@ useHead(() => {
   <NuxtLayout v-else>
     <ClientOnly>
       <UiToast />
+      <WalletConnectModal />
     </ClientOnly>
 
     <NuxtPage />
