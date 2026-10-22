@@ -321,14 +321,22 @@ describe("getRegistryProtocols", () => {
   });
 
   it("returns nothing for chains the registry does not cover", () => {
+    // Polygon has valuation methods in the registry, but nothing to permit.
     expect(getRegistryProtocols(POLYGON)).toEqual([]);
-    expect(getRegistryProtocols("0x3e7" as any)).toEqual([]); // HyperEVM
+  });
+
+  it("lists HyperEVM's protocols under their own names", () => {
+    const protocols = getRegistryProtocols("0x3e7" as any);
+    expect(protocols.map((p) => p.protocol)).toEqual(
+      expect.arrayContaining(["hyperliquid", "felix", "hyperlend"]),
+    );
+    expect(protocols.find((p) => p.protocol === "hyperlend")?.label).toBe("HyperLend");
   });
 });
 
 describe("action metadata", () => {
   it("has a hint for every registry action", () => {
-    for (const chain of [ETHEREUM, ARBITRUM, BASE, OPTIMISM, GNOSIS]) {
+    for (const chain of [ETHEREUM, ARBITRUM, BASE, OPTIMISM, GNOSIS, "0x3e7" as any]) {
       for (const protocol of getRegistryProtocols(chain)) {
         for (const action of protocol.actions) {
           expect(getActionHint(action.action), `${action.action} hint`).not.toBe(
@@ -336,6 +344,20 @@ describe("action metadata", () => {
           );
         }
       }
+    }
+  });
+
+  it("describes Hyperliquid's delegate as trading, not voting power", () => {
+    const hyperliquid = getRegistryProtocols("0x3e7" as any).find(
+      (p) => p.protocol === "hyperliquid",
+    )!;
+    const delegate = hyperliquid.actions.find((a) => a.action === "delegate")!;
+    expect(delegate.warning).toContain("Trading-sensitive");
+    expect(`${delegate.hint} ${delegate.warning}`).not.toMatch(/voting power|governance/i);
+    // None of the three HyperEVM deposits touches collateral settings.
+    for (const protocol of getRegistryProtocols("0x3e7" as any)) {
+      const deposit = protocol.actions.find((a) => a.action === "deposit");
+      expect(deposit?.hint, protocol.protocol).not.toMatch(/collateral/i);
     }
   });
 
