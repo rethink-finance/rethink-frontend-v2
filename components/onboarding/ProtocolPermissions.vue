@@ -19,6 +19,7 @@
         :entry="findProtocol(item.descriptor.protocol)!"
         :chain-id="chainId"
         :roles-mod-address="rolesModAddress"
+        :role-key="roleKey"
         @update:entry="(next) => replaceEntry(item.descriptor.protocol, next)"
         @remove="removeProtocol(item.descriptor.protocol)"
       />

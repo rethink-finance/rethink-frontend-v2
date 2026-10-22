@@ -199,6 +199,8 @@ import {
   getActionHint,
   getActionLabel,
   governingMembers,
+  isAdminOnlyGroup,
+  isAdminRoleKey,
   isSecondaryAction,
   isSecondaryGroup,
   validateProtocolSelections,
@@ -232,6 +234,11 @@ const props = defineProps<{
   chainId: ChainId;
   /** For the generated-calls preview; grants still build without it. */
   rolesModAddress?: string;
+  /**
+   * The role being granted (label or bytes32). Admin-only controls —
+   * Hyperliquid's API-wallet rotation — show on the admin role alone.
+   */
+  roleKey?: string;
 }>();
 
 const emit = defineEmits<{
@@ -301,7 +308,8 @@ const view = (group: IProtocolFieldGroup) => {
 const visibleGroups = computed(() =>
   props.descriptor.groups.filter(
     (group) =>
-      governingMembers(group).length > 0 || view(group).actions.length > 0,
+      (governingMembers(group).length > 0 || view(group).actions.length > 0) &&
+      (isAdminRoleKey(props.roleKey) || !isAdminOnlyGroup(group)),
   ),
 );
 
@@ -474,6 +482,7 @@ const preview = computed((): { descriptions: string[]; error: string } => {
       rolesModAddress:
         props.rolesModAddress || "0x0000000000000000000000000000000000000001",
       selections: [props.entry],
+      roleKey: props.roleKey,
     });
     return {
       descriptions: build.descriptions.map((description) =>

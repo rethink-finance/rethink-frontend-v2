@@ -9,6 +9,7 @@ import {
   type Selection,
 } from "@rethink-finance/positions-registry";
 import {
+  ADMIN_ROLE_KEY_V2,
   DEFAULT_ROLE_KEY_V2,
   toRoleKeyBytes32,
 } from "~/composables/nav/generateNAVPermission";
@@ -191,8 +192,38 @@ const FIELD_LABELS: Record<string, string> = {
   "morphoVaults.deposit.targets": "Vaults",
   "felix.deposit.targets": "Vaults",
   "hyperliquid.delegate.agent": "API wallet",
-  "hyperliquid.delegate.backupAgent": "Backup API wallet",
+  "hyperliquid.delegate.rotate": "Rotate API wallets",
 };
+
+/**
+ * What a field means, where the generic note would mislead. Looked up as
+ * "<protocol>.<action>.<field>". Hyperliquid's API wallet is optional in
+ * the schema only because rotation can stand in for it, so "selecting
+ * nothing lets the registry apply its default" would be wrong there.
+ */
+const FIELD_NOTES: Record<string, string> = {
+  "hyperliquid.delegate.agent":
+    "Required, unless this role may rotate API wallets.",
+  "hyperliquid.delegate.rotate":
+    "Lets this role register any new API wallet and take old ones off, " +
+    "without a permissions update. Whoever holds the role can then put any " +
+    "trader on the vault's Hyperliquid account: a trader can never " +
+    "withdraw, but can lose money on purpose.",
+};
+
+/**
+ * Fields only the vault's admin role is offered (reviewer decision
+ * 2026-10-22): Hyperliquid's rotation lets the holder appoint ANY trader,
+ * which is the admin's kind of power — it can already replace the
+ * manager — and never the manager's.
+ */
+const ADMIN_ONLY_FIELDS = new Set(["hyperliquid.delegate.rotate"]);
+
+/** Whether `roleKey` (label or bytes32) is the vault's admin role. */
+export const isAdminRoleKey = (roleKey?: string): boolean =>
+  !!roleKey &&
+  toRoleKeyBytes32(roleKey).toLowerCase() ===
+    toRoleKeyBytes32(ADMIN_ROLE_KEY_V2).toLowerCase();
 
 const getFieldLabel = (
   key: string,
@@ -294,6 +325,8 @@ export type ProtocolParamControl =
   | "multi-select"
   | "single-select"
   | "text"
+  /** A schema boolean: on or off, and off is the same as unset. */
+  | "switch"
   | "unsupported";
 
 export interface IProtocolParamField {
@@ -668,14 +701,22 @@ const buildParamField = (
   const core = unwrapSchema(schema);
   const def = zodDef(core);
   const declared = schemaDefault(schema);
+  // A switch is never "left empty": off is an answer, so the generic
+  // optional-field note does not apply to it.
+  const note =
+    (protocol && action ? FIELD_NOTES[`${protocol}.${action}.${key}`] : undefined) ??
+    (optional && def.typeName !== "ZodBoolean" ? OPTIONAL_FIELD_NOTE : undefined);
   const base = {
     key,
     label: getFieldLabel(key, protocol, action),
     optional,
     ...(declared === undefined ? {} : { defaultValue: declared }),
-    ...(optional ? { note: OPTIONAL_FIELD_NOTE } : {}),
+    ...(note === undefined ? {} : { note }),
   };
 
+  if (def.typeName === "ZodBoolean") {
+    return { ...base, control: "switch" };
+  }
   if (def.typeName === "ZodArray") {
     const elementDef = zodDef(unwrapSchema(def.type));
     if (elementDef.typeName === "ZodEnum") {
@@ -773,6 +814,13 @@ export const isSecondaryGroup = (group: IProtocolFieldGroup): boolean =>
   group.members.length > 0 &&
   group.members.every((member) => isSecondaryAction(member.action));
 
+/** A control only the admin role is offered (see ADMIN_ONLY_FIELDS). */
+export const isAdminOnlyGroup = (group: IProtocolFieldGroup): boolean =>
+  group.members.length > 0 &&
+  group.members.every((member) =>
+    ADMIN_ONLY_FIELDS.has(`${group.protocol}.${member.action}.${member.key}`),
+  );
+
 const isSubset = (inner: string[], outer: Set<string>): boolean =>
   inner.every((value) => outer.has(value));
 
@@ -795,6 +843,8 @@ const fieldsDescribeSameChoice = (
 ): boolean => {
   if (group.control !== field.control) return false;
   if (field.control === "unsupported") return false;
+  // Every switch is its own yes-or-no: two never make one question.
+  if (field.control === "switch") return false;
   if (field.control === "text") return group.pattern === field.pattern;
 
   const groupValues = new Set((group.options ?? []).map((o) => o.value));
@@ -1281,6 +1331,12 @@ export const viewGroup = (
             return Array.isArray(held) && held.includes(value);
           }),
       );
+  } else if (group.control === "switch") {
+    // Read as ["true"] or nothing, so a switch speaks the same value list as
+    // every other control; only `true` itself counts as on.
+    selected = members.some((member) => memberValue(entry, member) === true)
+      ? ["true"]
+      : [];
   } else {
     const held = members
       .map((member) => memberValue(entry, member))
@@ -1321,7 +1377,9 @@ export const applyGroupSelection = (
       const next =
         group.control === "multi-select"
           ? values.filter((value) => member.values.includes(value))
-          : (values[0] ?? "");
+          : group.control === "switch"
+            ? values.includes("true")
+            : (values[0] ?? "");
       return { ...action, params: { ...action.params, [member.key]: next } };
     }),
   });
@@ -1520,6 +1578,27 @@ const toCompileSelections = (
         })),
     );
 
+/**
+ * The selections with every admin-only setting taken out, for a role that
+ * is not the admin: the card never shows those controls there, and a value
+ * left over from a draft must not become a grant regardless.
+ */
+const withoutAdminOnlySettings = (
+  selections: IProtocolSelectionState[],
+): IProtocolSelectionState[] =>
+  selections.map((entry) => ({
+    ...entry,
+    actions: entry.actions.map((action) => ({
+      ...action,
+      params: Object.fromEntries(
+        Object.entries(action.params).filter(
+          ([key]) =>
+            !ADMIN_ONLY_FIELDS.has(`${entry.protocol}.${action.action}.${key}`),
+        ),
+      ),
+    })),
+  }));
+
 export const hasEnabledProtocolSelections = (
   selections: IProtocolSelectionState[],
 ): boolean => toCompileSelections(selections).length > 0;
@@ -1696,11 +1775,15 @@ export const buildProtocolPermissionEntries = (options: {
 }): IProtocolPermissionsBuild => {
   // Same normalization the validation ran: an action switched on beside an
   // emptied governing list compiles to a schema error, and the two paths
-  // must never disagree about what the save contains.
+  // must never disagree about what the save contains. A role other than the
+  // admin loses any admin-only setting first (ADMIN_ONLY_FIELDS).
+  const selections = isAdminRoleKey(options.roleKey)
+    ? options.selections
+    : withoutAdminOnlySettings(options.selections);
   const compileSelections = toCompileSelections(
     normalizeProtocolSelections(
       getRegistryProtocols(options.chainId),
-      options.selections,
+      selections,
     ),
   );
   if (!compileSelections.length) return emptyBuild();
