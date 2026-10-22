@@ -444,6 +444,54 @@ describe("field groups", () => {
     expect(groups.find((g) => g.label === "Delegatee")!.members).toHaveLength(1);
   });
 
+  it("never merges two fields of one action, so each reaches its own parameter", () => {
+    // Hyperliquid's delegate takes an API wallet and an optional backup,
+    // both addresses. Folded into one input, a typed address reached only
+    // the backup, and the required wallet failed as "Delegate: Required".
+    const HYPEREVM = "0x3e7" as any;
+    const API_WALLET = "0x1111111111111111111111111111111111111111";
+    const protocols = getRegistryProtocols(HYPEREVM);
+    const hyperliquid = protocols.find((p) => p.protocol === "hyperliquid")!;
+    const delegateGroups = hyperliquid.groups.filter((g) =>
+      g.members.some((m) => m.action === "delegate"),
+    );
+    expect(
+      delegateGroups.map((g) => [
+        g.label,
+        g.members.map((m) => `${m.action}.${m.key}`).join("+"),
+      ]),
+    ).toEqual([
+      ["API wallet", "delegate.agent"],
+      ["Backup API wallet", "delegate.backupAgent"],
+    ]);
+
+    const seeded = initProtocolSelections(protocols).map((entry) =>
+      entry.protocol === "hyperliquid"
+        ? {
+          ...entry,
+          enabled: true,
+          actions: entry.actions.map((a) =>
+            a.action === "delegate" ? { ...a, enabled: true } : a,
+          ),
+        }
+        : entry,
+    );
+    const picked = applyGroupSelection(
+      hyperliquid,
+      seeded.find((entry) => entry.protocol === "hyperliquid")!,
+      delegateGroups[0],
+      [API_WALLET],
+    );
+    expect(
+      picked.actions.find((a) => a.action === "delegate")!.params.agent,
+    ).toBe(API_WALLET);
+    // The backup left empty is no problem: it is optional.
+    const selections = seeded.map((entry) =>
+      entry.protocol === "hyperliquid" ? picked : entry,
+    );
+    expect(validateProtocolSelections(HYPEREVM, selections, protocols)).toEqual([]);
+  });
+
   it("keeps the lending family on nesting, so markets never join assets", () => {
     // Only the positions family merges on overlap. Compound's deposit
     // targets are MARKETS and its borrow targets are assets — disjoint sets
