@@ -346,7 +346,7 @@ const headers: any = computed(() => [
     value: (v: IFund) => v.baseToken?.symbol || "",
     sortable: true,
     width: 125,
-    align: "center",
+    align: "start",
   },
   {
     title: "Chain",
@@ -662,7 +662,6 @@ const navigateFundDetails = (event: any, row: any) => {
 .base-asset-cell {
   display: flex;
   align-items: center;
-  justify-content: center;
 
   &__symbol {
     font-family: $font-mono;
