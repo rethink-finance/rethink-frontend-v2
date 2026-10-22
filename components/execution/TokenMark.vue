@@ -3,7 +3,7 @@
     v-if="src"
     :src="src"
     :alt="symbol"
-    class="token_mark"
+    class="token_mark mark_ring"
     :style="{ width: size, height: size }"
   >
   <span

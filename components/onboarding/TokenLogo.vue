@@ -1,7 +1,7 @@
 <template>
   <img
     v-if="src"
-    class="token_logo"
+    class="token_logo mark_ring"
     :src="src"
     :alt="symbol"
     :style="{ '--token-logo-size': `${size}px` }"
@@ -9,6 +9,7 @@
   >
   <Icon
     v-else-if="iconifyFallback"
+    class="mark_ring"
     :icon="iconifyFallback.name"
     :width="size"
     :height="size"

@@ -33,6 +33,12 @@ corners as a rim around the logo. Base's is a full-bleed square, and rounding
 the frame is enough to give it the same silhouette, so a new file can be either
 shape.
 
+Token and chain marks sit in a thin ring: the global `.mark_ring` class in
+`assets/scss/app.scss`, a 1px `box-shadow` just outside the mark. It is drawn
+around the mark, never behind it, so the corners stay clear. Every mark
+component applies it (`IconChain`, `IconBaseAsset` including its Iconify
+fallback, `OnboardingTokenLogo`, `ExecutionTokenMark`), so callers never add it.
+
 Chain and token marks render at one shared diameter, `ICON_SIZE_PX` in
 `composables/designSystemIcons.ts`, so the two never disagree where they sit
 side by side.

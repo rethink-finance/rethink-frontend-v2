@@ -583,6 +583,13 @@ const navigateFundDetails = (event: any, row: any) => {
       padding-left: 28px;
     }
 
+    /* Base asset (4th): the header stays centred over the column, while each
+       row's mark and symbol start from a shared left edge, set in a little
+       so they are not crowded against the curator names. */
+    tbody td:nth-child(4) {
+      padding-left: 28px;
+    }
+
     /* Numeric data cells in mono (design-file rows) */
     .nav_cell,
     .nav_usd_value {
@@ -662,7 +669,6 @@ const navigateFundDetails = (event: any, row: any) => {
 .base-asset-cell {
   display: flex;
   align-items: center;
-  justify-content: center;
 
   &__symbol {
     font-family: $font-mono;

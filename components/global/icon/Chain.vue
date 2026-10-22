@@ -1,6 +1,6 @@
 <template>
   <span
-    class="chain_icon"
+    class="chain_icon mark_ring"
     :style="{ '--chain-icon-size': `${size}px` }"
     :title="chainName"
   >
@@ -83,11 +83,12 @@ const chainName = computed(
   flex: none;
   width: var(--chain-icon-size);
   height: var(--chain-icon-size);
-  /* No field and no hairline behind the mark. Every design-system mark but
-     Base is a disc drawn to the edge of a transparent square, so anything
-     painted underneath only ever showed through the corners as a rim around
-     the logo. The rounding stays: it is what turns Base's full-bleed square
-     into a disc, so all five chains read as one silhouette. */
+  /* No field behind the mark (the ring is .mark_ring, outside it). Every
+     design-system mark but Base is a disc drawn to the edge of a transparent
+     square, so anything painted underneath only ever showed through the
+     corners as a rim around the logo. The rounding stays: it is what turns
+     Base's full-bleed square into a disc, so all five chains read as one
+     silhouette. */
   border-radius: 999px;
   overflow: hidden;
 

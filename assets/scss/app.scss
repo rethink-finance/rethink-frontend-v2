@@ -74,6 +74,20 @@ a {
 }
 
 /* Components */
+
+/*
+ * The thin ring every token and chain mark sits in, wherever it is drawn
+ * (IconBaseAsset, IconChain, OnboardingTokenLogo, ExecutionTokenMark, and
+ * the sciETH console's ETH in SciMark). A box-shadow, not a border: it sits
+ * just outside the mark's own disc without shrinking it, and nothing is
+ * painted behind the mark, which would show through a PNG's transparent
+ * corners as a rim.
+ */
+.mark_ring {
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px $color-line-3;
+}
+
 .main_title {
   color: $color-primary;
   font-size: $text-md;
