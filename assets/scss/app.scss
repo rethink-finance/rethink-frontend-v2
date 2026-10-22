@@ -114,8 +114,9 @@ a {
     pointer-events: none;
   }
 
-  /* Vault details: the same grid moved up, so it is at its fullest behind
-     the top bar and the vault title and has faded out by the chart. The part
+  /* Vault details and /stake: the same grid moved up, so it is at its
+     fullest behind the top bar and the title and has faded out by the bottom
+     of the deposit card. The part
      above the page runs under the navbar, which is opaque. */
   &--raised::before {
     top: -12rem;

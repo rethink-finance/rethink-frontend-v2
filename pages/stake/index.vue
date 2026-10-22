@@ -1,5 +1,5 @@
 <template>
-  <div class="stake_page page_shell grid_backdrop">
+  <div class="stake_page page_shell grid_backdrop grid_backdrop--raised">
     <div class="stake_topbar">
       <NuxtLink to="/" class="stake_topbar__back">
         <Icon icon="mdi:arrow-left" width="0.8125rem" />
