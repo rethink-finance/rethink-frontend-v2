@@ -114,12 +114,13 @@ a {
   }
 
   /*
-   * Put on a stat strip to clear the grid behind it: grid lines running
-   * through the headline figures and the strip's own dividers read as
-   * strike-throughs and underlines. The patch is the page's background,
-   * feathered at its edges so the grid fades out around the strip rather
-   * than stopping on a hard line. It belongs to the strip, so it follows it
-   * however long the description above it runs.
+   * Put on text that sits on the page to clear the grid behind it (the stat
+   * strips, the vault description): grid lines running through figures and
+   * prose, and next to the strip's own dividers, read as strike-throughs and
+   * underlines. The patch is the page's background, feathered at its edges
+   * so the grid fades out around the text rather than stopping on a hard
+   * line. It belongs to the element, so it follows it however long the
+   * description runs.
    */
   &__clear {
     position: relative;
