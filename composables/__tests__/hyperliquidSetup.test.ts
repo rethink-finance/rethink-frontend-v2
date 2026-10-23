@@ -1,23 +1,31 @@
 import { compile, RETHINK_HYPERLIQUID_REFERRAL_CODE } from "@rethink-finance/positions-registry";
 import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
+import { encodeSendAsset, SPOT_DEX } from "~/composables/execution/crtV2Vault";
 import {
   API_WALLET_MAX_DAYS,
   API_WALLET_MIN_DAYS,
+  CORE_DEPOSIT_WALLET,
   CORE_WRITER,
+  HYPEREVM_USDC,
   HYPERLIQUID_INFO_URL,
   apiWalletNameProblem,
   apiWalletSlotName,
   apiWalletValidUntil,
+  approveCoreDepositCall,
   daysLeft,
+  depositToCoreCall,
   fetchApiWalletOwner,
   fetchApiWallets,
   fetchHyperliquidAccount,
   fetchReferral,
   registerApiWalletCall,
   removeApiWalletCall,
+  sendUsdcToEvmCall,
   setReferrerAction,
   setRethinkReferral,
+  spotPerpTransferCall,
+  toCoreSpotUnits,
   waitForApiWallet,
   walletFromPrivateKey,
 } from "~/composables/execution/hyperliquidSetup";
@@ -111,14 +119,14 @@ describe("the calls the manager sends", () => {
   });
 
   /**
-   * Whether the registry's own `delegate` permission, generated for
-   * `params`, lets `call` through — read back through the app's own
-   * byte-pattern reader.
+   * Whether the CoreWriter rule of the registry's own `action` permission,
+   * generated for `params`, lets `call` through — read back through the
+   * app's own byte-pattern reader.
    */
-  const delegateAllows = (params: Record<string, unknown>) => {
+  const coreWriterAllows = (action: "deposit" | "delegate", params: Record<string, unknown>) => {
     const { targets } = compile({
       chainId: 999,
-      selections: [{ protocol: "hyperliquid", action: "delegate", params }],
+      selections: [{ protocol: "hyperliquid", action, params }],
     });
     const target: any = targets.find((t: any) => t.address.toLowerCase() === CORE_WRITER);
     const scope = target.functions.find(
@@ -148,7 +156,7 @@ describe("the calls the manager sends", () => {
   // What the panel sends must pass the manager's permission for the one
   // address the vault was launched with, and nothing else.
   it("fits the manager's Hyperliquid permission, and only for its address", () => {
-    const allows = delegateAllows({ agent: AGENT });
+    const allows = coreWriterAllows("delegate", { agent: AGENT });
     expect(allows(registerApiWalletCall(AGENT, "main", NOW))).toBe(true);
     expect(allows(removeApiWalletCall("main"))).toBe(true);
     expect(allows(registerApiWalletCall(BACKUP, "backup", NOW))).toBe(false);
@@ -157,11 +165,63 @@ describe("the calls the manager sends", () => {
 
   // With rotation — the admin's — any address the panel registers passes.
   it("fits the admin's rotation permission for any address", () => {
-    const allows = delegateAllows({ rotate: true });
+    const allows = coreWriterAllows("delegate", { rotate: true });
     for (const address of [AGENT, BACKUP, STRANGER]) {
       expect(allows(registerApiWalletCall(address, "main", NOW))).toBe(true);
     }
     expect(allows(removeApiWalletCall("main"))).toBe(true);
+  });
+
+  // Funding goes only where the registry's deposit permission lets it: the
+  // approval to the CoreDepositWallet, the deposit to the Safe's own
+  // account, and the CoreWriter moves that end in that account.
+  it("funds the account on the deposit permission's routes, and no other", () => {
+    const { targets } = compile({
+      chainId: 999,
+      selections: [{ protocol: "hyperliquid", action: "deposit", params: { targets: ["USDC"] } }],
+    });
+    const scoped = (address: string, selector: string) =>
+      targets.some(
+        (t: any) =>
+          t.address.toLowerCase() === address.toLowerCase() &&
+          t.functions.some((fn: any) => fn.selector === selector),
+      );
+    const amount = 5_000_000n; // 5 USDC
+
+    const approve = approveCoreDepositCall(amount);
+    expect(approve.to).toBe(HYPEREVM_USDC);
+    expect(scoped(approve.to, approve.data.slice(0, 10))).toBe(true);
+    const [spender, approved] = new ethers.Interface([
+      "function approve(address spender, uint256 amount)",
+    ]).decodeFunctionData("approve", approve.data);
+    expect([spender, approved]).toEqual([CORE_DEPOSIT_WALLET, amount]);
+
+    const deposit = depositToCoreCall(SAFE.toLowerCase(), amount);
+    expect(deposit.to).toBe(CORE_DEPOSIT_WALLET);
+    expect(scoped(deposit.to, deposit.data.slice(0, 10))).toBe(true);
+    const [receiver, deposited, dex] = new ethers.Interface([
+      "function depositFor(address receiver, uint256 amount, uint32 dex)",
+    ]).decodeFunctionData("depositFor", deposit.data);
+    expect([receiver, deposited, dex]).toEqual([SAFE, amount, 0n]);
+
+    const allows = coreWriterAllows("deposit", { targets: ["USDC"] });
+    expect(allows(spotPerpTransferCall(amount, true))).toBe(true);
+    expect(allows(spotPerpTransferCall(amount, false))).toBe(true);
+    expect(allows(sendUsdcToEvmCall(amount))).toBe(true);
+    // The same sendAsset, to anyone but the Safe's own EVM balance.
+    const elsewhere = {
+      data: writer.encodeFunctionData("sendRawAction", [
+        encodeSendAsset(STRANGER, ethers.ZeroAddress, SPOT_DEX, SPOT_DEX, 0n, toCoreSpotUnits(amount)),
+      ]),
+    };
+    expect(allows(elsewhere)).toBe(false);
+    expect(allows(registerApiWalletCall(AGENT, "main", NOW))).toBe(false);
+  });
+
+  it("counts USDC the way HyperCore spot does on the way back", () => {
+    expect(toCoreSpotUnits(5_000_000n)).toBe(500_000_000n);
+    expect(payloadOf(sendUsdcToEvmCall(5_000_000n).data).slice(0, 10)).toBe("0x0100000d"); // sendAsset
+    expect(payloadOf(spotPerpTransferCall(5_000_000n, true).data).slice(0, 10)).toBe("0x01000007"); // usdClassTransfer
   });
 });
 

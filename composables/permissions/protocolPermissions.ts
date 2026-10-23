@@ -116,9 +116,10 @@ const ACTION_HINTS: Record<string, string> = {
     "vault Safe. Each vault is run by its own curator with its own market " +
     "allocation. Payouts are pinned to the Safe.",
   "hyperliquid.deposit":
-    "Move USDC between the vault Safe and the Safe's own Hyperliquid " +
-    "account: into HyperCore, between spot and perps, and back to the Safe. " +
-    "Every route ends in the Safe's own account.",
+    "Fund the vault's Hyperliquid account: move USDC from the Safe on " +
+    "HyperEVM into HyperCore, between the account's spot and perp " +
+    "balances, and from HyperCore back to the Safe. Every route ends in " +
+    "the Safe's own account; nothing can be sent anywhere else.",
   "hyperliquid.delegate":
     "Appoint the API wallets entered here to trade the vault's Hyperliquid " +
     "account through Hyperliquid's API. They can place and cancel orders " +
@@ -203,27 +204,37 @@ const FIELD_LABELS: Record<string, string> = {
  */
 const FIELD_NOTES: Record<string, string> = {
   "hyperliquid.delegate.agent":
-    "Required, unless this role may rotate API wallets.",
-  "hyperliquid.delegate.rotate":
-    "Lets this role register any new API wallet and take old ones off, " +
-    "without a permissions update. Whoever holds the role can then put any " +
-    "trader on the vault's Hyperliquid account: a trader can never " +
-    "withdraw, but can lose money on purpose.",
+    "The one address this role may register as the account's API wallet.",
 };
 
 /**
- * Fields only the vault's admin role is offered (reviewer decision
- * 2026-10-22): Hyperliquid's rotation lets the holder appoint ANY trader,
- * which is the admin's kind of power — it can already replace the
- * manager — and never the manager's.
+ * Fields the protocol card never offers, because a vault operation switch
+ * grants them instead: Hyperliquid's rotation is the admin's "Rotate
+ * Hyperliquid API" switch (hyperliquidRotation.ts), so the card strips it
+ * before compiling, whatever a draft holds.
  */
-const ADMIN_ONLY_FIELDS = new Set(["hyperliquid.delegate.rotate"]);
+const SWITCH_OWNED_FIELDS = new Set(["hyperliquid.delegate.rotate"]);
+
+/**
+ * Actions the admin's switches own outright: the rotation switch grants
+ * and revokes the admin's whole CoreWriter scope, so the admin's card never
+ * offers Hyperliquid's delegate — the two would write over each other's
+ * rule. The executor's card keeps it: that is where its API wallet is set.
+ */
+const ADMIN_SWITCH_OWNED_ACTIONS = new Set(["hyperliquid.delegate"]);
 
 /** Whether `roleKey` (label or bytes32) is the vault's admin role. */
 export const isAdminRoleKey = (roleKey?: string): boolean =>
   !!roleKey &&
   toRoleKeyBytes32(roleKey).toLowerCase() ===
     toRoleKeyBytes32(ADMIN_ROLE_KEY_V2).toLowerCase();
+
+/** Whether `roleKey`'s card leaves `action` of `protocol` to a vault operation switch. */
+export const isSwitchOwnedAction = (
+  protocol: string,
+  action: string,
+  roleKey?: string,
+): boolean => isAdminRoleKey(roleKey) && ADMIN_SWITCH_OWNED_ACTIONS.has(`${protocol}.${action}`);
 
 const getFieldLabel = (
   key: string,
@@ -814,11 +825,16 @@ export const isSecondaryGroup = (group: IProtocolFieldGroup): boolean =>
   group.members.length > 0 &&
   group.members.every((member) => isSecondaryAction(member.action));
 
-/** A control only the admin role is offered (see ADMIN_ONLY_FIELDS). */
-export const isAdminOnlyGroup = (group: IProtocolFieldGroup): boolean =>
+/**
+ * A control `roleKey`'s card leaves out, because a vault operation switch
+ * owns it (SWITCH_OWNED_FIELDS, ADMIN_SWITCH_OWNED_ACTIONS).
+ */
+export const isSwitchOwnedGroup = (group: IProtocolFieldGroup, roleKey?: string): boolean =>
   group.members.length > 0 &&
-  group.members.every((member) =>
-    ADMIN_ONLY_FIELDS.has(`${group.protocol}.${member.action}.${member.key}`),
+  group.members.every(
+    (member) =>
+      SWITCH_OWNED_FIELDS.has(`${group.protocol}.${member.action}.${member.key}`) ||
+      isSwitchOwnedAction(group.protocol, member.action, roleKey),
   );
 
 const isSubset = (inner: string[], outer: Set<string>): boolean =>
@@ -1579,21 +1595,23 @@ const toCompileSelections = (
     );
 
 /**
- * The selections with every admin-only setting taken out, for a role that
- * is not the admin: the card never shows those controls there, and a value
- * left over from a draft must not become a grant regardless.
+ * The selections as `roleKey`'s card may grant them: every switch-owned
+ * field taken out, and every action the role's switches own switched off.
+ * The card never shows those controls, and a value left over from a draft
+ * must not become a grant regardless — validate and compile through this.
  */
-const withoutAdminOnlySettings = (
+export const selectionsForRole = (
+  roleKey: string | undefined,
   selections: IProtocolSelectionState[],
 ): IProtocolSelectionState[] =>
   selections.map((entry) => ({
     ...entry,
     actions: entry.actions.map((action) => ({
       ...action,
+      enabled: action.enabled && !isSwitchOwnedAction(entry.protocol, action.action, roleKey),
       params: Object.fromEntries(
         Object.entries(action.params).filter(
-          ([key]) =>
-            !ADMIN_ONLY_FIELDS.has(`${entry.protocol}.${action.action}.${key}`),
+          ([key]) => !SWITCH_OWNED_FIELDS.has(`${entry.protocol}.${action.action}.${key}`),
         ),
       ),
     })),
@@ -1775,15 +1793,12 @@ export const buildProtocolPermissionEntries = (options: {
 }): IProtocolPermissionsBuild => {
   // Same normalization the validation ran: an action switched on beside an
   // emptied governing list compiles to a schema error, and the two paths
-  // must never disagree about what the save contains. A role other than the
-  // admin loses any admin-only setting first (ADMIN_ONLY_FIELDS).
-  const selections = isAdminRoleKey(options.roleKey)
-    ? options.selections
-    : withoutAdminOnlySettings(options.selections);
+  // must never disagree about what the save contains. What the role's
+  // vault operation switches own is taken out first (selectionsForRole).
   const compileSelections = toCompileSelections(
     normalizeProtocolSelections(
       getRegistryProtocols(options.chainId),
-      selections,
+      selectionsForRole(options.roleKey, options.selections),
     ),
   );
   if (!compileSelections.length) return emptyBuild();

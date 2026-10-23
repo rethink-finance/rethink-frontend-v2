@@ -4,17 +4,23 @@ import {
   CRT_V2_AGENT_MAX_DAYS,
   CRT_V2_AGENT_MIN_DAYS,
   encodeAddApiWallet,
+  encodeSendUsdcToEvm,
+  encodeUsdClassTransfer,
 } from "~/composables/execution/crtV2Vault";
 import { postExchangeAction } from "~/composables/hyperevm/bigBlocks";
 import { signL1Action } from "~/composables/hyperevm/hyperCoreSigning";
 import type { IRoleCall } from "~/composables/permissions/useRoleExecution";
 
 /**
- * A vault's Hyperliquid account, set up from the app: the two steps the
- * registry's HYPERLIQUID.md otherwise leaves to a script (registering an API
- * wallet, setting the RETHINK referral), for any HyperEVM vault whose
- * manager role holds the registry's Hyperliquid permissions.
+ * A vault's Hyperliquid account, set up from the app: the steps the
+ * registry's HYPERLIQUID.md otherwise leaves to a script (funding the
+ * account, registering an API wallet, setting the RETHINK referral), for
+ * any HyperEVM vault whose manager role holds the registry's Hyperliquid
+ * permissions.
  *
+ * - Funding is HyperEVM transactions through the vault's Roles modifier,
+ *   on the routes the registry's `deposit` permission allows (see "Funding
+ *   the account" below). Every route ends in the Safe's own account.
  * - Registering an API wallet is a HyperEVM transaction: the manager sends
  *   CoreWriter.sendRawAction(addApiWallet(address, name)) through the
  *   vault's Roles modifier, and the registry's `delegate` permission lets
@@ -116,6 +122,68 @@ export const removeApiWalletCall = (name: string): IRoleCall => ({
     encodeAddApiWallet(ethers.ZeroAddress, name),
   ]),
 });
+
+/* ---- Funding the account -------------------------------------------------- */
+
+/**
+ * The routes the registry's `deposit` permission allows, each ending in the
+ * Safe's own account: USDC from the Safe on HyperEVM into its HyperCore
+ * perp balance (Circle's CoreDepositWallet, dex 0 — the route the
+ * registry's fork tests take), between the account's spot and perp
+ * balances (usdClassTransfer), and from HyperCore spot back to the Safe
+ * on HyperEVM (sendAsset to USDC's system address).
+ */
+export const HYPEREVM_USDC = "0xb88339CB7199b77E23DB6E890353E22632Ba630f";
+export const CORE_DEPOSIT_WALLET = "0x6B9E773128f453f5c2C60935Ee2DE2CBc5390A24";
+/** depositFor's `dex`: 0 credits the account's perp balance. */
+export const PERP_DEX = 0;
+/** USDC is 1e6 on HyperEVM and in perp USD; HyperCore spot keeps it in 1e8. */
+export const USDC_EVM_DECIMALS = 6;
+export const USDC_CORE_SPOT_DECIMALS = 8;
+
+const erc20 = new ethers.Interface([
+  "function approve(address spender, uint256 amount)",
+  "function balanceOf(address owner) view returns (uint256)",
+]);
+const depositWallet = new ethers.Interface([
+  "function depositFor(address receiver, uint256 amount, uint32 dex)",
+]);
+
+/** A USDC amount in HyperEVM units (1e6) as HyperCore spot units (1e8). */
+export const toCoreSpotUnits = (amount: bigint): bigint =>
+  amount * 10n ** BigInt(USDC_CORE_SPOT_DECIMALS - USDC_EVM_DECIMALS);
+
+/** Let the CoreDepositWallet take `amount` USDC (1e6) from the Safe. */
+export const approveCoreDepositCall = (amount: bigint): IRoleCall => ({
+  to: HYPEREVM_USDC,
+  data: erc20.encodeFunctionData("approve", [CORE_DEPOSIT_WALLET, amount]),
+});
+
+/** Move `amount` USDC (1e6) from the Safe on HyperEVM into its HyperCore perp balance. */
+export const depositToCoreCall = (safe: string, amount: bigint): IRoleCall => ({
+  to: CORE_DEPOSIT_WALLET,
+  data: depositWallet.encodeFunctionData("depositFor", [ethers.getAddress(safe), amount, PERP_DEX]),
+});
+
+/** Move `amount` USDC (1e6) between the account's spot and perp balances. */
+export const spotPerpTransferCall = (amount: bigint, toPerp: boolean): IRoleCall => ({
+  to: CORE_WRITER,
+  data: coreWriter.encodeFunctionData("sendRawAction", [encodeUsdClassTransfer(amount, toPerp)]),
+});
+
+/** Move `amount` USDC (1e6) from the account's HyperCore spot balance back to the Safe on HyperEVM. */
+export const sendUsdcToEvmCall = (amount: bigint): IRoleCall => ({
+  to: CORE_WRITER,
+  data: coreWriter.encodeFunctionData("sendRawAction", [encodeSendUsdcToEvm(toCoreSpotUnits(amount))]),
+});
+
+/** The Safe's USDC balance on HyperEVM, as an eth_call and its decoder. */
+export const evmUsdcBalanceCall = (safe: string) => ({
+  to: HYPEREVM_USDC,
+  data: erc20.encodeFunctionData("balanceOf", [ethers.getAddress(safe)]),
+});
+export const decodeEvmUsdcBalance = (result: string): bigint =>
+  erc20.decodeFunctionResult("balanceOf", result)[0] as bigint;
 
 /* ---- Reads ---------------------------------------------------------------- */
 

@@ -455,6 +455,7 @@ const probesFor = (
     manageExecutorMembers: false,
     transferAdminRole: false,
     changeFeeDestinations: false,
+    rotateHyperliquidApi: false,
   };
   const a = permissions.adminEnabled ? permissions.admin : off;
   const e = permissions.executor;

@@ -13,9 +13,11 @@ import {
   initProtocolSelections,
   applyGroupSelection,
   applyValueScopes,
-  isAdminOnlyGroup,
   isAdminRoleKey,
   isSecondaryGroup,
+  isSwitchOwnedAction,
+  isSwitchOwnedGroup,
+  selectionsForRole,
   normalizeActionEnablement,
   viewValueScopes,
   listProtocolScopesToRevoke,
@@ -501,7 +503,9 @@ describe("field groups", () => {
     const { protocols, hyperliquid, groupOf, seeded } = hyperliquidDelegate();
     const rotate = groupOf("rotate");
     expect(rotate.control).toBe("switch");
-    expect(rotate.note).toContain("any new API wallet");
+    // No card shows it (the admin's vault operation switch does), so it
+    // carries no note of its own.
+    expect(rotate.note).toBeUndefined();
     expect(viewGroup(seeded, rotate).selected).toEqual([]);
 
     // On: no address needed.
@@ -519,12 +523,19 @@ describe("field groups", () => {
     expect(issues[0].message).toContain("enter the API wallet's address");
   });
 
-  it("offers rotation to the admin role only, and never grants it to another", () => {
+  it("leaves rotation, and the admin's delegate, to the admin's vault operation switch", () => {
     const { hyperliquid, groupOf, seeded } = hyperliquidDelegate();
-    expect(isAdminOnlyGroup(groupOf("rotate"))).toBe(true);
-    expect(isAdminOnlyGroup(groupOf("agent"))).toBe(false);
+    // The rotation field belongs to the admin's "Rotate Hyperliquid API"
+    // switch: no role's card offers it.
+    expect(isSwitchOwnedGroup(groupOf("rotate"), DEFAULT_ROLE_KEY_V2)).toBe(true);
+    expect(isSwitchOwnedGroup(groupOf("rotate"), undefined)).toBe(true);
+    // The admin's card leaves Hyperliquid's delegate out altogether — the
+    // switch owns that scope — while the executor's keeps its API wallet.
+    expect(isSwitchOwnedAction("hyperliquid", "delegate", ADMIN_ROLE_KEY_V2)).toBe(true);
+    expect(isSwitchOwnedGroup(groupOf("agent"), toRoleKeyBytes32(ADMIN_ROLE_KEY_V2))).toBe(true);
+    expect(isSwitchOwnedGroup(groupOf("agent"), DEFAULT_ROLE_KEY_V2)).toBe(false);
+    expect(isSwitchOwnedAction("hyperliquid", "deposit", ADMIN_ROLE_KEY_V2)).toBe(false);
     expect(isAdminRoleKey(ADMIN_ROLE_KEY_V2)).toBe(true);
-    expect(isAdminRoleKey(toRoleKeyBytes32(ADMIN_ROLE_KEY_V2))).toBe(true);
     expect(isAdminRoleKey(DEFAULT_ROLE_KEY_V2)).toBe(false);
     expect(isAdminRoleKey(undefined)).toBe(false);
 
@@ -537,15 +548,18 @@ describe("field groups", () => {
         rolesModAddress: ROLES_MOD,
         selections,
         roleKey,
-      }).entries;
-    // The admin gets rotation: a different grant than the address alone.
-    expect(build([rotating], ADMIN_ROLE_KEY_V2)).not.toEqual(
-      build([withAddress], ADMIN_ROLE_KEY_V2),
+      });
+    const CORE_WRITER = "0x3333333333333333333333333333333333333333";
+    // The executor gets exactly the address, as if rotation were off.
+    expect(build([rotating], DEFAULT_ROLE_KEY_V2).entries).toEqual(
+      build([withAddress], DEFAULT_ROLE_KEY_V2).entries,
     );
-    // Any other role gets exactly the address, as if rotation were off.
-    expect(build([rotating], DEFAULT_ROLE_KEY_V2)).toEqual(
-      build([withAddress], DEFAULT_ROLE_KEY_V2),
-    );
+    expect(build([withAddress], DEFAULT_ROLE_KEY_V2).targetAddresses).toContain(CORE_WRITER);
+    // The admin's card grants nothing on CoreWriter, address or not.
+    expect(build([rotating], ADMIN_ROLE_KEY_V2).targetAddresses).not.toContain(CORE_WRITER);
+    const forAdmin = selectionsForRole(ADMIN_ROLE_KEY_V2, [rotating])[0];
+    expect(forAdmin.actions.find((a) => a.action === "delegate")!.enabled).toBe(false);
+    expect("rotate" in forAdmin.actions.find((a) => a.action === "delegate")!.params).toBe(false);
   });
 
   it("keeps the lending family on nesting, so markets never join assets", () => {

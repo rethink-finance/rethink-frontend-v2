@@ -38,6 +38,7 @@ export const fetchVaultOperationContext = async (options: {
     baseToken: options.baseToken || settings.baseToken,
     rolesModifier: options.rolesModifier,
     executorRoleKey: options.executorRoleKey,
+    chainId: options.chainId,
     navExecutor: addresses.getNAVExecutorBeaconProxyAddress(options.chainId),
     poolPerformanceFee:
       addresses.rethinkContractAddresses.PoolPerformanceFeeBeaconProxy[options.chainId],

@@ -1,3 +1,4 @@
+import { compile, deriveReplaceCalls } from "@rethink-finance/positions-registry";
 import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
 import RolesFullV2 from "../assets/contracts/zodiac/RolesFullV2.json";
@@ -303,6 +304,7 @@ describe("vault operations as switches", () => {
     manageWhitelist: true,
     updateMetadata: true,
     changeFeeDestinations: true,
+    rotateHyperliquidApi: true,
   };
 
   it("sends nothing for switches left as they are", () => {
@@ -367,6 +369,54 @@ describe("vault operations as switches", () => {
     ]);
     expect(vaultOperationSwitches(grants, ADMIN_KEY)[0].hint).toContain("executor role");
   });
+
+  it("grants and revokes the admin's Hyperliquid rotation on its own", async () => {
+    const { buildHyperliquidRotationGrant } = await import("../composables/permissions/hyperliquidRotation");
+    const on = buildVaultOperationCalls(ADMIN_KEY, { ...ALL_ADMIN, rotateHyperliquidApi: false }, ALL_ADMIN, context);
+    expect(on).toEqual(buildHyperliquidRotationGrant(MODIFIER, ADMIN_KEY));
+    expect(on.length).toBeGreaterThan(0);
+    const off = buildVaultOperationCalls(ADMIN_KEY, ALL_ADMIN, { ...ALL_ADMIN, rotateHyperliquidApi: false }, context);
+    expect(decode(off)).toEqual([["revokeFunction", "0x3333333333333333333333333333333333333333", "0x17938e13"]]);
+  });
+
+  it("offers the Hyperliquid rotation chip on HyperEVM only, first, read from the stored grant", async () => {
+    const { buildHyperliquidRotationGrant } = await import("../composables/permissions/hyperliquidRotation");
+    const hyperEvm = { fundAddress: FUND, baseToken: BASE, rolesModifier: MODIFIER, chainId: "0x3e7" };
+    const entry = (data: string) => ({ data, label: "call" });
+
+    const rotating = splitPrepopulated(
+      buildHyperliquidRotationGrant(MODIFIER, ADMIN_KEY).map(entry),
+      ADMIN_KEY,
+      hyperEvm,
+      EXECUTOR_KEY,
+    );
+    const ops = vaultOperationSwitches(rotating.grants, ADMIN_KEY);
+    expect(ops).toHaveLength(6);
+    expect(ops[0]).toMatchObject({ key: "rotateHyperliquidApi", on: true, logo: "hyperliquid" });
+    // The switch's grant is the switch's, not protocol access.
+    expect(rotating.other).toEqual([]);
+
+    // An agent pinned by hand is not the switch: the chip stays off and the
+    // grant stays protocol access, where it is named.
+    const { targets } = compile({
+      chainId: 999,
+      selections: [{ protocol: "hyperliquid", action: "delegate", params: { agent: ALICE } }],
+    });
+    const pinned = deriveReplaceCalls({ rolesMod: MODIFIER.toLowerCase(), roleKey: ADMIN_KEY, targets })
+      .calls.map((call: any) => entry(call.data));
+    const pinnedSplit = splitPrepopulated(pinned, ADMIN_KEY, hyperEvm, EXECUTOR_KEY);
+    expect(vaultOperationSwitches(pinnedSplit.grants, ADMIN_KEY)[0]).toMatchObject({
+      key: "rotateHyperliquidApi",
+      on: false,
+    });
+    expect(pinnedSplit.other).toHaveLength(pinned.length);
+
+    // Another chain has no such chip.
+    const elsewhere = splitPrepopulated([], ADMIN_KEY, { ...hyperEvm, chainId: "0x1" }, EXECUTOR_KEY);
+    expect(vaultOperationSwitches(elsewhere.grants, ADMIN_KEY).map((op) => op.key)).not.toContain(
+      "rotateHyperliquidApi",
+    );
+  });
 });
 
 describe("protocol access grouped by protocol", () => {
@@ -402,6 +452,28 @@ describe("protocol access grouped by protocol", () => {
     expect(groups[1].indices).toEqual([2, 3, 4, 5]);
     expect(groups[1].logo).toEqual({ protocol: "hyperliquid" });
     expect(groups[0].logo).toEqual({ token: "USDC" });
+  });
+
+  // Which address may trade the account is the whole of the API-agent
+  // grant, so the tag names it; a rotation grant says any address will do.
+  it("names the API agent a Hyperliquid grant pins", async () => {
+    const { contractProtocol } = await import("../composables/contracts/contractNames");
+    const entriesFor = (params: Record<string, unknown>) => {
+      const { targets } = compile({
+        chainId: 999,
+        selections: [{ protocol: "hyperliquid", action: "delegate", params }],
+      });
+      return deriveReplaceCalls({ rolesMod: MODIFIER.toLowerCase(), roleKey: EXECUTOR, targets })
+        .calls.map((call: any) => ({ data: call.data, label: call.description }));
+    };
+    const pinned = groupByProtocol(entriesFor({ agent: ALICE }), contractProtocol, () => "Some contract");
+    expect(pinned.map((group) => [group.name, group.tags])).toEqual([
+      ["HyperCore", ["API agent 0xE257…5d99"]],
+    ]);
+    const rotating = groupByProtocol(entriesFor({ rotate: true }), contractProtocol, () => "Some contract");
+    expect(rotating.map((group) => [group.name, group.tags])).toEqual([
+      ["HyperCore", ["API agent: any address"]],
+    ]);
   });
 
   it("names sciETH's staking, Lido, CoW and payout grants by what they do", async () => {

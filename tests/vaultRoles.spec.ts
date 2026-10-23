@@ -123,6 +123,7 @@ describe("VAULT_ROLES", () => {
       manageWhitelist: true,
       updateMetadata: true,
       changeFeeDestinations: true,
+      rotateHyperliquidApi: true,
     });
     expect(Object.values(defaults.executor).every(Boolean)).toBe(true);
   });
@@ -133,14 +134,17 @@ describe("VAULT_ROLES", () => {
     expect(prepopulated.title).toBe("Prepopulated permissions");
     expect(prepopulated.defaultOn).toBe(true);
     expect(prepopulated.permissions.map((option) => option.key)).toEqual([
+      "rotateHyperliquidApi",
       "manageExecutorMembers",
       "transferAdminRole",
       "manageWhitelist",
       "updateMetadata",
       "changeFeeDestinations",
     ]);
+    // Hyperliquid rotation is a HyperEVM switch, marked as Hyperliquid's.
+    expect(prepopulated.permissions[0]).toMatchObject({ chains: ["0x3e7"], logo: "hyperliquid" });
     // What the settings switches wait on is said on each of them.
-    for (const option of prepopulated.permissions.slice(2)) {
+    for (const option of prepopulated.permissions.slice(3)) {
       expect(option.hint, option.key).toMatch(/settings authority/);
     }
     // Each group's starting state is what the defaults actually are.
@@ -205,6 +209,41 @@ describe("buildPrepopulatedPermissionsBatch", () => {
     expect(new Set(calls.map((call) => call.role))).toEqual(
       new Set([ADMIN_KEY, EXECUTOR_KEY]),
     );
+  });
+
+  it("grants the admin Hyperliquid rotation on HyperEVM, revokes it when off, and knows no such switch elsewhere", () => {
+    const CORE_WRITER = "0x3333333333333333333333333333333333333333";
+    const SEND_RAW_ACTION = "0x17938e13";
+    const rotation = key(CORE_WRITER, SEND_RAW_ACTION);
+    const hyperEvm = { ...CONTEXT, chainId: "0x3e7" };
+
+    const on = buildPrepopulatedPermissionsBatch(hyperEvm, fullVaultRolePermissions());
+    expect(functionsOf(decode(on.grants), ADMIN_KEY)).toContain(rotation);
+    expect(functionsOf(decode(on.grants), EXECUTOR_KEY)).not.toContain(rotation);
+    expect(functionsOf(decode(on.revokes), ADMIN_KEY, "revokeFunction")).toEqual([]);
+
+    const off = buildPrepopulatedPermissionsBatch(
+      hyperEvm,
+      withPermissions((p) => {
+        p.admin.rotateHyperliquidApi = false;
+      }),
+    );
+    expect(functionsOf(decode(off.grants), ADMIN_KEY)).not.toContain(rotation);
+    expect(functionsOf(decode(off.revokes), ADMIN_KEY, "revokeFunction")).toEqual([rotation]);
+
+    // Another chain: neither granted nor revoked, whatever the switch says.
+    const elsewhere = buildPrepopulatedPermissionsBatch(CONTEXT, fullVaultRolePermissions());
+    expect(functionsOf(decode(elsewhere.grants), ADMIN_KEY)).not.toContain(rotation);
+    expect(functionsOf(decode(elsewhere.revokes), ADMIN_KEY, "revokeFunction")).toEqual([]);
+    expect(prepopulatedScopeLabels("adminRole", hyperEvm).map((item) => item.label)).toEqual([
+      "Rotate Hyperliquid API",
+      "Role management",
+      "Vault settings",
+    ]);
+    expect(prepopulatedScopeLabels("adminRole", CONTEXT).map((item) => item.label)).toEqual([
+      "Role management",
+      "Vault settings",
+    ]);
   });
 
   it("never grants the executor vault settings — and always takes them back", () => {

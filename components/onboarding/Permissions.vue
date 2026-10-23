@@ -189,6 +189,7 @@ import {
 import {
   type IProtocolSelectionState,
   buildProtocolPermissionEntries,
+  selectionsForRole,
   validateProtocolSelections,
 } from "~/composables/permissions/protocolPermissions";
 import { describeQueuedCalls } from "~/composables/permissions/rawPermissionQueue";
@@ -482,6 +483,7 @@ const scopeContext = computed(() => ({
   fundAddress: fundInitCache?.value?.fundContractAddr ?? "",
   baseToken: fundInitCache?.value?.fundSettings?.baseToken ?? "",
   rolesModifier: roleModAddress.value ?? "",
+  chainId: fundChainId.value,
 }));
 
 /** Everything the modifier stores for the role, as the calls that grant it. */
@@ -553,7 +555,6 @@ const autoRevoked = computed(() => {
   if (!savedLogs.value || !roleModAddress.value || !draft) return scopes;
   try {
     const revoked = integrationScopesToRevoke({
-      chainId: fundChainId.value,
       protocolBuild: buildProtocolPermissionEntries({
         chainId: fundChainId.value,
         rolesModAddress: roleModAddress.value,
@@ -720,6 +721,7 @@ const storePermissions = async () => {
         fundAddress,
         baseToken: fundInitCacheSettings.baseToken,
         rolesModifier: rolesModifierAddress,
+        chainId: fundChainId.value,
         navExecutor: navExecutorAddress.value,
         poolPerformanceFee: poolPerformanceFeeAddress.value,
         executorRoleKey: executorRoleKey.value,
@@ -754,7 +756,10 @@ const storePermissions = async () => {
     .map((role) => {
       const draft = drafts.value[role.key];
       const prefix = role.key === selectedRole.value.key ? "" : `${role.name}: `;
-      const issues = validateProtocolSelections(fundChainId.value, draft.selections);
+      const issues = validateProtocolSelections(
+        fundChainId.value,
+        selectionsForRole(role.roleKey, draft.selections),
+      );
       if (issues.length) throw new Error(prefix + issues[0].message);
       try {
         return {
