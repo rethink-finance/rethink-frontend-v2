@@ -34,8 +34,17 @@ import {
   findExtraSignature,
   type IConditionNode,
 } from "~/composables/proposal/describeProposalActions";
-import { coreWriterActionNames } from "~/composables/permissions/coreWriterPatterns";
+import { coreWriterActionNames, coreWriterAgents } from "~/composables/permissions/coreWriterPatterns";
+import {
+  HYPERLIQUID_ROTATION_KEY,
+  HYPERLIQUID_ROTATION_LABEL,
+  buildHyperliquidRotationGrant,
+  hyperliquidRotationScope,
+  isHyperliquidRotationGrant,
+} from "~/composables/permissions/hyperliquidRotation";
 import { CORE_WRITER, type IContractProtocol } from "~/composables/contracts/contractNames";
+import { truncateAddressEllipsis } from "~/composables/addressUtils";
+import type { ChainId } from "~/types/enums/chain_id";
 
 /**
  * The Permissions tab's manage mode, in pure functions: which stored grants a
@@ -212,6 +221,8 @@ export interface IVaultContracts {
   fundAddress: string;
   baseToken: string;
   rolesModifier: string;
+  /** The vault's chain, for the chain-specific switches (Hyperliquid rotation on HyperEVM). */
+  chainId?: ChainId | string;
 }
 
 /** One built-in grant of a role, as the create flow's switches made it. */
@@ -282,9 +293,15 @@ export const splitPrepopulated = (
 
   const calls = describeQueuedCalls(entries);
   const wanted = new Set(labels.map(({ scope }) => scopeKey(scope.target, scope.selector)));
-  const isPrepopulated = (call: (typeof calls)[number]) =>
-    FUNCTION_ACTIONS.has(call.description.action) &&
-    wanted.has(scopeKey(call.description.target, call.description.selector));
+  const rotation = hyperliquidRotationScope();
+  const rotationKey = scopeKey(rotation.target, rotation.selector);
+  const isPrepopulated = (call: (typeof calls)[number]) => {
+    const key = scopeKey(call.description.target, call.description.selector);
+    if (!FUNCTION_ACTIONS.has(call.description.action) || !wanted.has(key)) return false;
+    // The admin's CoreWriter scope is the rotation switch's only as the
+    // rotation grant; an agent someone pinned by hand stays protocol access.
+    return key !== rotationKey || isHyperliquidRotationGrant(call.description.conditions);
+  };
 
   const prepopulated: IRawPermissionCodeEntry[] = [];
   const other: IRawPermissionCodeEntry[] = [];
@@ -339,6 +356,13 @@ export const splitPrepopulated = (
         { label: adminLabel("manageExecutorMembers"), on: names(executorRoleKey) },
         { label: adminLabel("transferAdminRole"), on: names(ADMIN_ROLE_KEY_V2) },
       ];
+    } else if (scopeKey(scope.target, scope.selector) === rotationKey) {
+      grant.switches = [
+        {
+          label: HYPERLIQUID_ROTATION_LABEL,
+          on: granted && (unrestricted || isHyperliquidRotationGrant(stored.description.conditions)),
+        },
+      ];
     }
     return grant;
   });
@@ -366,12 +390,15 @@ export interface IVaultOperationSwitch {
   /** The create flow's explanation of the switch. */
   hint: string;
   on: boolean;
+  /** The protocol whose mark the chip carries, when the switch is about one. */
+  logo?: string;
 }
 
 /**
  * A built-in role's vault operations as the create flow's switches: the
- * executor's four (one grant each) and the admin's five (two shared grants).
- * A custom role has none.
+ * executor's four (one grant each) and the admin's five (two shared grants)
+ * — six on HyperEVM, where Hyperliquid rotation is offered. A custom role
+ * has none.
  */
 export const vaultOperationSwitches = (
   grants: IPrepopulatedGrant[],
@@ -389,12 +416,17 @@ export const vaultOperationSwitches = (
     const states = new Map(
       grants.flatMap((grant) => (grant.switches ?? []).map((option) => [option.label, option.on])),
     );
-    return VAULT_ROLES.admin.permissions.map((option) => ({
-      key: option.key,
-      label: option.label,
-      hint: option.hint,
-      on: !!states.get(option.label),
-    }));
+    // A chain-specific switch is offered where its grant is: the labels
+    // name it on that chain only.
+    return VAULT_ROLES.admin.permissions
+      .filter((option) => !option.chains || grants.some((grant) => grant.label === option.label))
+      .map((option) => ({
+        key: option.key,
+        label: option.label,
+        hint: option.hint,
+        on: !!states.get(option.label),
+        ...(option.logo ? { logo: option.logo } : {}),
+      }));
   }
   return [];
 };
@@ -452,6 +484,15 @@ export const buildVaultOperationCalls = (
   }
 
   if (roleKey !== ADMIN_ROLE_KEY_V2) return calls;
+
+  // Its own grant, on HyperEVM (the chip exists nowhere else).
+  if (changed(HYPERLIQUID_ROTATION_KEY)) {
+    calls.push(
+      ...(desired[HYPERLIQUID_ROTATION_KEY]
+        ? buildHyperliquidRotationGrant(context.rolesModifier, ADMIN_ROLE_KEY_V2)
+        : buildRevokeFunctionEntriesV2([hyperliquidRotationScope()], ADMIN_ROLE_KEY_V2)),
+    );
+  }
 
   if (SETTINGS_SWITCHES.some(changed)) {
     const open = {
@@ -555,6 +596,22 @@ const tagFor = (name: string) =>
   (name === SEND_ETH ? "Send ETH" : undefined) ??
   name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/^./, (first) => first.toUpperCase());
 
+/**
+ * The tags for a sendRawAction rule, one per HyperCore action it allows —
+ * except the API-agent grant, which names the agent: which address may
+ * trade the account is the whole of that permission, and "API agent" alone
+ * would hide it. Rotation (any address) says so.
+ */
+const coreWriterTags = (actions: string[], conditions: IConditionNode | undefined): string[] =>
+  actions.flatMap((action) => {
+    if (action !== "addApiWallet") return [CORE_ACTION_TAGS[action] ?? tagFor(action)];
+    const agents = coreWriterAgents(conditions) ?? [];
+    if (!agents.length) return [CORE_ACTION_TAGS[action]];
+    return agents.map((agent) =>
+      agent === "any" ? "API agent: any address" : `API agent ${truncateAddressEllipsis(agent)}`,
+    );
+  });
+
 export interface IProtocolGroup {
   key: string;
   name: string;
@@ -609,7 +666,7 @@ export const groupByProtocol = (
         const actions = description.action === "scope-function"
           ? coreWriterActionNames(description.conditions)
           : undefined;
-        tags.push(...(actions ? actions.map((action) => CORE_ACTION_TAGS[action] ?? tagFor(action)) : ["Any action"]));
+        tags.push(...(actions ? coreWriterTags(actions, description.conditions) : ["Any action"]));
       } else {
         tags.push(name ? protocol?.actions?.[name] ?? tagFor(name) : "Other");
       }

@@ -343,3 +343,33 @@ export const coreWriterActionNames = (root: IConditionNode | undefined): string[
   }
   return names;
 };
+
+/**
+ * The addresses a v2 rule on sendRawAction lets the role register as the
+ * account's API wallet (addApiWallet): each pinned agent, or "any" where
+ * the rule leaves the address open (rotation). The zero address is
+ * Hyperliquid's removal of a slot, not an agent, so it is left out.
+ * Undefined when the rule is not made of byte checks, or allows no
+ * registration at all.
+ */
+export const coreWriterAgents = (root: IConditionNode | undefined): (string | "any")[] | undefined => {
+  if (!root) return undefined;
+  const data = root.operator === RolesV2Operator.Matches ? root.children[0] : undefined;
+  if (!data) return undefined;
+  const patterns = patternsOf(data);
+  if (!patterns?.length) return undefined;
+  const agents: (string | "any")[] = [];
+  for (const pattern of patterns) {
+    const header = [0, 1, 2, 3].map((i) => pattern.get(i));
+    if (header.some((byte) => byte?.mask !== 0xff)) return undefined;
+    const [version, ...idBytes] = header.map((byte) => byte!.value);
+    if (version !== 1) return undefined;
+    const id = (idBytes[0] << 16) | (idBytes[1] << 8) | idBytes[2];
+    if (ACTIONS[id]?.name !== "addApiWallet") continue;
+    const agent = readArg(pattern, 0, "address");
+    const value = agent.state === "fixed" ? String(agent.value) : agent.state === "any" ? "any" : undefined;
+    if (value === undefined || value === ethers.ZeroAddress) continue;
+    if (!agents.includes(value)) agents.push(value);
+  }
+  return agents.length ? agents : undefined;
+};

@@ -162,9 +162,13 @@
         names. Deliberately not switchable: a control-wide switch takes a
         scope off EVERY asset at once, which is a long way to undo by hand —
         narrowing belongs on the asset, where one click does one thing.
+        A picker with one scope shows it from the start: with no chip per
+        asset to say so, this line is the only place that says what
+        picking an asset grants (Hyperliquid's USDC funds the account —
+        HyperEVM to HyperCore, spot to perp, and back).
       -->
       <div
-        v-if="view.actions.length > 1 && view.selected.length"
+        v-if="view.selected.length || view.actions.length === 1"
         class="field__scope_list"
       >
         <p class="field__label field__scope_list_title">

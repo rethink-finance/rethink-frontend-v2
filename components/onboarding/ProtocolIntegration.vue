@@ -68,19 +68,42 @@
       -->
       <div v-if="hasSecondary" class="integration__secondary">
         <!--
-          Nothing to disclose when the box holds one parameterless
-          action: its own switch IS the grant, and a disclosure over it
-          would be the same label and the same switch, twice.
+          Nothing to disclose when the box holds one action that no
+          picker grants: its own switch IS the grant, and a disclosure
+          over it would be the same label and the same switch, twice.
+          What the action takes (Hyperliquid's API wallet) shows while
+          it is on.
         -->
-        <OnboardingProtocolSwitchRow
-          v-if="soleSecondaryAction"
-          :label="secondaryLabel"
-          :hint="secondaryHint"
-          :open="isActionEnabled(soleSecondaryAction.action)"
-          :bordered="false"
-          :switch-label="`Allow the ${secondaryLabel.toLowerCase()} action on ${descriptor.label}`"
-          @update:open="(v: boolean) => setActionEnabled(soleSecondaryAction!.action, v)"
-        />
+        <template v-if="soleSecondaryAction">
+          <OnboardingProtocolSwitchRow
+            :label="secondaryLabel"
+            :hint="secondaryHint"
+            :open="isActionEnabled(soleSecondaryAction.action)"
+            :bordered="false"
+            :switch-label="`Allow the ${secondaryLabel.toLowerCase()} action on ${descriptor.label}`"
+            @update:open="(v: boolean) => setActionEnabled(soleSecondaryAction!.action, v)"
+          />
+
+          <div
+            v-if="isActionEnabled(soleSecondaryAction.action) && secondaryParts.groups.length"
+            class="integration__secondary_body"
+          >
+            <div
+              v-for="group in secondaryParts.groups"
+              :key="group.id"
+              class="integration__field"
+            >
+              <OnboardingProtocolField
+                :descriptor="descriptor"
+                :entry="entry"
+                :group="group"
+                :chain-id="chainId"
+                :hide-label="group.label === secondaryLabel"
+                @update:entry="(next) => emit('update:entry', next)"
+              />
+            </div>
+          </div>
+        </template>
 
         <template v-else>
           <OnboardingProtocolSwitchRow
@@ -199,10 +222,11 @@ import {
   getActionHint,
   getActionLabel,
   governingMembers,
-  isAdminOnlyGroup,
-  isAdminRoleKey,
   isSecondaryAction,
   isSecondaryGroup,
+  isSwitchOwnedAction,
+  isSwitchOwnedGroup,
+  selectionsForRole,
   validateProtocolSelections,
   viewGroup,
 } from "~/composables/permissions/protocolPermissions";
@@ -235,8 +259,9 @@ const props = defineProps<{
   /** For the generated-calls preview; grants still build without it. */
   rolesModAddress?: string;
   /**
-   * The role being granted (label or bytes32). Admin-only controls —
-   * Hyperliquid's API-wallet rotation — show on the admin role alone.
+   * The role being granted (label or bytes32). What the role's vault
+   * operation switches own — the admin's Hyperliquid delegate, granted by
+   * its "Rotate Hyperliquid API" switch — is left off its card.
    */
   roleKey?: string;
 }>();
@@ -309,7 +334,7 @@ const visibleGroups = computed(() =>
   props.descriptor.groups.filter(
     (group) =>
       (governingMembers(group).length > 0 || view(group).actions.length > 0) &&
-      (isAdminRoleKey(props.roleKey) || !isAdminOnlyGroup(group)),
+      !isSwitchOwnedGroup(group, props.roleKey),
   ),
 );
 
@@ -340,7 +365,9 @@ const standaloneActions = computed<IProtocolActionDescriptor[]>(() => {
     ),
   );
   return props.descriptor.actions.filter(
-    (action) => !governed.has(action.action),
+    (action) =>
+      !governed.has(action.action) &&
+      !isSwitchOwnedAction(props.descriptor.protocol, action.action, props.roleKey),
   );
 });
 
@@ -450,19 +477,31 @@ const secondarySummary = computed((): string => {
 });
 
 /**
- * A box holding nothing but one parameterless action has nothing to
- * disclose: the header switch grants it directly rather than opening a
- * body that repeats the same label over the same switch.
+ * A box holding one action that no picker grants — Spark's parameterless
+ * stake, or Hyperliquid's delegate, whose controls are all its own
+ * parameters — has nothing to disclose: the header switch grants it
+ * directly rather than opening a body that repeats the same label over a
+ * second switch. A control shared with another action keeps the
+ * disclosure, since the header could not say which action it switches.
  */
 const soleSecondaryAction = computed(
   (): IProtocolActionDescriptor | undefined => {
     const { groups, actions } = secondaryParts.value;
-    return groups.length === 0 && actions.length === 1 ? actions[0] : undefined;
+    if (actions.length !== 1) return undefined;
+    const sole = actions[0];
+    const ownControls = groups.every((group) =>
+      group.members.every((member) => member.action === sole.action),
+    );
+    return ownControls ? sole : undefined;
   },
 );
 
 const issues = computed<IProtocolSelectionIssue[]>(() =>
-  validateProtocolSelections(props.chainId, [props.entry], [props.descriptor]),
+  validateProtocolSelections(
+    props.chainId,
+    selectionsForRole(props.roleKey, [props.entry]),
+    [props.descriptor],
+  ),
 );
 
 /**

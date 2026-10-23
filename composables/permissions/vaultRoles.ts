@@ -8,9 +8,17 @@ import {
   toRoleKeyBytes32,
 } from "~/composables/nav/generateNAVPermission";
 import {
+  HYPERLIQUID_ROTATION_KEY,
+  HYPERLIQUID_ROTATION_LABEL,
+  buildHyperliquidRotationGrant,
+  hyperliquidRotationScope,
+  isHyperEvm,
+} from "~/composables/permissions/hyperliquidRotation";
+import {
   buildRevokeFunctionEntriesV2,
   type IPermissionScope,
 } from "~/composables/permissions/revokePermissions";
+import { ChainId } from "~/types/enums/chain_id";
 import {
   ASSIGN_ROLES_SELECTOR,
   EXECUTE_NAV_UPDATE_SELECTOR,
@@ -47,6 +55,11 @@ export interface IAdminPermissions {
   manageExecutorMembers: boolean;
   transferAdminRole: boolean;
   changeFeeDestinations: boolean;
+  /**
+   * HyperEVM vaults only: register any address as the vault's Hyperliquid
+   * API wallet (hyperliquidRotation.ts). Ignored on every other chain.
+   */
+  rotateHyperliquidApi: boolean;
 }
 
 export interface IExecutorPermissions {
@@ -76,6 +89,7 @@ export const fullVaultRolePermissions = (): IVaultRolePermissions => ({
     manageExecutorMembers: true,
     transferAdminRole: true,
     changeFeeDestinations: true,
+    rotateHyperliquidApi: true,
   },
   executor: {
     sendFunds: true,
@@ -98,6 +112,10 @@ export interface IRolePermissionOption {
   label: string;
   /** One sentence on what switching it on allows, for the row's info mark. */
   hint: string;
+  /** Offered on these chains only; everywhere when left out. */
+  chains?: ChainId[];
+  /** The protocol whose mark the row carries, when the switch is about one. */
+  logo?: string;
 }
 
 export interface IRolePermissionGroup {
@@ -157,6 +175,18 @@ export const VAULT_ROLES: Record<VaultRoleId, IVaultRoleDefinition> = {
         title: "Prepopulated permissions",
         defaultOn: true,
         permissions: [
+          {
+            key: HYPERLIQUID_ROTATION_KEY,
+            label: HYPERLIQUID_ROTATION_LABEL,
+            hint:
+              "Register any address as the vault's Hyperliquid API wallet, and take " +
+              "old ones off, without a permissions update. Whoever holds the admin " +
+              "role can then put any trader on the vault's Hyperliquid account: a " +
+              "trader can never withdraw, but can lose money on purpose. The " +
+              "executor's own API wallet is set on its Hyperliquid permission.",
+            chains: [ChainId.HYPEREVM],
+            logo: "hyperliquid",
+          },
           {
             key: "manageExecutorMembers",
             label: "Manage executor role members",
@@ -253,6 +283,8 @@ export interface IPrepopulatedPermissionsContext {
   fundAddress: string;
   baseToken: string;
   rolesModifier: string;
+  /** The vault's chain: decides the chain-specific switches (Hyperliquid rotation on HyperEVM). */
+  chainId?: ChainId | string;
   /** Required while "Update NAV" is on. */
   navExecutor?: string;
   /** Required while "Collect fee" is on. */
@@ -301,12 +333,16 @@ export const executorPrepopulatedScopes = (
   },
 });
 
-/** The scopes the admin's switches own: vault settings and membership. */
+/**
+ * The scopes the admin's switches own: vault settings, membership and, on
+ * HyperEVM, Hyperliquid's CoreWriter (the rotation switch).
+ */
 export const adminPrepopulatedScopes = (
-  context: Pick<IPrepopulatedPermissionsContext, "fundAddress" | "rolesModifier">,
+  context: Pick<IPrepopulatedPermissionsContext, "fundAddress" | "rolesModifier" | "chainId">,
 ): IPermissionScope[] => [
   { target: context.fundAddress, selector: UPDATE_SETTINGS_SELECTOR },
   { target: context.rolesModifier, selector: ASSIGN_ROLES_SELECTOR },
+  ...(isHyperEvm(context.chainId) ? [hyperliquidRotationScope()] : []),
 ];
 
 /**
@@ -317,7 +353,7 @@ export const prepopulatedScopeLabels = (
   roleKey: string,
   context: Pick<
     IPrepopulatedPermissionsContext,
-    "fundAddress" | "baseToken" | "rolesModifier"
+    "fundAddress" | "baseToken" | "rolesModifier" | "chainId"
   >,
 ): { scope: IPermissionScope; label: string }[] => {
   if (isExecutorRoleKey(roleKey)) {
@@ -329,8 +365,9 @@ export const prepopulatedScopeLabels = (
     }));
   }
   if (roleKey === ADMIN_ROLE_KEY_V2) {
-    const [settings, membership] = adminPrepopulatedScopes(context);
+    const [settings, membership, rotation] = adminPrepopulatedScopes(context);
     return [
+      ...(rotation ? [{ scope: rotation, label: HYPERLIQUID_ROTATION_LABEL }] : []),
       { scope: membership, label: "Role management" },
       { scope: settings, label: "Vault settings" },
     ];
@@ -493,6 +530,7 @@ export const buildPrepopulatedPermissionsBatch = (
       manageExecutorMembers: false,
       transferAdminRole: false,
       changeFeeDestinations: false,
+      rotateHyperliquidApi: false,
     };
   const { fundAddress, baseToken, rolesModifier } = context;
   const executorRoleKey = context.executorRoleKey ?? EXECUTOR_ROLE_KEY_V2;
@@ -574,6 +612,10 @@ export const buildPrepopulatedPermissionsBatch = (
     ...(admin.manageExecutorMembers ? [executorRoleKey] : []),
     ...(admin.transferAdminRole ? [ADMIN_ROLE_KEY_V2] : []),
   ];
+  // Hyperliquid rotation exists on HyperEVM only: elsewhere the switch is
+  // neither granted nor revoked, whatever a draft holds for it.
+  const rotationOffered = isHyperEvm(context.chainId);
+  const rotates = rotationOffered && admin.rotateHyperliquidApi;
 
   const adminRevokes = buildRevokeFunctionEntriesV2(
     [
@@ -583,6 +625,7 @@ export const buildPrepopulatedPermissionsBatch = (
       ...(manageableRoles.length
         ? []
         : [{ target: rolesModifier, selector: ASSIGN_ROLES_SELECTOR }]),
+      ...(rotationOffered && !rotates ? [hyperliquidRotationScope()] : []),
     ],
     ADMIN_ROLE_KEY_V2,
   );
@@ -610,6 +653,9 @@ export const buildPrepopulatedPermissionsBatch = (
         roleKeys: manageableRoles,
       }),
     );
+  }
+  if (rotates) {
+    adminGrants.push(...buildHyperliquidRotationGrant(rolesModifier, ADMIN_ROLE_KEY_V2));
   }
 
   return {

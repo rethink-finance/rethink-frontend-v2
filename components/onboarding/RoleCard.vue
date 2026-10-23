@@ -90,12 +90,18 @@
             {{ group.note }}
           </p>
           <div
-            v-for="option in group.permissions"
+            v-for="option in optionsOf(group)"
             :key="option.key"
             class="role_card__row"
             :class="{ 'role_card__row--off': !permissions[option.key] }"
           >
             <div class="role_card__label">
+              <OnboardingProtocolLogo
+                v-if="option.logo"
+                :protocol="option.logo"
+                :label="option.label"
+                :size="16"
+              />
               <span>{{ option.label }}</span>
               <OnboardingInfoTip
                 :text="option.hint"
@@ -191,8 +197,14 @@ const emit = defineEmits<{
   (e: "remove"): void;
 }>();
 
+/** The group's switches on this vault's chain: a chain-specific one is left out elsewhere. */
+const optionsOf = (group: IRolePermissionGroup) =>
+  group.permissions.filter(
+    (option) => !option.chains || (!!props.chainId && option.chains.includes(props.chainId)),
+  );
+
 const enabledIn = (group: IRolePermissionGroup) =>
-  group.permissions.filter((option) => props.permissions[option.key]).length;
+  optionsOf(group).filter((option) => props.permissions[option.key]).length;
 
 /**
  * A switch has no third state, so the count is what says a group is only
@@ -200,14 +212,14 @@ const enabledIn = (group: IRolePermissionGroup) =>
  */
 const summaryOf = (group: IRolePermissionGroup) => {
   const on = enabledIn(group);
-  if (on === group.permissions.length) return "All on";
+  if (on === optionsOf(group).length) return "All on";
   if (on === 0) return "All off";
-  return `${on} of ${group.permissions.length} on`;
+  return `${on} of ${optionsOf(group).length} on`;
 };
 
 /** Is the group as it starts out: everything on, or everything off? */
 const isAtDefault = (group: IRolePermissionGroup) =>
-  enabledIn(group) === (group.defaultOn ? group.permissions.length : 0);
+  enabledIn(group) === (group.defaultOn ? optionsOf(group).length : 0);
 
 // A group opens itself when it is not in its starting state, so nobody is
 // left looking at an innocent-looking folded row that hides a missing
@@ -242,7 +254,7 @@ const setOne = (key: string, value: boolean) =>
 const setGroup = (group: IRolePermissionGroup, value: boolean) => {
   emit("update:permissions", {
     ...props.permissions,
-    ...Object.fromEntries(group.permissions.map((option) => [option.key, value])),
+    ...Object.fromEntries(optionsOf(group).map((option) => [option.key, value])),
   });
   // Moving a whole group off its starting state is how someone says they
   // want to look at it: the rows (and the group's note) should be there.

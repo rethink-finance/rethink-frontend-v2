@@ -355,6 +355,7 @@ import {
   getRegistryProtocols,
   hasEnabledProtocolSelections,
   initProtocolSelections,
+  selectionsForRole,
   validateProtocolSelections,
   type IProtocolSelectionState,
 } from "~/composables/permissions/protocolPermissions";
@@ -900,6 +901,7 @@ const vaultContracts = computed(() => ({
   fundAddress: fund?.address ?? "",
   baseToken: fund?.baseToken?.address ?? "",
   rolesModifier: roleModAddress.value,
+  chainId: fund?.chainId,
 }));
 /** A role's permissions beyond its prepopulated ones: what Remove indexes into. */
 const otherEntriesOf = (view: IStoredRoleView) =>
@@ -1032,7 +1034,10 @@ const permissionChanges = computed(() => {
     const added = additions[view.keyBytes];
     if (!added) continue;
     if (hasEnabledProtocolSelections(added.selections)) {
-      const problems = validateProtocolSelections(fund.chainId, added.selections);
+      const problems = validateProtocolSelections(
+        fund.chainId,
+        selectionsForRole(view.keyBytes, added.selections),
+      );
       if (problems.length) {
         issues.push(...problems.map((problem) => `${view.name}: ${problem.message}`));
       } else {

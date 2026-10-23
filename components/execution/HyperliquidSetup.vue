@@ -1,10 +1,11 @@
 <template>
   <!--
     A HyperEVM vault's Hyperliquid account, set up without a script: is it
-    activated, which API wallets trade it, and does it carry the RETHINK
-    referral. Registering goes through the vault's Roles modifier like every
-    other button on this page; the referral is signed in this tab with an
-    API wallet's key (hyperliquidSetup.ts).
+    activated, how is it funded, which API wallets trade it, and does it
+    carry the RETHINK referral. Funding and registering go through the
+    vault's Roles modifier like every other button on this page; the
+    referral is signed in this tab with an API wallet's key
+    (hyperliquidSetup.ts).
   -->
   <div class="hl_setup">
     <div class="group_title hl_setup__section">
@@ -41,6 +42,12 @@
           </dd>
         </div>
         <div>
+          <dt>Safe on HyperEVM</dt>
+          <dd :title="evmUsdcError">
+            {{ evmUsdcText }}
+          </dd>
+        </div>
+        <div>
           <dt>Spot USDC</dt>
           <dd>{{ usdc(account.spotUsdc) }}</dd>
         </div>
@@ -63,7 +70,65 @@
       </div>
     </div>
 
-    <!-- 2 · API wallets -->
+    <!-- 2 · Funding: USDC between the Safe and its HyperCore account -->
+    <div class="main_card hl_setup__card">
+      <UiHeader>
+        <div class="main_header__title">
+          Funding
+        </div>
+      </UiHeader>
+      <p class="hl_setup__lead">
+        USDC enters Hyperliquid from the vault Safe on HyperEVM and lands in
+        the account's perp balance. Inside the account it moves between the
+        perp and spot balances, and from spot it can go back to the Safe.
+        These are the only routes the vault's Hyperliquid permission allows,
+        and each ends in the Safe's own account.
+      </p>
+      <div class="inputs">
+        <v-row>
+          <v-col cols="12" sm="4">
+            <v-label class="mb-2">
+              Amount
+            </v-label>
+            <v-text-field
+              v-model="funding.amount"
+              placeholder="0.00"
+              suffix="USDC"
+              :error-messages="amountProblem"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </v-col>
+        </v-row>
+        <div class="hl_setup__routes">
+          <v-tooltip
+            v-for="route in FUNDING_ROUTES"
+            :key="route.key"
+            location="bottom"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <span v-bind="tooltipProps">
+                <v-btn
+                  color="primary"
+                  variant="outlined"
+                  :disabled="!!fundingBlockedReason || moving !== ''"
+                  :loading="moving === route.key"
+                  @click="move(route.key)"
+                >
+                  {{ route.label }}
+                </v-btn>
+              </span>
+            </template>
+            {{ fundingBlockedReason || route.hint }}
+          </v-tooltip>
+        </div>
+        <p v-if="fundingNote" :class="fundingFailed ? 'hl_setup__error' : 'hl_setup__note'">
+          {{ fundingNote }}
+        </p>
+      </div>
+    </div>
+
+    <!-- 3 · API wallets -->
     <div class="main_card hl_setup__card">
       <UiHeader>
         <div class="main_header__title">
@@ -179,7 +244,7 @@
       </div>
     </div>
 
-    <!-- 3 · The RETHINK referral -->
+    <!-- 4 · The RETHINK referral -->
     <div class="main_card hl_setup__card">
       <UiHeader>
         <div class="main_header__title">
@@ -249,15 +314,22 @@ import { ethers } from "ethers";
 import {
   API_WALLET_MAX_DAYS,
   API_WALLET_MIN_DAYS,
+  USDC_EVM_DECIMALS,
   apiWalletNameProblem,
   apiWalletValidUntil,
+  approveCoreDepositCall,
   daysLeft,
+  decodeEvmUsdcBalance,
+  depositToCoreCall,
+  evmUsdcBalanceCall,
   fetchApiWallets,
   fetchHyperliquidAccount,
   fetchReferral,
   registerApiWalletCall,
   removeApiWalletCall,
+  sendUsdcToEvmCall,
   setRethinkReferral,
+  spotPerpTransferCall,
   waitForApiWallet,
   type IApiWalletSlot,
   type IHyperliquidAccount,
@@ -268,14 +340,17 @@ import type { IRoleCall } from "~/composables/permissions/useRoleExecution";
 import { describeRailError } from "~/composables/useTransactionRail";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
+import { useWeb3Store } from "~/store/web3/web3.store";
 
 const RETHINK_CODE = RETHINK_HYPERLIQUID_REFERRAL_CODE;
 
 const fundStore = useFundStore();
 const toastStore = useToastStore();
+const web3Store = useWeb3Store();
 const { canExecute, disabledReason, sendAsCurator } = useCuratorExecution();
 
 const safe = computed(() => fundStore.fund?.safeAddress ?? "");
+const chainId = computed(() => fundStore.fund?.chainId ?? "");
 
 const short = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`;
 const usdc = (amount: number) =>
@@ -310,6 +385,30 @@ const loadWallets = async () => {
   }
 };
 
+/** The Safe's USDC on HyperEVM — what "HyperEVM → HyperCore" can draw on. */
+const evmUsdc = ref<bigint | null>(null);
+const evmUsdcError = ref("");
+const loadEvmUsdc = async () => {
+  const provider = web3Store.chainProviders[chainId.value];
+  if (!provider || !safe.value) return;
+  try {
+    const raw = await web3Store.callWithRetry(chainId.value, () =>
+      provider.eth.call(evmUsdcBalanceCall(safe.value)),
+    );
+    evmUsdc.value = decodeEvmUsdcBalance(raw);
+    evmUsdcError.value = "";
+  } catch (error: any) {
+    evmUsdcError.value = `Could not read the Safe's USDC balance: ${error?.message ?? error}`;
+  }
+};
+const evmUsdcText = computed(() =>
+  evmUsdcError.value
+    ? "unavailable"
+    : evmUsdc.value === null
+      ? "…"
+      : usdc(Number(ethers.formatUnits(evmUsdc.value, USDC_EVM_DECIMALS))),
+);
+
 const loadAll = async () => {
   if (!safe.value) return;
   isLoading.value = true;
@@ -317,6 +416,7 @@ const loadAll = async () => {
     fetchHyperliquidAccount(safe.value),
     loadWallets(),
     fetchReferral(safe.value),
+    loadEvmUsdc(),
   ]);
   if (accountRead.status === "fulfilled") {
     account.value = accountRead.value;
@@ -446,6 +546,96 @@ const remove = async (slot: IApiWalletSlot) => {
   }
 };
 
+/* ---- Funding -------------------------------------------------------------- */
+
+type FundingRoute = "evm-to-core" | "spot-to-perp" | "perp-to-spot" | "core-to-evm";
+
+const FUNDING_ROUTES: { key: FundingRoute; label: string; hint: string }[] = [
+  {
+    key: "evm-to-core",
+    label: "HyperEVM → HyperCore",
+    hint: "From the Safe on HyperEVM into the account's perp balance. Two transactions: the USDC approval, then the deposit.",
+  },
+  {
+    key: "spot-to-perp",
+    label: "Spot → Perp",
+    hint: "Inside the account, from its spot balance to its perp balance.",
+  },
+  {
+    key: "perp-to-spot",
+    label: "Perp → Spot",
+    hint: "Inside the account, from its perp balance to its spot balance.",
+  },
+  {
+    key: "core-to-evm",
+    label: "HyperCore → HyperEVM",
+    hint: "From the account's spot balance back to the Safe on HyperEVM.",
+  },
+];
+
+const funding = reactive({ amount: "" });
+const moving = ref<FundingRoute | "">("");
+const fundingNote = ref("");
+const fundingFailed = ref(false);
+
+const amountProblem = computed(() => {
+  const text = funding.amount.trim();
+  return !text || /^\d+(\.\d{1,6})?$/.test(text) ? "" : "An amount in USDC, with up to 6 decimals.";
+});
+/** The amount in USDC base units (1e6); zero while the field is empty or wrong. */
+const amount = computed(() =>
+  !funding.amount.trim() || amountProblem.value
+    ? 0n
+    : ethers.parseUnits(funding.amount.trim(), USDC_EVM_DECIMALS),
+);
+
+const fundingBlockedReason = computed(() => {
+  if (!canExecute.value) return disabledReason.value;
+  if (account.value && !account.value.activated) {
+    return "Activate the vault's Hyperliquid account first.";
+  }
+  if (amountProblem.value) return amountProblem.value;
+  if (amount.value <= 0n) return "Enter an amount in USDC.";
+  return "";
+});
+
+/**
+ * One route, as the transactions the manager sends through the role. Each
+ * is dry-run against the modifier first (sendThroughRole), so a route the
+ * vault's permission does not allow is refused before the wallet opens.
+ */
+const move = async (route: FundingRoute) => {
+  if (fundingBlockedReason.value || moving.value) return;
+  moving.value = route;
+  fundingFailed.value = false;
+  try {
+    const usdcAmount = amount.value;
+    if (route === "evm-to-core") {
+      fundingNote.value = "Step 1 of 2, the USDC approval: confirm it in your wallet.";
+      await sendThroughRole(approveCoreDepositCall(usdcAmount));
+      fundingNote.value = "Step 2 of 2, the deposit: confirm it in your wallet.";
+      await sendThroughRole(depositToCoreCall(safe.value, usdcAmount));
+    } else {
+      fundingNote.value = "Confirm the transaction in your wallet.";
+      await sendThroughRole(
+        route === "core-to-evm"
+          ? sendUsdcToEvmCall(usdcAmount)
+          : spotPerpTransferCall(usdcAmount, route === "spot-to-perp"),
+      );
+    }
+    fundingNote.value =
+      "Confirmed on HyperEVM. HyperCore applies it a few seconds after the block; the balances above refresh once it has.";
+    funding.amount = "";
+    await sleep(5000);
+    await loadAll();
+  } catch (error) {
+    fundingFailed.value = true;
+    fundingNote.value = describeRailError(error);
+  } finally {
+    moving.value = "";
+  }
+};
+
 /* ---- The referral --------------------------------------------------------- */
 
 const referralKey = ref("");
@@ -501,6 +691,12 @@ const setReferral = async () => {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+  }
+
+  &__routes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   &__lead,

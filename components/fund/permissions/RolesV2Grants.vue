@@ -156,6 +156,12 @@
               @click="manage && emit('toggle-operation', current, op.key)"
             >
               <Icon :icon="OP_ICONS[opState(op)]" width="0.9375rem" height="0.9375rem" />
+              <OnboardingProtocolLogo
+                v-if="op.logo"
+                :protocol="op.logo"
+                :label="op.label"
+                :size="14"
+              />
               {{ op.label }}
               <v-tooltip activator="parent" location="top" max-width="320">
                 <div class="op_tip">
@@ -492,6 +498,7 @@ const contracts = computed(() => ({
   fundAddress: props.fundAddress,
   baseToken: props.baseToken ?? "",
   rolesModifier: props.rolesModAddress,
+  chainId: props.chainId,
 }));
 const split = computed(() =>
   current.value
