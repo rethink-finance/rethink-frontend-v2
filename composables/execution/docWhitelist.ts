@@ -347,3 +347,61 @@ export const fmtUnits = (v: bigint, decimals: number, dp = 4) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: dp,
   });
+
+/* -------------------------------------------------------------------------- */
+/* One-transaction batches                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The MultiSendCallOnly the vault's Roles v1 modifier is configured with
+ * (`multisend()` on the modifier). A role member who delegatecalls exactly
+ * this address gets the batch unpacked and EVERY inner call checked against
+ * the role's permissions on its own — so a whole rebalance can go out as one
+ * signature without widening anything: one bad leg fails the lot.
+ * The rehearsal script asserts the modifier still points here.
+ */
+export const DOC_MULTISEND = "0x40A2aCCbd92BCA938b02010E17A5b8929b49130D";
+
+const multiSendInterface = new ethers.Interface(["function multiSend(bytes transactions)"]);
+
+export interface DocBatchCall {
+  to: string;
+  data: string;
+}
+
+/**
+ * Safe's MultiSend packing: per call `uint8 operation (0 = call) · address to
+ * · uint256 value · uint256 dataLength · bytes data`, concatenated.
+ */
+export const packDocBatch = (calls: DocBatchCall[]) =>
+  ethers.concat(
+    calls.map((c) =>
+      ethers.solidityPacked(
+        ["uint8", "address", "uint256", "uint256", "bytes"],
+        [0, c.to, 0n, ethers.dataLength(c.data), c.data],
+      ),
+    ),
+  );
+
+/** The one call the manager signs: a delegatecall into MultiSendCallOnly. */
+export const encodeDocBatch = (calls: DocBatchCall[]) => ({
+  to: DOC_MULTISEND,
+  data: multiSendInterface.encodeFunctionData("multiSend", [packDocBatch(calls)]),
+  operation: 1 as const,
+});
+
+/** Read a packed batch back into its calls — for tests and the calldata preview. */
+export const unpackDocBatch = (data: string): DocBatchCall[] => {
+  const [packed] = multiSendInterface.decodeFunctionData("multiSend", data);
+  const bytes = ethers.getBytes(packed);
+  const calls: DocBatchCall[] = [];
+  let i = 0;
+  while (i < bytes.length) {
+    if (bytes[i] !== 0) throw new Error("A batch call is not a plain call.");
+    const to = ethers.getAddress(ethers.hexlify(bytes.slice(i + 1, i + 21)));
+    const length = Number(ethers.toBigInt(bytes.slice(i + 53, i + 85)));
+    calls.push({ to, data: ethers.hexlify(bytes.slice(i + 85, i + 85 + length)) });
+    i += 85 + length;
+  }
+  return calls;
+};

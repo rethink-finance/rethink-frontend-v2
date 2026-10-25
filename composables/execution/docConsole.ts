@@ -9,8 +9,10 @@ import {
   fmtUnits,
   routeCandidates,
   shortAddr,
+  validateDocUnoswap,
 } from "./docWhitelist";
 import { UNOSWAP_TO2_SELECTOR, UNOSWAP_TO_SELECTOR, wordHex } from "./onchainSwap";
+import { rpcRequestOn } from "./rpc";
 import { fetchOnChainRolesV1 } from "~/services/onchain/rolesV1";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { ParamComparison } from "~/types/enums/zodiac-roles";
@@ -794,4 +796,207 @@ export const readDocUnoswapGrant = async (): Promise<DocGrantState> => {
   if (states.every((s) => s === "granted")) return "granted";
   if (states.every((s) => s === "missing")) return "missing";
   return "different";
+};
+
+/* -------------------------------------------------------------------------- */
+/* Sequencing a plan into one transaction                                     */
+/* -------------------------------------------------------------------------- */
+
+/** One leg of the plan, as the sequencer needs to see it. */
+export interface DocLeg {
+  kind: "approve" | "aaveWithdraw" | "swap" | "aaveSupply";
+  /** The call as it stands. Swap and deposit legs are rebuilt from the sequence. */
+  inner: DocInner;
+  /** A swap leg: what it sells, for what, and through which route. */
+  swap?: {
+    route: DocRoute;
+    sell: DocToken;
+    buy: DocToken;
+    amountIn: bigint;
+    sellPrice: number;
+    buyPrice: number;
+  };
+  /** A deposit leg: the asset and the amount the plan asked for. */
+  supply?: { token: DocToken; planned: bigint };
+}
+
+export interface DocSequencedLeg {
+  inner: DocInner;
+  /** Set on a swap: priced against the state the legs before it leave behind. */
+  quote: DocQuote | null;
+  /** Why this leg cannot go out in the batch, if it cannot. */
+  problem: string | null;
+}
+
+/** Endpoints that serve eth_simulateV1 on Polygon, tried after the app's own. */
+const SIMULATE_FALLBACK_RPCS = ["https://polygon-bor-rpc.publicnode.com"];
+
+interface SimulatedCall {
+  ok: boolean;
+  returnData: string;
+}
+
+/**
+ * Run `calls` one after another, from the Safe, in a single simulated block
+ * on top of the latest Polygon state — the way they would run inside one
+ * batch. Nothing is sent and the modifier is not involved (the Safe is the
+ * sender), so this answers "what does each leg return, given the legs in
+ * front of it", which a plain eth_call per leg cannot.
+ */
+export const simulateFromSafe = async (calls: { to: string; data: string }[]): Promise<SimulatedCall[]> => {
+  const params = [
+    {
+      blockStateCalls: [
+        {
+          calls: calls.map((c) => ({ from: A.safe, to: c.to, data: c.data, gas: "0x4c4b40" })),
+        },
+      ],
+      validation: false,
+      traceTransfers: false,
+    },
+    "latest",
+  ];
+  const parse = (result: any): SimulatedCall[] => {
+    const out = result?.[0]?.calls;
+    if (!Array.isArray(out) || out.length !== calls.length) {
+      throw new Error("The simulation came back incomplete.");
+    }
+    return out.map((c: any) => ({ ok: c.status === "0x1", returnData: c.returnData ?? "0x" }));
+  };
+  try {
+    return parse(await rpcRequestOn(DOC.CHAIN, "eth_simulateV1", params));
+  } catch (firstError) {
+    for (const url of SIMULATE_FALLBACK_RPCS) {
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_simulateV1", params }),
+        });
+        const json = await response.json();
+        if (!json.error) return parse(json.result);
+      } catch {
+        // next endpoint
+      }
+    }
+    throw firstError;
+  }
+};
+
+/**
+ * Size a whole plan to go out as ONE transaction.
+ *
+ * Quoting each leg on its own overstates the later ones: the second clip of a
+ * PAXG sale meets a pool the first clip has already moved, and the deposit at
+ * the end is funded by swaps that hand back a little less than the plan's
+ * oracle estimate. Inside a single batch nothing can be re-priced between
+ * legs, so every number is fixed up front by simulating the legs in order:
+ *
+ *   · each swap is priced through EVERY listed route for its pair against the
+ *     state the legs before it leave behind, and takes the best — so clips
+ *     spread across pools as one pool gets moved, instead of all draining the
+ *     route that looked best before anything traded; its floor becomes that
+ *     price minus the operator's tolerance;
+ *   · the deposit is sized from the Safe's simulated balance at that point,
+ *     less everything the swaps in front of it are allowed to come in short
+ *     by — so it still fits if every one of them fills at its floor.
+ *
+ * A leg that would revert, or prices past the tolerance, is reported rather
+ * than sent: in one batch it would take every other leg down with it.
+ */
+export const sequenceDocPlan = async (
+  legs: DocLeg[],
+  tolerancePct: number,
+): Promise<DocSequencedLeg[]> => {
+  /** The calls that run before the leg being priced, as they will in the batch. */
+  const prefix: { to: string; data: string }[] = [];
+  const lastResult = async (call: { to: string; data: string }) => {
+    const results = await simulateFromSafe([...prefix, call]);
+    return results[results.length - 1];
+  };
+  // How far below the simulated outcome each token may land once every swap
+  // into it fills at its floor rather than at the simulated price.
+  const shortfall: Record<string, bigint> = {};
+  const out: DocSequencedLeg[] = [];
+
+  for (const leg of legs) {
+    if (leg.kind === "swap" && leg.swap) {
+      const { sell, buy, amountIn, sellPrice, buyPrice } = leg.swap;
+      const priced = await Promise.all(
+        routeCandidates(sell.symbol, buy.symbol).map(async (route) => {
+          const data = encodeUnoswap(route, sell, amountIn, 1n);
+          const result = await lastResult({ to: A.oneInch, data });
+          return { route, data, amountOut: result.ok ? BigInt(result.returnData) : 0n };
+        }),
+      );
+      const best = priced.reduce<(typeof priced)[number] | null>(
+        (a, b) => (!a || b.amountOut > a.amountOut ? b : a),
+      null,
+      );
+      if (!best || best.amountOut <= 0n) {
+        out.push({
+          inner: leg.inner,
+          quote: null,
+          problem: `${sell.symbol} → ${buy.symbol} would revert at this point in the plan.`,
+        });
+        continue;
+      }
+      prefix.push({ to: A.oneInch, data: best.data });
+      const valueIn = Number(ethers.formatUnits(amountIn, sell.decimals)) * sellPrice;
+      const valueOut = Number(ethers.formatUnits(best.amountOut, buy.decimals)) * buyPrice;
+      const quote: DocQuote = {
+        route: best.route,
+        amountIn,
+        amountOut: best.amountOut,
+        slippagePct: valueIn ? ((valueOut - valueIn) / valueIn) * 100 : 0,
+      };
+      const minReturn = minReturnFor(quote, tolerancePct);
+      const key = buy.address.toLowerCase();
+      shortfall[key] = (shortfall[key] ?? 0n) + (best.amountOut - minReturn);
+      const inner = docInner.unoswap(sell, buy, quote, minReturn);
+      const invalid = validateDocUnoswap(inner.data, { sell, buy, amount: amountIn });
+      let problem: string | null = invalid[0] ?? null;
+      if (!problem && quote.slippagePct < -tolerancePct) {
+        problem =
+          `${sell.symbol} → ${buy.symbol} prices ${quote.slippagePct.toFixed(2)}% at this point in the plan, ` +
+          `past your ${tolerancePct}% limit. Raise the limit or rebuild the plan smaller.`;
+      }
+      out.push({ inner, quote, problem });
+      continue;
+    }
+
+    if (leg.kind === "aaveSupply" && leg.supply) {
+      const { token, planned } = leg.supply;
+      // The deposit's size is what this sequence leaves in the Safe, so the
+      // simulation reads the balance where the deposit would run.
+      const result = await lastResult({
+        to: token.address,
+        data: IF.erc20.encodeFunctionData("balanceOf", [A.safe]),
+      });
+      const simulated = result.ok ? BigInt(result.returnData) : 0n;
+      const safe = simulated - (shortfall[token.address.toLowerCase()] ?? 0n);
+      const amount = planned < safe ? planned : safe;
+      if (amount <= 0n) {
+        out.push({
+          inner: leg.inner,
+          quote: null,
+          problem: `The swaps in front of it leave no ${token.symbol} to deposit.`,
+        });
+        continue;
+      }
+      const inner = docInner.aaveSupply(token, amount);
+      prefix.push({ to: inner.to, data: inner.data });
+      out.push({ inner, quote: null, problem: null });
+      continue;
+    }
+
+    const result = await lastResult({ to: leg.inner.to, data: leg.inner.data });
+    if (result.ok) prefix.push({ to: leg.inner.to, data: leg.inner.data });
+    out.push({
+      inner: leg.inner,
+      quote: null,
+      problem: result.ok ? null : `${leg.inner.sig} would revert at this point in the plan.`,
+    });
+  }
+  return out;
 };

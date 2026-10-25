@@ -18,7 +18,9 @@ import {
   DOC_TOKENS,
   DOC_UNOSWAP_RULES,
   HOP_TOKENS,
+  DOC_MULTISEND,
   dexWord,
+  encodeDocBatch,
   encodeUnoswap,
   routeCandidates,
 } from "~/composables/execution/docWhitelist";
@@ -34,6 +36,7 @@ const STRANGER = "0x000000000000000000000000000000000000bEEF";
 const roles = new ethers.Interface([
   "function execTransactionWithRole(address to,uint256 value,bytes data,uint8 operation,uint16 role,bool shouldRevert) returns (bool)",
   "function owner() view returns (address)",
+  "function multisend() view returns (address)",
   "error TargetAddressNotAllowed()",
   "error FunctionNotAllowed()",
   "error ParameterNotAllowed()",
@@ -48,6 +51,7 @@ const router = new ethers.Interface([
 ]);
 const pool = new ethers.Interface([
   "function supply(address asset,uint256 amount,address onBehalfOf,uint16 referralCode)",
+  "function withdraw(address asset,uint256 amount,address to) returns (uint256)",
 ]);
 
 const token = (symbol: string) => DOC_TOKENS.find((t) => t.symbol === symbol)!;
@@ -63,6 +67,17 @@ const asManager = (to: string, data: string, from = MANAGER) => ({
   gas: "0x2dc6c0",
   data: roles.encodeFunctionData("execTransactionWithRole", [to, 0n, data, 0, Number(DOC.ROLE), true]),
 });
+
+/** A whole plan as the console sends it: one delegatecall into MultiSend, wrapped for role 1. */
+const asBatch = (calls: { to: string; data: string }[], from = MANAGER) => {
+  const batch = encodeDocBatch(calls);
+  return {
+    from,
+    to: A.roles,
+    gas: "0x5f5e100",
+    data: roles.encodeFunctionData("execTransactionWithRole", [batch.to, 0n, batch.data, batch.operation, Number(DOC.ROLE), true]),
+  };
+};
 
 interface Step {
   label: string;
@@ -90,6 +105,13 @@ const main = async () => {
   if (owner.toLowerCase() !== GOVERNOR.toLowerCase()) {
     throw new Error(`The modifier's owner is ${owner}, not the governor the proposal is written for.`);
   }
+  const multisend = roles.decodeFunctionResult(
+    "multisend",
+    await rpc("eth_call", [{ to: A.roles, data: roles.encodeFunctionData("multisend", []) }, "latest"]),
+  )[0] as string;
+  if (multisend.toLowerCase() !== DOC_MULTISEND.toLowerCase()) {
+    throw new Error(`The modifier batches through ${multisend}, not DOC_MULTISEND ${DOC_MULTISEND}.`);
+  }
 
   const amount = (symbol: string, units: string) => ethers.parseUnits(units, token(symbol).decimals);
   const best = (sell: string, buy: string, hops: 1 | 2) =>
@@ -97,7 +119,29 @@ const main = async () => {
   const built = (sell: string, buy: string, hops: 1 | 2, units: string) =>
     encodeUnoswap(best(sell, buy, hops), token(sell), amount(sell, units), 1n);
 
+  const rebalance = [
+    { to: A.aavePool, data: pool.encodeFunctionData("withdraw", [addressOf("DAI"), amount("DAI", "50"), A.safe]) },
+    { to: A.oneInch, data: built("DAI", "WETH", 1, "100") },
+    { to: A.oneInch, data: built("PAXG", "WBTC", 2, "0.05") },
+    { to: A.oneInch, data: built("WETH", "DAI", 2, "0.01") },
+    { to: A.aavePool, data: pool.encodeFunctionData("supply", [addressOf("DAI"), amount("DAI", "40"), A.safe, 0]) },
+  ];
+  const poisoned = [
+    ...rebalance,
+    {
+      to: A.oneInch,
+      data: unoswapInterface.encodeFunctionData("unoswapTo", [
+        BigInt(STRANGER), BigInt(addressOf("DAI")), amount("DAI", "1"), 1n, word("DAI", "WETH"),
+      ]),
+    },
+  ];
+
   const steps: Step[] = [
+    {
+      label: "before the vote: the one-transaction rebalance is refused",
+      call: asBatch(rebalance),
+      expect: "FunctionNotAllowed",
+    },
     {
       label: "before the vote: unoswapTo is refused",
       call: asManager(A.oneInch, built("DAI", "WETH", 1, "100")),
@@ -200,6 +244,21 @@ const main = async () => {
     {
       label: "a stranger holding no role",
       call: asManager(A.oneInch, built("DAI", "WETH", 1, "100"), STRANGER),
+      expect: "Error(Module not authorized)",
+    },
+    {
+      label: "ONE transaction: Aave withdraw + 3 swaps + Aave deposit",
+      call: asBatch(rebalance),
+      expect: "ok",
+    },
+    {
+      label: "one transaction with a leg paying a stranger fails as a whole",
+      call: asBatch(poisoned),
+      expect: "ParameterNotAllowed",
+    },
+    {
+      label: "the batch from a wallet without the role",
+      call: asBatch(rebalance, STRANGER),
       expect: "Error(Module not authorized)",
     },
     {

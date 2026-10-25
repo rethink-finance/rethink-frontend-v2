@@ -27,7 +27,7 @@
             {{ state ? "$" + fmtUsd(driftUsd) : "—" }}
           </div>
           <div class="doc_stat__sub">
-            {{ steps.length ? steps.length + " transaction" + (steps.length === 1 ? "" : "s") : "plan not built" }}
+            {{ steps.length ? steps.length + " step" + (steps.length === 1 ? "" : "s") + " · one signature" : "plan not built" }}
           </div>
         </div>
         <div class="doc_stat">
@@ -465,6 +465,7 @@ import {
   docSafeBalance,
   docValidateWrapped,
   docWrappedPreview,
+  encodeDocBatch,
   findBestRoute,
   MIN_TRADE_USD,
   fmtUnits,
@@ -472,10 +473,13 @@ import {
   minReturnFor,
   planClips,
   readDocUnoswapGrant,
+  sequenceDocPlan,
   shortAddr,
   tradeToInner,
   validateDocUnoswap,
   type DocGrantState,
+  type DocLeg,
+  type DocSequencedLeg,
 } from "~/composables/execution/docConsole";
 import {
   DOC_PROPOSAL_TITLE,
@@ -572,6 +576,8 @@ type StepStatus = "idle" | "quoting" | "simulating" | "signing" | "pending" | "o
 
 interface DocStep {
   label: string;
+  /** What the leg does, for the sequencer: an approval runs as is, a swap or deposit is re-sized. */
+  kind: DocLeg["kind"];
   trade: DocTrade;
   /** Set on a swap; the Aave legs need no quote. */
   quote: DocQuote | null;
@@ -840,12 +846,14 @@ const priceOf = (symbol: string) =>
 
 const makeStep = (
   label: string,
+  kind: DocLeg["kind"],
   trade: DocTrade,
   inner: DocInner,
   quote: DocQuote | null = null,
 ): DocStep =>
   reactive({
     label,
+    kind,
     trade,
     quote,
     inner,
@@ -880,6 +888,7 @@ const buildPlan = async () => {
         list.push(
           makeStep(
             `Approve ${spendToken.symbol} for the ${name}`,
+            "approve",
             trade,
             docInner.approve(spendToken, spender, name),
           ),
@@ -888,7 +897,7 @@ const buildPlan = async () => {
 
       if (trade.kind !== "swap") {
         const inner = tradeToInner(trade);
-        if (inner) list.push(makeStep(trade.label, trade, inner));
+        if (inner) list.push(makeStep(trade.label, trade.kind, trade, inner));
         continue;
       }
 
@@ -928,6 +937,7 @@ const buildPlan = async () => {
         list.push(
           makeStep(
             label,
+            "swap",
             trade,
             docInner.unoswap(sell, buy, quote, minReturnFor(quote, tol)),
             quote,
@@ -936,10 +946,54 @@ const buildPlan = async () => {
       });
     }
 
+    // Each clip above was quoted on its own against today's pools. The batch
+    // runs them one after another, so re-price the whole list in sequence and
+    // show those numbers instead. Best effort: if the simulation cannot run,
+    // the independent quotes stay and Execute all sizes the batch again.
+    try {
+      const sequenced = await sequenceDocPlan(list.map(stepToLeg), Number(tolerance.value) || 1);
+      sequenced.forEach((leg, i) => applySequenced(list[i], leg));
+      for (const leg of sequenced) if (leg.problem) found.push(leg.problem);
+    } catch (error) {
+      console.warn("Could not price the plan in sequence", error);
+    }
+
     issues.value = found;
     steps.value = list;
   } finally {
     building.value = false;
+  }
+};
+
+/** A step as the sequencer sees it. */
+const stepToLeg = (step: DocStep): DocLeg => {
+  const leg: DocLeg = { kind: step.kind, inner: step.inner };
+  if (step.kind === "swap" && step.quote) {
+    const sell = step.trade.sell!;
+    const buy = step.trade.buy!;
+    leg.swap = {
+      route: step.quote.route,
+      sell,
+      buy,
+      amountIn: step.quote.amountIn,
+      sellPrice: priceOf(sell.symbol),
+      buyPrice: priceOf(buy.symbol),
+    };
+  }
+  if (step.kind === "aaveSupply") {
+    leg.supply = { token: step.trade.token, planned: step.trade.amount };
+  }
+  return leg;
+};
+
+/** Take a sequenced leg's numbers into its step. */
+const applySequenced = (step: DocStep, leg: DocSequencedLeg) => {
+  step.inner = leg.inner;
+  step.wrapped = docWrappedPreview(leg.inner);
+  if (leg.quote) step.quote = leg.quote;
+  if (step.kind === "aaveSupply") {
+    const amount = leg.inner.params.find((p) => p.k === "amount")?.v;
+    if (amount) step.label = `Deposit ${amount} into Aave`;
   }
 };
 
@@ -1101,24 +1155,126 @@ const runStep = async (step: DocStep): Promise<boolean> => {
 };
 
 /**
- * The whole plan, in order, stopping at the first step that does not land.
- * Order is not cosmetic: an Aave withdrawal frees the DAI a later swap spends,
- * and a deposit is funded by the swaps in front of it.
+ * The plan one step at a time, stopping at the first that does not land.
+ * Kept for a session connected as the Safe itself, which sends calls
+ * unwrapped and so cannot delegatecall into MultiSend; everyone else gets
+ * the whole plan as one transaction (executePlan).
+ */
+const executeOneByOne = async () => {
+  for (const step of steps.value) {
+    if (step.status === "ok") continue;
+    if (!(await runStep(step))) {
+      toastStore.errorToast(
+        step.error || "The plan stopped at a step that did not go through.",
+        12000,
+      );
+      return;
+    }
+  }
+  toastStore.successToast("The portfolio is rebalanced.");
+};
+
+/**
+ * The whole plan as ONE transaction: the manager signs once, the Roles
+ * modifier unpacks the batch and checks every leg against role 1's
+ * permissions, and either every leg lands or none does — no half-rebalanced
+ * portfolio if a pool moves mid-plan.
+ *
+ * Order is not cosmetic: an Aave withdrawal frees the DAI a later swap
+ * spends, and a deposit is funded by the swaps in front of it. So the batch
+ * is sized from one chained simulation of the legs in that order
+ * (sequenceDocPlan), then dry-run through the modifier from the connected
+ * wallet exactly as it will be sent.
  */
 const executePlan = async () => {
+  if (!accountStore.connectedWalletWeb3) {
+    toastStore.errorToast("Connect your wallet.");
+    return;
+  }
   running.value = true;
-  try {
-    for (const step of steps.value) {
-      if (step.status === "ok") continue;
-      if (!(await runStep(step))) {
-        toastStore.errorToast(
-          step.error || "The plan stopped at a step that did not go through.",
-          12000,
-        );
-        return;
-      }
+  const pending = steps.value.filter((s) => s.status !== "ok");
+  const fail = (message: string, step?: DocStep) => {
+    for (const s of pending) if (s.status !== "ok") s.status = "idle";
+    if (step) {
+      step.status = "failed";
+      step.error = message;
     }
-    toastStore.successToast("The portfolio is rebalanced.");
+    toastStore.errorToast(message, 12000);
+  };
+  try {
+    if (accountStore.connectedWalletChainId !== DOC.CHAIN) {
+      await accountStore.switchNetwork(DOC.CHAIN);
+    }
+    if (isConnectedAsSafe.value) {
+      await executeOneByOne();
+      return;
+    }
+    if (needsGrant.value) {
+      fail(planButtonTitle.value || "The whitelist proposal has not executed yet.");
+      return;
+    }
+    if (!pending.length) return;
+    for (const s of pending) {
+      s.error = "";
+      s.status = "quoting";
+    }
+
+    const tol = Number(tolerance.value) || 1;
+    let sequenced;
+    try {
+      sequenced = await sequenceDocPlan(pending.map(stepToLeg), tol);
+    } catch (error) {
+      console.error(error);
+      fail(
+        "The plan could not be priced as one transaction just now. Try again, or run the steps one at a time.",
+      );
+      return;
+    }
+    sequenced.forEach((leg, i) => applySequenced(pending[i], leg));
+    const blocked = sequenced.findIndex((leg) => leg.problem);
+    if (blocked >= 0) {
+      fail(sequenced[blocked].problem!, pending[blocked]);
+      return;
+    }
+
+    for (const s of pending) s.status = "simulating";
+    const batch = encodeDocBatch(pending.map((s) => ({ to: s.inner.to, data: s.inner.data })));
+    const dryRun = await simulateCuratorTransaction(batch, DOC_ROUTE);
+    // Unlike a single step, nothing in a batch is staged behind an unmined
+    // transaction, so an inner revert here is real and would cost gas.
+    if (!dryRun.ok) {
+      fail(dryRun.reason || "The Roles modifier refused the batch.");
+      return;
+    }
+
+    for (const s of pending) s.status = "signing";
+    const landed = await new Promise<boolean>((resolve) => {
+      sendCuratorTransaction(batch, DOC_ROUTE)
+        .on("transactionHash", (hash: any) => {
+          for (const s of pending) {
+            s.txHash = hash;
+            s.status = "pending";
+          }
+        })
+        .on("receipt", (receipt: any) => {
+          for (const s of pending) s.status = receipt.status ? "ok" : "failed";
+          if (!receipt.status) pending[0].error = "The batch reverted on chain; nothing moved.";
+          resolve(!!receipt.status);
+        })
+        .catch((error: any) => {
+          for (const s of pending) if (s.status !== "ok") s.status = "idle";
+          sendFailed(pending[0], error);
+          if (!pending[0].error) pending[0].status = "idle";
+          resolve(false);
+        });
+    });
+    if (landed) {
+      toastStore.successToast("The portfolio is rebalanced.");
+      await refresh();
+    }
+  } catch (error: any) {
+    console.error(error);
+    fail(error?.message || "There has been an error.");
   } finally {
     running.value = false;
   }
