@@ -54,6 +54,45 @@
       </v-btn>
     </div>
 
+    <!--
+      The swap legs go through the router's direct-pool entry points, which
+      role 1 may call only once the whitelist proposal has executed. Until
+      then the plan can be built and priced but not sent, so the blocker sits
+      at the top rather than behind a disabled button.
+    -->
+    <div
+      v-if="grantNotice"
+      class="brand_card doc_card doc_gate"
+      :class="{ 'doc_gate--bad': grantState === 'different' }"
+    >
+      <div class="doc_card__titles">
+        <div class="brand_card__eyebrow">
+          {{ grantTitle }}
+        </div>
+        <div class="doc_card__sub">
+          {{ grantNotice }}
+        </div>
+      </div>
+      <div v-if="grantState === 'missing'" class="doc_row doc_row--end">
+        <a
+          v-if="proposalTx"
+          :href="DOC.EXPLORER + '/tx/' + proposalTx"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="doc_ok"
+        >proposal submitted · view</a>
+        <v-btn
+          variant="outlined"
+          size="small"
+          :loading="proposing"
+          :disabled="!accountStore.isConnected"
+          @click="proposeWhitelist"
+        >
+          Submit the whitelist proposal
+        </v-btn>
+      </div>
+    </div>
+
     <div class="doc_layout">
       <div class="doc_main">
         <div class="group_title doc_section">
@@ -271,7 +310,7 @@
                   class="bg-primary text-secondary"
                   size="small"
                   :loading="running"
-                  :disabled="!canExecute || steps.some((s) => !isReady(s))"
+                  :disabled="!canExecute || needsGrant"
                   @click="executePlan"
                 >
                   Execute all
@@ -329,47 +368,18 @@
               </div>
             </div>
 
-            <div v-for="p in step.inner?.params ?? []" :key="p.k" class="doc_param">
+            <div v-for="p in step.inner.params" :key="p.k" class="doc_param">
               <span>{{ p.k }}</span>
               <span>{{ p.v }}<em v-if="p.pinned" class="doc_pinned"> · pinned</em></span>
             </div>
 
-            <!--
-              A swap leg carries no calldata until 1inch has written one: the
-              routing program is the pathfinder's, and role 1 may send nothing
-              else. Everything the operator needs to ask for is spelled out
-              here so the returned calldata can only be the right one.
-            -->
-            <div v-if="step.intent && !step.inner" class="doc_paste">
-              <div class="doc_card__sub">
-                Build this swap on 1inch with the receiver set to the Safe, then
-                paste its <code>swap</code> calldata here.
-              </div>
-              <div class="doc_paste__intent">
-                <div><span>sell</span><span>{{ fmtUnits(step.intent.amount, step.intent.sell.decimals) }} {{ step.intent.sell.symbol }}</span></div>
-                <div><span>buy</span><span>{{ step.intent.buy.symbol }}</span></div>
-                <div><span>receiver</span><span>{{ DOC.ADDR.safe }}</span></div>
-              </div>
-              <textarea
-                v-model="step.paste"
-                class="doc_paste__input"
-                rows="3"
-                spellcheck="false"
-                placeholder="0x07ed2379…"
-                @input="applyCalldata(step)"
-              />
-              <div v-for="problem in step.problems" :key="problem" class="doc_warn">
-                {{ problem }}
-              </div>
-            </div>
-
-            <details v-if="step.inner" class="doc_details">
+            <details class="doc_details">
               <summary>
                 <!-- A Pilot session sends the inner call from the Safe and
                      lets Pilot apply the Roles route; everyone else sends
                      the wrap. Show whichever will actually be signed. -->
                 <template v-if="isConnectedAsSafe">
-                  Calldata · from the Safe to {{ shortAddr(step.inner?.to) }} ·
+                  Calldata · from the Safe to {{ shortAddr(step.inner.to) }} ·
                   unwrapped, for Pilot to route
                 </template>
                 <template v-else>
@@ -416,7 +426,7 @@
                       class="bg-primary text-secondary"
                       size="small"
                       :loading="isBusy(step)"
-                      :disabled="!canExecute || !isReady(step) || step.status === 'ok' || running"
+                      :disabled="!canExecute || needsGrant || step.status === 'ok' || running"
                       @click="runStep(step)"
                     >
                       {{ step.status === "ok" ? "Executed" : "Execute" }}
@@ -450,22 +460,28 @@ import {
   type DocTrade,
   buildRebalancePlan,
   docInner,
-  docOneInchSwap,
   docPositions,
   docReadState,
   docSafeBalance,
-  parseDocSwap,
-  validateDocSwap,
-  type DocSwapIntent,
   docValidateWrapped,
   docWrappedPreview,
+  findBestRoute,
   MIN_TRADE_USD,
   fmtUnits,
   fmtUsd,
+  minReturnFor,
   planClips,
+  readDocUnoswapGrant,
   shortAddr,
   tradeToInner,
+  validateDocUnoswap,
+  type DocGrantState,
 } from "~/composables/execution/docConsole";
+import {
+  DOC_PROPOSAL_TITLE,
+  buildDocUnoswapProposal,
+  describeDocUnoswapProposal,
+} from "~/composables/execution/docProposal";
 import {
   sendCuratorTransaction,
   simulateCuratorTransaction,
@@ -474,10 +490,12 @@ import {
 } from "~/composables/permissions/useCuratorExecution";
 import { RolesVersion } from "~/composables/permissions/useRoleExecution";
 import { useAccountStore } from "~/store/account/account.store";
+import { useFundStore } from "~/store/fund/fund.store";
 import { useToastStore } from "~/store/toasts/toast.store";
 
 const toastStore = useToastStore();
 const accountStore = useAccountStore();
+const fundStore = useFundStore();
 
 // Every action here acts with the Safe's authority. A curator signs from
 // their own wallet and the vault's Roles modifier forwards the call; a
@@ -509,6 +527,46 @@ const locked = reactive<Record<string, boolean>>({});
 const drafts = reactive<Record<string, string | null>>({});
 const tolerance = ref("1");
 
+/**
+ * Whether role 1 may call the router's direct-pool entry points yet. The
+ * swap legs are built and priced either way — eth_call from the Safe skips
+ * the modifier — but they can only be sent once the whitelist proposal has
+ * executed. A session connected as the Safe itself needs no grant.
+ */
+const grantState = ref<DocGrantState | "checking">("checking");
+const needsGrant = computed(() => !isConnectedAsSafe.value && grantState.value !== "granted");
+const grantTitle = computed(() => {
+  switch (grantState.value) {
+    case "missing":
+      return "One governance proposal is needed first";
+    case "different":
+      return "The modifier is scoped differently";
+    default:
+      return "Permissions could not be confirmed";
+  }
+});
+const grantNotice = computed(() => {
+  if (isConnectedAsSafe.value) return "";
+  switch (grantState.value) {
+    case "missing":
+      return (
+        "Role 1 may not call the 1inch router's unoswapTo yet. The plan below is priced live, " +
+        "but no swap can be sent until the whitelist proposal has passed and executed."
+      );
+    case "different":
+      return (
+        "The modifier allows unoswapTo, but with different rules than this console builds for. " +
+        "It needs the whitelist proposal as written."
+      );
+    case "unreachable":
+      return (
+        "The modifier's permissions could not be read from any source, so this screen cannot " +
+        "tell whether swaps will be accepted."
+      );
+    default:
+      return "";
+  }
+});
 
 type StepStatus = "idle" | "quoting" | "simulating" | "signing" | "pending" | "ok" | "failed";
 
@@ -517,17 +575,7 @@ interface DocStep {
   trade: DocTrade;
   /** Set on a swap; the Aave legs need no quote. */
   quote: DocQuote | null;
-  /**
-   * What a pasted swap has to match. Null on every leg this console can build
-   * itself — approvals and the Aave deposits and withdrawals, all of which are
-   * scoped for role 1 by name.
-   */
-  intent: DocSwapIntent | null;
-  /** The operator's paste, and what is wrong with it. */
-  paste: string;
-  problems: string[];
-  /** Null on a swap leg until its calldata arrives and validates. */
-  inner: DocInner | null;
+  inner: DocInner;
   wrapped: string;
   status: StepStatus;
   error: string;
@@ -551,24 +599,20 @@ const stepStatusText = (step: DocStep) => {
     case "ok":
       return "done";
     default:
-      if (step.intent && !step.inner) return "waiting for its 1inch calldata";
-      return step.quote ? step.quote.route.label : step.inner?.sig ?? "";
+      return step.quote ? step.quote.route.label : step.inner.sig;
   }
 };
 
 const planButtonTitle = computed(() => {
-  if (steps.value.some((s) => s.intent && !s.inner)) {
-    return "Every swap leg needs its 1inch calldata before the plan can run.";
+  if (needsGrant.value) {
+    return grantState.value === "checking" ? "Checking the whitelist…" : grantNotice.value;
   }
   return disabledReason.value;
 });
 
-/** A leg is runnable once it has calldata — pasted, or built here. */
-const isReady = (step: DocStep) => !!step.inner;
-
 /** The bytes the wallet will be asked to sign for this leg, in this session. */
 const sentCalldata = (step: DocStep) =>
-  isConnectedAsSafe.value ? (step.inner?.data ?? "") : step.wrapped;
+  isConnectedAsSafe.value ? step.inner.data : step.wrapped;
 
 const positions = computed<DocPosition[]>(() =>
   state.value ? docPositions(state.value) : [],
@@ -771,7 +815,12 @@ const refresh = async () => {
   }
 };
 
-onMounted(refresh);
+onMounted(async () => {
+  await Promise.all([
+    refresh(),
+    readDocUnoswapGrant().then((s) => (grantState.value = s)),
+  ]);
+});
 
 /* -------------------------------------------------------------------------- */
 /* Plan                                                                        */
@@ -792,51 +841,19 @@ const priceOf = (symbol: string) =>
 const makeStep = (
   label: string,
   trade: DocTrade,
-  inner: DocInner | null,
+  inner: DocInner,
   quote: DocQuote | null = null,
-  intent: DocSwapIntent | null = null,
 ): DocStep =>
   reactive({
     label,
     trade,
     quote,
-    intent,
-    paste: "",
-    problems: [] as string[],
     inner,
-    wrapped: inner ? docWrappedPreview(inner) : "",
+    wrapped: docWrappedPreview(inner),
     status: "idle" as StepStatus,
     error: "",
     txHash: null,
   }) as DocStep;
-
-/**
- * Take the operator's paste and either turn it into this step's calldata or
- * say exactly why it is not this step's calldata. Both the permission's rules
- * and the leg's own numbers are checked here, so nothing that would revert in
- * the modifier ever reaches a wallet prompt.
- */
-const applyCalldata = (step: DocStep) => {
-  step.inner = null;
-  step.wrapped = "";
-  step.error = "";
-  const hex = step.paste.trim();
-  if (!hex || !step.intent) {
-    step.problems = [];
-    return;
-  }
-  let call;
-  try {
-    call = parseDocSwap(hex);
-  } catch (error: any) {
-    step.problems = [error?.message ?? "That calldata could not be read."];
-    return;
-  }
-  step.problems = validateDocSwap(call, step.intent);
-  if (step.problems.length) return;
-  step.inner = docOneInchSwap(call, hex, step.intent.sell, step.intent.buy);
-  step.wrapped = docWrappedPreview(step.inner);
-};
 
 const buildPlan = async () => {
   if (!state.value) return;
@@ -909,11 +926,12 @@ const buildPlan = async () => {
             : `Sell $${fmtUsd(clipUsd)} of ${sell.symbol} for ${buy.symbol}` +
               ` — ${index + 1} of ${clips.length}`;
         list.push(
-          makeStep(label, trade, null, quote, {
-            sell,
-            buy,
-            amount: quote.amountIn,
-          }),
+          makeStep(
+            label,
+            trade,
+            docInner.unoswap(sell, buy, quote, minReturnFor(quote, tol)),
+            quote,
+          ),
         );
       });
     }
@@ -930,19 +948,45 @@ const buildPlan = async () => {
 /* -------------------------------------------------------------------------- */
 
 /**
- * The pasted program carries its own floor, written by the pathfinder that
- * built it, so there is nothing here to re-price — a stale quote fails on
- * `minReturn` rather than filling badly. What is worth re-checking is that the
- * calldata still matches the leg, in case the plan was rebuilt around it.
+ * A quote taken while the operator reads the plan is stale by the time they
+ * press the button, so a swap is re-priced against live pools immediately
+ * before signing and the floor is recomputed from that. Same discipline the
+ * sni-dca keeper uses: simulate the identical swap seconds before sending.
+ * The rebuilt call is then held against the whitelist's own rules, so nothing
+ * the modifier would refuse reaches a wallet prompt.
  */
-const revalidate = (step: DocStep): boolean => {
-  if (!step.intent || !step.inner) return true;
-  const problems = validateDocSwap(parseDocSwap(step.inner.data), step.intent);
-  step.problems = problems;
+const reprice = async (step: DocStep): Promise<boolean> => {
+  if (!step.quote) return true;
+  const sell = step.trade.sell!;
+  const buy = step.trade.buy!;
+  step.status = "quoting";
+  const fresh = await findBestRoute(
+    sell,
+    buy,
+    step.quote.amountIn,
+    priceOf(sell.symbol),
+    priceOf(buy.symbol),
+  );
+  if (!fresh) {
+    step.error = "No pool route priced this trade just now.";
+    return false;
+  }
+  const tol = Number(tolerance.value) || 1;
+  if (fresh.slippagePct < -tol) {
+    step.error =
+      `The live quote is ${fresh.slippagePct.toFixed(2)}%, past your ${tol}% ` +
+      "limit. Nothing was sent — raise the limit or rebuild the plan smaller.";
+    return false;
+  }
+  const inner = docInner.unoswap(sell, buy, fresh, minReturnFor(fresh, tol));
+  const problems = validateDocUnoswap(inner.data, { sell, buy, amount: fresh.amountIn });
   if (problems.length) {
     step.error = problems[0];
     return false;
   }
+  step.quote = fresh;
+  step.inner = inner;
+  step.wrapped = docWrappedPreview(inner);
   return true;
 };
 
@@ -953,7 +997,7 @@ const revalidate = (step: DocStep): boolean => {
  * deposit is the last step: sized at plan time it would revert on chain after
  * every swap had already been paid for. So it is re-sized against what the
  * Safe actually holds immediately before signing — the same discipline
- * revalidate() applies to a swap.
+ * reprice() applies to a swap.
  */
 const resize = async (step: DocStep): Promise<boolean> => {
   if (step.trade.kind !== "aaveSupply") return true;
@@ -978,10 +1022,6 @@ const resize = async (step: DocStep): Promise<boolean> => {
  */
 const preflight = async (step: DocStep): Promise<boolean> => {
   step.status = "simulating";
-  if (!step.inner) {
-    step.error = "This leg has no calldata yet.";
-    return false;
-  }
   const result = await simulateCuratorTransaction(
     { to: step.inner.to, data: step.inner.data },
     DOC_ROUTE,
@@ -1010,9 +1050,7 @@ const sendFailed = (step: DocStep, error: any): false => {
 const send = (step: DocStep): Promise<boolean> =>
   new Promise((resolve) => {
     step.status = "signing";
-    // preflight() has already refused a step without calldata.
-    const inner = step.inner!;
-    sendCuratorTransaction({ to: inner.to, data: inner.data }, DOC_ROUTE)
+    sendCuratorTransaction({ to: step.inner.to, data: step.inner.data }, DOC_ROUTE)
       .on("transactionHash", (hash: any) => {
         step.txHash = hash;
         step.status = "pending";
@@ -1042,7 +1080,12 @@ const runStep = async (step: DocStep): Promise<boolean> => {
     if (accountStore.connectedWalletChainId !== DOC.CHAIN) {
       await accountStore.switchNetwork(DOC.CHAIN);
     }
-    if (!revalidate(step) || !(await resize(step)) || !(await preflight(step))) {
+    if (needsGrant.value) {
+      step.error = planButtonTitle.value || "The whitelist proposal has not executed yet.";
+      step.status = "failed";
+      return false;
+    }
+    if (!(await reprice(step)) || !(await resize(step)) || !(await preflight(step))) {
       step.status = "failed";
       return false;
     }
@@ -1078,6 +1121,70 @@ const executePlan = async () => {
     toastStore.successToast("The portfolio is rebalanced.");
   } finally {
     running.value = false;
+  }
+};
+
+/* -------------------------------------------------------------------------- */
+/* The whitelist proposal                                                      */
+/* -------------------------------------------------------------------------- */
+
+const proposing = ref(false);
+const proposalTx = ref("");
+
+/**
+ * Submits the governance proposal that scopes unoswapTo for role 1 (see
+ * docProposal.ts) from the connected wallet. The governor's proposal
+ * threshold is dust, but it is the vault's governance token (wPNC) that
+ * votes, and the managers hold nearly all of it.
+ */
+const proposeWhitelist = async () => {
+  if (proposing.value) return;
+  if (!accountStore.connectedWalletWeb3) {
+    toastStore.errorToast("Connect your wallet.");
+    return;
+  }
+  try {
+    if (accountStore.connectedWalletChainId !== DOC.CHAIN) {
+      await accountStore.switchNetwork(DOC.CHAIN);
+    }
+    const governor = fundStore.fundGovernorContract;
+    if (!governor) throw new Error("The vault's governor is not loaded yet.");
+    const calls = buildDocUnoswapProposal();
+    const description = JSON.stringify({
+      title: DOC_PROPOSAL_TITLE,
+      description: describeDocUnoswapProposal(),
+    });
+    proposing.value = true;
+    await new Promise<void>((resolve, reject) => {
+      governor
+        .send(
+          "propose",
+          {},
+          calls.map((c) => c.target),
+          calls.map((c) => c.value.toString()),
+          calls.map((c) => c.data),
+          description,
+        )
+        .on("transactionHash", (hash: any) => {
+          proposalTx.value = hash;
+          toastStore.addToast("The proposal has been submitted. Please wait for it to be confirmed.");
+        })
+        .on("receipt", (receipt: any) =>
+          receipt.status ? resolve() : reject(new Error("The proposal transaction reverted.")),
+        )
+        .on("error", (err: any) => reject(err));
+    });
+    toastStore.successToast("Proposal created — it is now up for a vote under Governance.");
+  } catch (error: any) {
+    console.error(error);
+    const message = error?.innerError?.message || error?.message || "";
+    const declined =
+      error?.code === 4001 ||
+      error?.innerError?.code === 4001 ||
+      /user (denied|rejected)/i.test(message);
+    if (!declined) toastStore.errorToast(message || "The proposal could not be submitted.", 12000);
+  } finally {
+    proposing.value = false;
   }
 };
 
@@ -1229,46 +1336,6 @@ const copyText = (text: string, message: string) => {
   }
 }
 
-/* A leg that cannot run yet, marked as one. */
-.doc_paste {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border: 1px dashed $color-line-3;
-  border-radius: 0.5rem;
-
-  &__intent {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    font-family: monospace;
-    font-size: 0.75rem;
-
-    > div {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-    }
-
-    span:first-child {
-      opacity: 0.6;
-    }
-  }
-
-  &__input {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid $color-line-3;
-    border-radius: 0.375rem;
-    background: $color-card-background;
-    font-family: monospace;
-    font-size: 0.7rem;
-    line-height: 1.4;
-    word-break: break-all;
-    resize: vertical;
-  }
-}
 
 /* Two states of one control, so it reads as a switch rather than two buttons. */
 .doc_toggle {
@@ -1825,6 +1892,16 @@ const copyText = (text: string, message: string) => {
 
 .doc_neg {
   color: $color-neg;
+}
+
+/* The blocker, marked as one: the plan can be priced but not sent until the
+   whitelist proposal has executed. */
+.doc_gate {
+  border-color: $color-warning;
+
+  &--bad {
+    border-color: $color-neg-line;
+  }
 }
 
 .doc_warn {
