@@ -54,6 +54,26 @@ export interface DecodedCall {
   calldata: string;
 }
 
+/**
+ * One thing that happened to a vault outside governance — a Safe owner change,
+ * a Roles-module execution, a beacon upgrade, a watchlist contract event, or
+ * a polled condition (share price, NAV floor, Safe baseline drift, validators)
+ * — graded like a proposal flag. Polled conditions carry no transaction:
+ * their txHash reads "poll:<fingerprint>", and an empty txHash means unknown.
+ */
+export interface ActivityFlag extends ThreatFlag {
+  txHash: string;
+  blockNumber: string;
+  /** Unix seconds. */
+  blockTimestamp: number;
+  contractAddress: string;
+  eventName: string;
+  /** EOA that sent the transaction, where it matters (module executions). */
+  sender?: string;
+  /** What the module executed, decoded, where the flag comes from an execution. */
+  call?: DecodedCall;
+}
+
 export interface MonitoredVault {
   chainId: ChainId;
   fundAddress: string;
@@ -81,6 +101,20 @@ export interface MonitoredVault {
   flaggedProposals: number;
   snapshotUpdatedAt?: string;
   contextError?: string;
+  /** The last 30 days outside governance, newest first (see ActivityFlag). */
+  activity: ActivityFlag[];
+  /** Highest activity severity in the last 7 days. */
+  activityLevel: ThreatLevel;
+  /** Activity flags at high or critical in the last 7 days. */
+  activityAlerts: number;
+}
+
+/** One activity flag with the vault it belongs to, for the overview's cross-vault list. */
+export interface MonitoredActivity extends ActivityFlag {
+  chainId: ChainId;
+  fundAddress: string;
+  fundName: string;
+  fundSymbol: string;
 }
 
 export interface MonitoredProposal {
@@ -136,6 +170,8 @@ export interface MonitoringOverview {
   live: MonitoredProposal[];
   executable: MonitoredProposal[];
   recent: MonitoredProposal[];
+  /** Non-governance activity across every vault, medium and above, newest first. */
+  activity: MonitoredActivity[];
   summary: {
     liveProposals: number;
     flaggedLive: number;
@@ -144,6 +180,8 @@ export interface MonitoringOverview {
     flaggedExecutable: number;
     vaults: number;
     vaultsAtRisk: number;
+    /** Activity flags at high or critical across all vaults in the last 7 days. */
+    activityAlerts: number;
   };
 }
 
@@ -220,6 +258,33 @@ export const formatLag = (seconds?: number): string => {
   return `${Math.floor(hours / 24)}d ${hours % 24}h`;
 };
 
+/**
+ * A backend that predates activity monitoring sends no activity fields at
+ * all. Fill them in once here so the page can read them as present and empty
+ * rather than guard every access.
+ */
+export const normalizeMonitoringOverview = (raw: any): MonitoringOverview => {
+  const vaults: MonitoredVault[] = (raw?.vaults ?? []).map((vault: any) => ({
+    ...vault,
+    activity: Array.isArray(vault?.activity) ? vault.activity : [],
+    activityLevel: vault?.activityLevel ?? "none",
+    activityAlerts: vault?.activityAlerts ?? 0,
+  }));
+  return {
+    ...raw,
+    chains: raw?.chains ?? [],
+    vaults,
+    live: raw?.live ?? [],
+    executable: raw?.executable ?? [],
+    recent: raw?.recent ?? [],
+    activity: Array.isArray(raw?.activity) ? raw.activity : [],
+    summary: {
+      ...(raw?.summary ?? {}),
+      activityAlerts: raw?.summary?.activityAlerts ?? 0,
+    },
+  };
+};
+
 /** Throws on any failure: the page has nothing to fall back to and says so. */
 export const fetchMonitoringOverview = async (): Promise<MonitoringOverview> => {
   const config = useRuntimeConfig();
@@ -227,8 +292,15 @@ export const fetchMonitoringOverview = async (): Promise<MonitoringOverview> => 
   if (!response.ok) {
     throw new Error(`Monitoring overview request failed: ${response.status} ${response.statusText}`);
   }
-  return await response.json();
+  return normalizeMonitoringOverview(await response.json());
 };
+
+/**
+ * A polled condition's txHash is "poll:<fingerprint>" and an unknown one is
+ * empty: neither is a transaction a reader can open. Only a real 32-byte hash
+ * gets an explorer link.
+ */
+export const isTxHash = (value?: string): value is string => /^0x[0-9a-fA-F]{64}$/.test(value ?? "");
 
 /** High and critical are the grades that should stop a reader; the rest are context. */
 export const isFlaggedLevel = (level: ThreatLevel) => SEVERITY_RANK[level] >= SEVERITY_RANK.high;

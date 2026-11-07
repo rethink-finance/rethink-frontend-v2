@@ -21,6 +21,9 @@
           <div class="vault_table__th vault_table__th--right">
             Live
           </div>
+          <div class="vault_table__th vault_table__th--right">
+            Activity
+          </div>
           <div class="vault_table__th">
             Notes
           </div>
@@ -29,57 +32,87 @@
         <div
           v-for="vault in vaults"
           :key="vault.chainId + vault.fundAddress"
-          class="vault_table__row"
+          class="vault_table__vault_rows"
         >
-          <div class="vault_table__vault">
-            <IconChain :chain-id="vault.chainId" :size="16" />
-            <div class="vault_table__names">
-              <nuxt-link :to="vaultUrl(vault)" class="vault_table__name">
-                {{ vault.fundName || truncateAddress(vault.fundAddress) }}
-              </nuxt-link>
-              <span class="vault_table__symbol">{{ vault.fundSymbol }} · {{ vault.baseTokenSymbol || "?" }}</span>
+          <div class="vault_table__row" :class="{ 'vault_table__row--open': isOpen(vault) }">
+            <div class="vault_table__vault">
+              <IconChain :chain-id="vault.chainId" :size="16" />
+              <div class="vault_table__names">
+                <nuxt-link :to="vaultUrl(vault)" class="vault_table__name">
+                  {{ vault.fundName || truncateAddress(vault.fundAddress) }}
+                </nuxt-link>
+                <span class="vault_table__symbol">{{ vault.fundSymbol }} · {{ vault.baseTokenSymbol || "?" }}</span>
+              </div>
+            </div>
+
+            <div>
+              <MonitoringThreatBadge :level="vault.level" />
+            </div>
+
+            <div class="vault_table__number" :class="{ 'vault_table__number--bad': vault.quorumPercent < 10 }">
+              {{ vault.quorumPercent.toFixed(vault.quorumPercent % 1 ? 2 : 0) }}%
+            </div>
+
+            <div class="vault_table__number" :class="{ 'vault_table__number--dim': vault.proposalThreshold === '0' }">
+              {{ thresholdText(vault) }}
+            </div>
+
+            <div class="vault_table__number">
+              {{ votingPeriod(vault) }}
+            </div>
+
+            <div class="vault_table__number" :class="{ 'vault_table__number--bad': vault.flaggedProposals > 0 }">
+              {{ vault.liveProposals }}<span v-if="vault.flaggedProposals" class="vault_table__flagged"> · {{ vault.flaggedProposals }} flagged</span>
+            </div>
+
+            <div class="vault_table__number">
+              <button
+                v-if="vault.activity.length"
+                type="button"
+                class="vault_table__activity"
+                :class="{ 'vault_table__activity--bad': vault.activityAlerts > 0 }"
+                :aria-expanded="isOpen(vault)"
+                :title="`${vault.activity.length} graded events in the last 30 days · ${vault.activityAlerts} at high or critical in the last 7 days`"
+                @click="toggle(vault)"
+              >
+                {{ vault.activity.length }}<span v-if="vault.activityAlerts" class="vault_table__flagged"> · {{ vault.activityAlerts }} alert{{ vault.activityAlerts === 1 ? "" : "s" }}</span>
+                <Icon
+                  icon="octicon:chevron-down-16"
+                  width="0.875rem"
+                  height="0.875rem"
+                  class="vault_table__chevron"
+                  :class="{ 'vault_table__chevron--open': isOpen(vault) }"
+                />
+              </button>
+              <span v-else class="vault_table__number--dim">0</span>
+            </div>
+
+            <div class="vault_table__notes">
+              <span
+                v-for="flag in vault.flags"
+                :key="flag.code"
+                class="vault_table__note"
+                :class="`vault_table__note--${flag.severity}`"
+                :title="flag.detail"
+              >
+                {{ flag.title }}
+              </span>
+              <span v-if="vault.contextError" class="vault_table__note vault_table__note--medium" :title="vault.contextError">
+                settings unreadable
+              </span>
+              <span v-if="!vault.roleModules.length" class="vault_table__note vault_table__note--info">
+                no Roles modifier
+              </span>
+              <span v-if="!vault.snapshotUpdatedAt" class="vault_table__note vault_table__note--info">
+                not indexed yet
+              </span>
             </div>
           </div>
-
-          <div>
-            <MonitoringThreatBadge :level="vault.level" />
-          </div>
-
-          <div class="vault_table__number" :class="{ 'vault_table__number--bad': vault.quorumPercent < 10 }">
-            {{ vault.quorumPercent.toFixed(vault.quorumPercent % 1 ? 2 : 0) }}%
-          </div>
-
-          <div class="vault_table__number" :class="{ 'vault_table__number--dim': vault.proposalThreshold === '0' }">
-            {{ thresholdText(vault) }}
-          </div>
-
-          <div class="vault_table__number">
-            {{ votingPeriod(vault) }}
-          </div>
-
-          <div class="vault_table__number" :class="{ 'vault_table__number--bad': vault.flaggedProposals > 0 }">
-            {{ vault.liveProposals }}<span v-if="vault.flaggedProposals" class="vault_table__flagged"> · {{ vault.flaggedProposals }} flagged</span>
-          </div>
-
-          <div class="vault_table__notes">
-            <span
-              v-for="flag in vault.flags"
-              :key="flag.code"
-              class="vault_table__note"
-              :class="`vault_table__note--${flag.severity}`"
-              :title="flag.detail"
-            >
-              {{ flag.title }}
-            </span>
-            <span v-if="vault.contextError" class="vault_table__note vault_table__note--medium" :title="vault.contextError">
-              settings unreadable
-            </span>
-            <span v-if="!vault.roleModules.length" class="vault_table__note vault_table__note--info">
-              no Roles modifier
-            </span>
-            <span v-if="!vault.snapshotUpdatedAt" class="vault_table__note vault_table__note--info">
-              not indexed yet
-            </span>
+          <div v-if="isOpen(vault)" class="vault_table__activity_row">
+            <div class="vault_table__activity_caption">
+              Outside governance, last 30 days · newest first
+            </div>
+            <MonitoringActivityList :items="activityRows(vault)" :show-vault="false" />
           </div>
         </div>
       </div>
@@ -93,6 +126,7 @@
 <script setup lang="ts">
 import { truncateAddress } from "~/composables/addressUtils";
 import { formatApproximateDuration, formatNumberShort } from "~/composables/formatters";
+import type { ActivityRow } from "~/components/monitoring/ActivityList.vue";
 import { shareDecimals, type MonitoredVault } from "~/services/backend/monitoring";
 
 /**
@@ -139,21 +173,46 @@ const votingPeriod = (vault: MonitoredVault) => {
 
 const vaultUrl = (vault: MonitoredVault) =>
   `/details/${vault.chainId}-${vault.fundSymbol}-${vault.fundAddress}/governance`;
+
+/** Which vaults have their activity list unfolded beneath the row. */
+const openVaults = ref(new Set<string>());
+const vaultKey = (vault: MonitoredVault) => `${vault.chainId}-${vault.fundAddress.toLowerCase()}`;
+const isOpen = (vault: MonitoredVault) => openVaults.value.has(vaultKey(vault));
+const toggle = (vault: MonitoredVault) => {
+  const next = new Set(openVaults.value);
+  const key = vaultKey(vault);
+  if (next.has(key)) next.delete(key);
+  else next.add(key);
+  openVaults.value = next;
+};
+
+const activityRows = (vault: MonitoredVault): ActivityRow[] =>
+  vault.activity.map((flag) => ({
+    ...flag,
+    chainId: vault.chainId,
+    fundAddress: vault.fundAddress,
+    fundName: vault.fundName,
+    fundSymbol: vault.fundSymbol,
+  }));
 </script>
 
 <style lang="scss" scoped>
 .vault_table {
+  // A size container, so the unfolded activity list below can take the
+  // visible width (100cqw) while the rows scroll sideways past it.
   &__scroll {
     overflow-x: auto;
+    container-type: inline-size;
   }
 
-  &__grid {
-    min-width: 960px;
+  &__vault_rows {
+    min-width: 1080px;
   }
 
   &__row {
     display: grid;
-    grid-template-columns: minmax(0, 1.6fr) 110px 80px 90px 110px 110px minmax(0, 1.4fr);
+    min-width: 1080px;
+    grid-template-columns: minmax(0, 1.6fr) 110px 80px 90px 110px 110px 120px minmax(0, 1.4fr);
     align-items: center;
     gap: 1rem;
     padding: 0.75rem 1.5rem;
@@ -165,6 +224,61 @@ const vaultUrl = (vault: MonitoredVault) =>
       padding-bottom: 0;
       border-top: 1px solid $color-line;
     }
+
+    &--open {
+      border-bottom-color: transparent;
+    }
+  }
+
+  &__activity {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: $color-white;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-cyan;
+    }
+
+    &--bad {
+      color: $color-neg;
+    }
+  }
+
+  &__chevron {
+    color: $color-steel-blue;
+    transition: transform 0.2s ease;
+
+    &--open {
+      transform: rotate(180deg);
+    }
+  }
+
+  // The rows scroll sideways on a narrow screen; the unfolded list is as wide
+  // as the visible table and sticks to its left edge, so it never scrolls off.
+  &__activity_row {
+    position: sticky;
+    left: 0;
+    box-sizing: border-box;
+    width: 100cqw;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding: 0 1.5rem 1rem 3rem;
+    border-bottom: 1px solid $color-line;
+  }
+
+  &__activity_caption {
+    font-family: $font-mono;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-text-irrelevant;
   }
 
   &__th {
