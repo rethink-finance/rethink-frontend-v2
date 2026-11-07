@@ -7,7 +7,7 @@
         </h1>
         <p class="monitoring__subtitle">
           Every live governance proposal across Rethink vaults, decoded and checked for
-          suspicious executable code.
+          suspicious executable code — and everything that moved a vault outside governance.
         </p>
       </div>
       <div class="monitoring__status">
@@ -116,6 +116,17 @@
             {{ overview?.summary.flaggedExecutable ?? 0 }} flagged · still executable by anyone
           </div>
         </div>
+        <div class="brand_card monitoring__tile" :class="{ 'monitoring__tile--alert': (overview?.summary.activityAlerts ?? 0) > 0 }">
+          <div class="monitoring__tile_label">
+            Activity alerts
+          </div>
+          <div class="monitoring__tile_value">
+            {{ overview ? overview.summary.activityAlerts : "—" }}
+          </div>
+          <div class="monitoring__tile_hint">
+            high or critical outside governance, last 7 days
+          </div>
+        </div>
         <div class="brand_card monitoring__tile">
           <div class="monitoring__tile_label">
             Vaults monitored
@@ -171,6 +182,46 @@
             :default-open="isFlaggedLevel(proposal.level)"
           />
         </div>
+      </section>
+
+      <section class="brand_card monitoring__section">
+        <div class="brand_card__head">
+          <div>
+            <span class="brand_card__eyebrow">Activity</span>
+            <div class="monitoring__section_caption">
+              What changed on each vault outside a vote — Safe owners and modules, Roles permissions and
+              executions, beacon upgrades, watched contracts and polled drift. Medium and above, newest first.
+            </div>
+          </div>
+          <span class="brand_card__meta">
+            <span v-if="flaggedActivityCount" class="monitoring__toggle_flag">
+              {{ flaggedActivityCount }} flagged
+            </span>
+            {{ filteredActivity.length }} of {{ overview?.activity.length ?? 0 }}
+          </span>
+        </div>
+        <div v-if="isLoading && !overview" class="monitoring__loading">
+          <v-progress-circular size="18" width="2" indeterminate />
+          Building the overview…
+        </div>
+        <MonitoringActivityList v-else :items="visibleActivity">
+          <template #empty>
+            <template v-if="overview?.activity.length">
+              Nothing matches the current filters.
+            </template>
+            <template v-else>
+              Nothing graded medium or above has happened outside governance on any monitored vault in the last 30 days.
+            </template>
+          </template>
+        </MonitoringActivityList>
+        <button
+          v-if="filteredActivity.length > visibleActivity.length"
+          type="button"
+          class="monitoring__more"
+          @click="activityLimit += ACTIVITY_PAGE"
+        >
+          Show {{ Math.min(ACTIVITY_PAGE, filteredActivity.length - visibleActivity.length) }} more
+        </button>
       </section>
 
       <section class="brand_card monitoring__section">
@@ -247,7 +298,8 @@
           <div>
             <span class="brand_card__eyebrow">Vault posture</span>
             <div class="monitoring__section_caption">
-              How cheaply a hostile proposal passes on each vault. Quorum under 10% means a dust deposit can carry a vote.
+              How cheaply a hostile proposal passes on each vault, and what moved it outside governance.
+              Quorum under 10% means a dust deposit can carry a vote; the activity count unfolds the vault's own list.
             </div>
           </div>
           <span class="brand_card__meta">{{ filteredVaults.length }} vaults</span>
@@ -267,9 +319,11 @@ import {
   formatLag,
   isFlaggedLevel,
   SEVERITY_RANK,
+  type MonitoredActivity,
   type MonitoredProposal,
   type MonitoringHealth,
   type MonitoringOverview,
+  type ThreatLevel,
 } from "~/services/backend/monitoring";
 
 /**
@@ -368,7 +422,7 @@ const levelOptions: SegmentedOption[] = [
   { key: "critical", label: "Critical" },
 ];
 
-const matchesLevel = (level: MonitoredProposal["level"]) => {
+const matchesLevel = (level: ThreatLevel) => {
   switch (levelFilter.value) {
     case "critical":
       return level === "critical";
@@ -401,6 +455,27 @@ const flaggedExecutableCount = computed(
 const flaggedRecentCount = computed(
   () => filteredRecent.value.filter((p) => isFlaggedLevel(p.level)).length,
 );
+
+/**
+ * The cross-vault activity list answers to the same filters as the
+ * proposals: a flag's severity is its grade. The backend sends up to 300
+ * rows newest first; the page shows them a screen at a time.
+ */
+const ACTIVITY_PAGE = 25;
+const activityLimit = ref(ACTIVITY_PAGE);
+const filteredActivity = computed(() =>
+  (overview.value?.activity ?? []).filter(
+    (a: MonitoredActivity) =>
+      (chainFilter.value === "all" || a.chainId === chainFilter.value) &&
+      matchesLevel(a.severity) &&
+      matchesSearch(`${a.fundName} ${a.fundSymbol} ${a.title} ${a.detail ?? ""} ${a.sender ?? ""} ${a.fundAddress} ${a.eventName}`),
+  ),
+);
+const visibleActivity = computed(() => filteredActivity.value.slice(0, activityLimit.value));
+const flaggedActivityCount = computed(
+  () => filteredActivity.value.filter((a) => isFlaggedLevel(a.severity)).length,
+);
+watch([chainFilter, levelFilter, search], () => (activityLimit.value = ACTIVITY_PAGE));
 
 /**
  * A canary governor votes in ~20 s, so its proposals are created, passed and
@@ -601,10 +676,14 @@ const proposalKey = (proposal: MonitoredProposal) =>
 
   &__tiles {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 1rem;
 
-    @media (max-width: 960px) {
+    @media (max-width: 1100px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    @media (max-width: 720px) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
@@ -742,6 +821,26 @@ const proposalKey = (proposal: MonitoredProposal) =>
 
     &--spaced {
       margin-top: 1.125rem;
+    }
+  }
+
+  &__more {
+    align-self: center;
+    margin-top: 1rem;
+    padding: 0.4375rem 0.875rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: none;
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+    cursor: pointer;
+
+    &:hover {
+      color: $color-white;
+      border-color: $color-line-3;
     }
   }
 
