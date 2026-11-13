@@ -750,6 +750,22 @@ const rawExcludedFundAddresses = {
       address: "0x9561361b9886B5064abe56ee65780964BE090726",
       alwaysExclude: true,
     }, // Smart 10 Hyperliquid
+    {
+      address: "0x1C60439913E732E2D8311e172004ca9BA76D52D7",
+      alwaysExclude: true,
+    }, // OpenAlpha HL Deploy Test 20261031
+    {
+      address: "0x42412fE11A262060A21Ffb50953d68b9c4A26a11",
+      alwaysExclude: true,
+    }, // OpenAlpha HL Deploy Test 20261101
+    {
+      address: "0xec38BD3AcE269cd8dB94dc1D228e032B496bF409",
+      alwaysExclude: true,
+    }, // OpenAlpha HL Deploy Test 20261101B
+    {
+      address: "0x237BF1486e36e0C8C67e33eb8eFD677E7c3fca2E",
+      alwaysExclude: true,
+    }, // OpenAlpha SmartBTC-36 Staging 1
   ],
 } as Record<string, { address: string; alwaysExclude: boolean }[]>;
 
