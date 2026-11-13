@@ -15,6 +15,7 @@
     "test:roles-v2-fork": "esbuild scripts/rolesV2ForkE2E.ts --bundle --platform=node --format=esm --alias:~=\"$PWD\" --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --outfile=node_modules/.cache/rolesV2ForkE2E.mjs && node node_modules/.cache/rolesV2ForkE2E.mjs",
     "postinstall": "nuxt prepare",
     "test:crt-v2-acceptance": "esbuild scripts/crtV2PermissionsAcceptance.ts --bundle --platform=node --format=esm --alias:~=\"$PWD\" --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --outfile=node_modules/.cache/crtV2PermissionsAcceptance.mjs && node node_modules/.cache/crtV2PermissionsAcceptance.mjs",
+    "test:doc-unoswap-rehearsal": "esbuild scripts/docUnoswapRehearsal.ts --bundle --platform=node --format=esm --alias:~=\"$PWD\" --inject:scripts/shims/nuxtAutoImports.ts --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --outfile=node_modules/.cache/docUnoswapRehearsal.mjs && node node_modules/.cache/docUnoswapRehearsal.mjs",
     "crt-v2:export": "esbuild scripts/crtV2PermissionsExport.ts --bundle --platform=node --format=esm --alias:~=\"$PWD\" --banner:js=\"import { createRequire } from 'module'; const require = createRequire(import.meta.url);\" --outfile=node_modules/.cache/crtV2PermissionsExport.mjs && node node_modules/.cache/crtV2PermissionsExport.mjs"
   },
   "devDependencies": {
