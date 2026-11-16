@@ -19,6 +19,8 @@ export const notificationIcon = (kind: NotificationKind | string): string => {
       return "mdi-arrow-down-circle-outline";
     case "redemption_ready":
       return "mdi-arrow-up-circle-outline";
+    case "syc_distribution_ready":
+      return "mdi-hand-coin-outline";
     default:
       return "mdi-bell-outline";
   }
