@@ -10,7 +10,7 @@
     </div>
 
     <p class="dist_lead">
-      Weekly SYC mint to sniETH depositors. The amounts refresh every three hours; signers of the admin multisig are told
+      Weekly SYC mint to sniETH depositors. The amounts refresh once a day; signers of the admin multisig are told
       when a mint is due (switch on Telegram under the bell, signed in with your signer wallet).
     </p>
 

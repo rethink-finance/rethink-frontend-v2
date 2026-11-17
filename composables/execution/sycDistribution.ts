@@ -18,8 +18,8 @@ import { IF, SYC, accruedAllowance, sycToken, type SycAllowance, type SycCall } 
 export const SYC_DIST = {
   ROLE: "adminRole",
   ALLOWANCE: "sycMint",
-  /** The backend recomputes every three hours; figures older than this mean it has stopped. */
-  MAX_AGE_MS: 86_400_000,
+  /** The backend recomputes once a day; figures older than this mean it has stopped. */
+  MAX_AGE_MS: 2 * 86_400_000,
   MAX_WALLETS: 200,
 } as const;
 
@@ -153,9 +153,9 @@ export const distributionProblems = (d: SycDistribution, chain: SycDistributionC
   const problems: string[] = [];
   if (!chain.finalized) problems.push("The vault is not finalized yet, so nothing can be minted.");
   if (chain.supply !== d.supplyAtGeneration) {
-    problems.push("SYC has been minted since these figures were computed. They refresh within three hours.");
+    problems.push("SYC has been minted since these figures were computed. They refresh once a day.");
   } else if (nowMs - d.generatedAt > SYC_DIST.MAX_AGE_MS) {
-    problems.push("These figures are more than a day old: the backend has stopped refreshing them.");
+    problems.push("These figures are more than two days old: the backend has stopped refreshing them.");
   }
   if (!chain.allowanceStored) {
     problems.push("The mint allowance is not stored on the Roles modifier yet.");

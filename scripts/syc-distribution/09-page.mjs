@@ -97,7 +97,7 @@ const html = `<title>SYC Distribution Proposal</title>
 <section>
   <h2>How the weekly mint works</h2>
   <ol>
-    <li>Every three hours the Rethink backend works out what each wallet is owed and subtracts what was already minted.</li>
+    <li>Once a day the Rethink backend works out what each wallet is owed and subtracts what was already minted.</li>
     <li>When a mint is due, the signers of the admin multisig get a Telegram message.</li>
     <li>A signer opens the Rethink app as the multisig and presses Propose mint.</li>
     <li>The other signers confirm it in the Safe.</li>

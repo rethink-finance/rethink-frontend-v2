@@ -2,8 +2,8 @@
 
 Works out how many SYC each sniETH depositor is owed and writes the multisig transaction that mints it.
 
-Since 16 Nov 2026 the weekly job itself runs in rethink-backend (`backend/src/syc-distribution`): it recomputes every three
-hours, serves `GET /syc-distribution/latest` to the console's Distribution card, and notifies the admin multisig's signers.
+Since 16 Nov 2026 the weekly job itself runs in rethink-backend (`backend/src/syc-distribution`): it recomputes once a
+day, serves `GET /syc-distribution/latest` to the console's Distribution card, and notifies the admin multisig's signers.
 This folder is the reference the backend is tested against (`13-backend-export.mjs` writes its fixtures and frozen history),
 and `weekly.mjs` remains a way to produce the same mint without the backend.
 

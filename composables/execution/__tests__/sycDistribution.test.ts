@@ -115,8 +115,8 @@ describe("SYC distribution checks", () => {
     expect(distributionProblems(d, chain({ supply: e(1300) }), NOW).join(" ")).toMatch(/minted since/);
   });
 
-  it("stops on figures older than a day", () => {
-    expect(distributionProblems(d, chain(), d.generatedAt + SYC_DIST.MAX_AGE_MS + 1).join(" ")).toMatch(/day old/);
+  it("stops on figures older than two days", () => {
+    expect(distributionProblems(d, chain(), d.generatedAt + SYC_DIST.MAX_AGE_MS + 1).join(" ")).toMatch(/two days old/);
     expect(distributionProblems(d, chain(), d.generatedAt + SYC_DIST.MAX_AGE_MS)).toEqual([]);
   });
 

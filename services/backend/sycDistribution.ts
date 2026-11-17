@@ -1,6 +1,6 @@
 /**
  * The backend's SYC distribution: what each sniETH depositor is owed and what
- * to mint now, recomputed every three hours. Returned as text because the
+ * to mint now, recomputed once a day. Returned as text because the
  * console validates it exactly as it would a file (parseDistribution) before
  * anything is built from it.
  */
