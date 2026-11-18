@@ -54,6 +54,59 @@
             Finalizing opens the vault for deposits. Changing permissions or NAV
             methods then takes a governance vote.
           </p>
+          <!--
+            What the button is about to send. The first NAV update belongs in
+            the same transaction as the finalize (see finalizeCalls.ts); when
+            the wallet or its role cannot deliver that, the step says so
+            before anything is signed rather than after.
+          -->
+          <p
+            v-if="firstNavPlan"
+            class="preflight__nav"
+            :class="{ 'preflight__nav--warn': firstNavPlan.mode !== 'atomic' }"
+          >
+            <Icon
+              :icon="firstNavPlan.mode === 'atomic'
+                ? 'material-symbols:verified-user-outline-rounded'
+                : 'material-symbols:warning-outline-rounded'"
+              width="1.125rem"
+              aria-hidden="true"
+            />
+            <span v-if="firstNavPlan.mode === 'atomic'">
+              The first NAV update runs in the same transaction, so nobody can
+              deposit and take voting control ahead of it.
+            </span>
+            <span v-else-if="firstNavPlan.mode === 'sequential'">
+              This wallet cannot batch transactions, so the first NAV update
+              follows as a second confirmation. Until it confirms, deposits
+              settle instantly — a wallet with smart-account batching closes
+              that gap.
+            </span>
+            <span v-else-if="firstNavPlan.mode === 'none'">
+              The first NAV update will not be included: {{ firstNavPlan.reason }}
+              Deposits settle instantly until a NAV update is recorded, so run
+              one right after finalizing.
+            </span>
+          </p>
+          <p v-if="hasBatchFailed" class="preflight__nav preflight__nav--warn">
+            <Icon
+              icon="material-symbols:warning-outline-rounded"
+              width="1.125rem"
+              aria-hidden="true"
+            />
+            <span>
+              Finalizing together with the first NAV update did not go
+              through, most likely because a NAV method reverts. Check the
+              simulated values, or
+              <button
+                type="button"
+                class="paths__link paths__link--button"
+                @click="finalizeCreateFund({ skipFirstNav: true })"
+              >
+                finalize without the NAV update
+              </button>
+            </span>
+          </p>
         </header>
 
         <div class="preflight__notice">
@@ -324,6 +377,32 @@ import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import { truncateAddressEllipsis } from "~/composables/addressUtils";
 import { OnboardingStep } from "~/types/enums/stepper_onboarding";
 import type { ChainId } from "~/types/enums/chain_id";
+import {
+  buildFinalizeWithFirstNavCalls,
+  encodeFirstNavUpdate,
+  firstNavRoleCandidates,
+  pickFirstNavRole,
+  type IFirstNavRoute,
+} from "~/composables/onboarding/finalizeCalls";
+import {
+  RolesVersion,
+  detectRolesVersion,
+  fetchMemberRoles,
+  sendRoleExecution,
+  simulateRoleExecution,
+} from "~/composables/permissions/useRoleExecution";
+import {
+  getAtomicBatchStatus,
+  isBatchUnsupportedError,
+  isUpgradeRejectionError,
+  isUserRejectionError,
+  isWalletCallsSuccess,
+  isWalletRpcHealthError,
+  sendWalletCalls,
+  waitForWalletCalls,
+  WALLET_RPC_HEALTH_MESSAGE,
+  WalletCallsTimeoutError,
+} from "~/services/eip5792";
 
 const emit = defineEmits<{
   /** Back to an earlier step of the flow, to re-check it before launching. */
@@ -501,8 +580,247 @@ onBeforeUnmount(() => {
   if (safeCopiedTimer) clearTimeout(safeCopiedTimer);
 });
 
-const finalizeCreateFund = async () => {
+/**
+ * How the first NAV update travels with the finalize:
+ *
+ *   "atomic"      one EIP-5792 batch — finalize and NAV update land together
+ *                 or not at all.
+ *   "sequential"  the wallet cannot batch; the NAV update is a second
+ *                 transaction sent the moment the finalize confirms.
+ *   "none"        the connected wallet cannot run the NAV update at all, so
+ *                 only the finalize goes out.
+ */
+type FirstNavPlan =
+  | { mode: "atomic" | "sequential"; route: IFirstNavRoute }
+  | { mode: "none"; reason: string };
+
+const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
+
+const firstNavPlan = ref<FirstNavPlan | undefined>(undefined);
+/** Set when an atomic batch reverted, to offer the way out. */
+const hasBatchFailed = ref(false);
+
+const fundAddress = computed(
+  () =>
+    createFundStore.fundInitCache?.fundContractAddr ||
+    fundSettings?.value?.fundAddress ||
+    "",
+);
+const navExecutorAddress = computed(() =>
+  fundChainId.value ? getNAVExecutorBeaconProxyAddress(fundChainId.value) : "",
+);
+
+const resolveFirstNavPlan = async (): Promise<FirstNavPlan> => {
+  const chainId = fundChainId.value as ChainId;
+  const account = accountStore.activeAccountAddress;
+  const rolesModAddress = createFundStore.fundInitCache?.rolesModifier;
+
+  if (!account) return { mode: "none", reason: "no wallet is connected." };
+  if (!fundAddress.value || !rolesModAddress || isZeroAddress(rolesModAddress)) {
+    return { mode: "none", reason: "the vault's Roles modifier is not known." };
+  }
+  if (!navExecutorAddress.value) {
+    return {
+      mode: "none",
+      reason: "there is no NAV executor configured for this network.",
+    };
+  }
+
+  const version = await detectRolesVersion(
+    chainId,
+    rolesModAddress,
+    createFundStore.fundFactoryContractV2Used
+      ? RolesVersion.V2
+      : RolesVersion.V1,
+  );
+
+  // Membership is a log scan some RPCs refuse; the default keys are tried
+  // either way, so a failed read only costs the custom-named roles.
+  let heldRoles: string[] = [];
+  try {
+    heldRoles = await fetchMemberRoles(chainId, rolesModAddress, account, version);
+  } catch (error) {
+    console.warn("Could not read role membership before finalizing", error);
+  }
+
+  const navCall = {
+    to: fundAddress.value,
+    data: encodeFirstNavUpdate(navExecutorAddress.value),
+  };
+  const role = await pickFirstNavRole(
+    firstNavRoleCandidates(version, heldRoles),
+    (candidate) =>
+      simulateRoleExecution(chainId, rolesModAddress, navCall, candidate, version),
+  );
+  if (!role) {
+    return {
+      mode: "none",
+      reason:
+        "the connected wallet holds no role that is allowed to update the vault's NAV.",
+    };
+  }
+  const route: IFirstNavRoute = { rolesModAddress, role, version };
+
+  const provider = accountStore.connectedWallet?.provider;
+  let canBatch = false;
+  if (provider) {
+    try {
+      canBatch =
+        (await getAtomicBatchStatus(provider, account, chainId)) !==
+        "unsupported";
+    } catch (error) {
+      // The wallet's RPC is failing; the send will surface that on its own.
+      console.warn("Batch capability probe failed", error);
+    }
+  }
+  return { mode: canBatch ? "atomic" : "sequential", route };
+};
+
+const refreshFirstNavPlan = async () => {
+  try {
+    firstNavPlan.value = await resolveFirstNavPlan();
+  } catch (error) {
+    console.error("Failed resolving the first NAV update plan", error);
+    firstNavPlan.value = undefined;
+  }
+  return firstNavPlan.value;
+};
+
+watch(
+  () => [
+    accountStore.activeAccountAddress,
+    accountStore.connectedWallet?.label,
+    fundChainId.value,
+    fundAddress.value,
+    createFundStore.fundInitCache?.rolesModifier,
+  ],
+  () => {
+    hasBatchFailed.value = false;
+    refreshFirstNavPlan();
+  },
+  { immediate: true },
+);
+
+const SUBMITTED_TOAST =
+  "The transaction has been submitted. Please wait for it to be confirmed.";
+const FINALIZE_FAILED_TOAST =
+  "The Create Fund tx has failed. Please contact the Rethink Finance community for support.";
+
+/** Resolves once a plain send is mined (true) or has failed (false). */
+const settle = (transaction: any): Promise<boolean> =>
+  new Promise((resolve) => {
+    Promise.resolve(
+      transaction
+        .on("transactionHash", (hash: any) => {
+          console.log("tx hash: " + hash);
+          toastStore.addToast(SUBMITTED_TOAST);
+        })
+        .on("receipt", (receipt: any) => {
+          console.log("receipt: ", receipt);
+          resolve(!!receipt.status);
+        })
+        .on("error", (error: any) => {
+          console.error("transaction error", error);
+          resolve(false);
+        }),
+    ).catch((error: any) => {
+      // The PromiEvent rejects with the error its "error" event carried, and
+      // on its own for failures before a wallet prompt.
+      console.error(error);
+      resolve(false);
+    });
+  });
+
+const markFinalized = (message: string) => {
+  toastStore.successToast(message);
+  isFundCreateFinalized.value = true;
+  // Clear local storage for this chain.
+  createFundStore.clearFundLocalStorage();
+};
+
+type BatchOutcome = "success" | "unsupported" | "stopped";
+
+/** Finalize and the first NAV update as one atomic wallet batch. */
+const sendFinalizeBatch = async (route: IFirstNavRoute): Promise<BatchOutcome> => {
+  const chainId = fundChainId.value as ChainId;
+  const account = accountStore.activeAccountAddress;
+  const provider = accountStore.connectedWallet?.provider;
+  const factoryAddress = fundFactoryContract.value?.options?.address;
+  if (!account || !provider || !factoryAddress) return "unsupported";
+
+  try {
+    if (chainId !== accountStore.connectedWalletChainId) {
+      await accountStore.switchNetwork(chainId);
+    }
+  } catch (error) {
+    // switchNetwork has raised its own toast.
+    console.error("Network switch failed before finalizing", error);
+    return "stopped";
+  }
+
+  let batchId: string;
+  try {
+    batchId = await sendWalletCalls(provider, {
+      chainId,
+      from: account,
+      calls: buildFinalizeWithFirstNavCalls({
+        factoryAddress,
+        fundAddress: fundAddress.value,
+        navExecutorAddress: navExecutorAddress.value,
+        route,
+      }),
+    });
+  } catch (error: any) {
+    // Declining the account upgrade is declining to batch, not to finalize.
+    if (isUpgradeRejectionError(error) || isBatchUnsupportedError(error)) {
+      return "unsupported";
+    }
+    if (isUserRejectionError(error)) {
+      toastStore.addToast("Transaction was rejected.");
+      return "stopped";
+    }
+    console.error("Finalize batch was not sent", error);
+    if (isWalletRpcHealthError(error)) {
+      toastStore.errorToast(WALLET_RPC_HEALTH_MESSAGE);
+    } else {
+      // Wallets that simulate the batch refuse it here when a call reverts.
+      hasBatchFailed.value = true;
+      toastStore.errorToast(
+        "The wallet could not send the finalize and NAV update together.",
+      );
+    }
+    return "stopped";
+  }
+
+  toastStore.addToast(SUBMITTED_TOAST);
+  try {
+    const result = await waitForWalletCalls(provider, batchId);
+    if (isWalletCallsSuccess(result)) return "success";
+    // Atomic: a reverted NAV update took the finalize with it.
+    hasBatchFailed.value = true;
+    toastStore.errorToast(
+      "Finalizing with the first NAV update has failed. The vault is not finalized.",
+    );
+  } catch (error: any) {
+    if (error instanceof WalletCallsTimeoutError) {
+      toastStore.addToast(
+        "The transaction is taking longer than expected. Reload this page once it confirms.",
+      );
+    } else if (isWalletRpcHealthError(error)) {
+      toastStore.errorToast(WALLET_RPC_HEALTH_MESSAGE);
+    } else {
+      console.error("Finalize batch failed", error);
+      toastStore.errorToast(
+        "There has been an error. Please contact the Rethink Finance community for support.",
+      );
+    }
+  }
+  return "stopped";
+};
+
+const finalizeCreateFund = async ({ skipFirstNav = false } = {}) => {
   console.warn("finalizeCreateFund");
+  if (isFinalizingFundCreation.value) return;
   if (!fundChainId.value) {
     return toastStore.errorToast("Fund chain ID not set.");
   }
@@ -514,40 +832,56 @@ const finalizeCreateFund = async () => {
     );
   }
   isFinalizingFundCreation.value = true;
+  hasBatchFailed.value = false;
 
   try {
-    await fundFactoryContract.value
-      .send("finalizeCreateFund", {}, [])
-      .on("transactionHash", (hash: any) => {
-        console.log("tx hash: " + hash);
-        toastStore.addToast(
-          "The transaction has been submitted. Please wait for it to be confirmed.",
-        );
-      })
-      .on("receipt", (receipt: any) => {
-        console.log("receipt: ", receipt);
-        if (receipt.status) {
-          toastStore.successToast("Fund was created successfully.");
-          isFundCreateFinalized.value = true;
+    // Resolved again at click time: the wallet may have changed since mount.
+    const plan = skipFirstNav ? undefined : await refreshFirstNavPlan();
+    const route = plan && plan.mode !== "none" ? plan.route : undefined;
 
-          // Clear local storage for this chain.
-          createFundStore.clearFundLocalStorage();
-        } else {
-          toastStore.errorToast(
-            "The Create Fund tx has failed. Please contact the Rethink Finance community for support.",
-          );
-        }
-      })
-      .on("error", (error: any) => {
-        console.error("error when initializing", error);
-        isFinalizingFundCreation.value = false;
-        toastStore.errorToast(
-          "There has been an error. Please contact the Rethink Finance community for support.",
+    if (route && plan?.mode === "atomic") {
+      const outcome = await sendFinalizeBatch(route);
+      if (outcome === "success") {
+        return markFinalized(
+          "Fund was created and its first NAV update recorded in one transaction.",
         );
-      });
+      }
+      if (outcome === "stopped") return;
+      toastStore.addToast(
+        "This wallet cannot batch. Finalize first, then confirm the NAV update right after.",
+      );
+    }
+
+    const isFinalized = await settle(
+      fundFactoryContract.value.send("finalizeCreateFund", {}, []),
+    );
+    if (!isFinalized) return toastStore.errorToast(FINALIZE_FAILED_TOAST);
+    if (!route) return markFinalized("Fund was created successfully.");
+
+    // Not atomic, so make the gap as short as it can be: the NAV update is
+    // prompted the moment the finalize is mined.
+    const isNavRecorded = await settle(
+      sendRoleExecution(
+        fundChainId.value as ChainId,
+        route.rolesModAddress,
+        { to: fundAddress.value, data: encodeFirstNavUpdate(navExecutorAddress.value) },
+        route.role,
+        route.version as RolesVersion,
+      ),
+    );
+    if (!isNavRecorded) {
+      toastStore.errorToast(
+        "The vault is finalized, but its first NAV update did not go through. Deposits settle instantly until one is recorded — update NAV from the vault's NAV page now.",
+      );
+    }
+    markFinalized(
+      isNavRecorded
+        ? "Fund was created and its first NAV update recorded."
+        : "Fund was created successfully.",
+    );
   } catch (error: any) {
     console.error(error);
-    toastStore.errorToast("There was an error initializing the vault");
+    toastStore.errorToast("There was an error finalizing the vault");
   } finally {
     isFinalizingFundCreation.value = false;
   }
@@ -595,7 +929,7 @@ const navigateToFundDetailsAfterFinalizedSuccessfully = async () => {
 
 // The button lives in the page's sticky footer with every other step's primary.
 defineExpose({
-  finalize: finalizeCreateFund,
+  finalize: () => finalizeCreateFund(),
   isFinalizing: isFinalizingFundCreation,
   isDone: isFundCreateFinalized,
 });
@@ -703,6 +1037,26 @@ defineExpose({
 
   /* The recommendation itself, in the one tone the flow reserves for "this
      is your last chance to change it". */
+  /* One line on what the Finalize button will send. */
+  &__nav {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0.75rem 0 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: $color-steel-blue;
+
+    svg {
+      flex: none;
+      margin-top: 0.15rem;
+    }
+
+    &--warn svg {
+      color: $color-warn;
+    }
+  }
+
   &__notice {
     display: flex;
     align-items: center;
