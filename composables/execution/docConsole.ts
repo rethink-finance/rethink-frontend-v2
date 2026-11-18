@@ -1,6 +1,23 @@
 import { ethers } from "ethers";
+import {
+  DOC,
+  DOC_TOKENS,
+  DOC_UNOSWAP_RULES,
+  type DocRoute,
+  type DocToken,
+  encodeUnoswap,
+  fmtUnits,
+  routeCandidates,
+  shortAddr,
+  validateDocUnoswap,
+} from "./docWhitelist";
+import { UNOSWAP_TO2_SELECTOR, UNOSWAP_TO_SELECTOR, wordHex } from "./onchainSwap";
+import { rpcRequestOn } from "./rpc";
+import { fetchOnChainRolesV1 } from "~/services/onchain/rolesV1";
 import { useWeb3Store } from "~/store/web3/web3.store";
-import { ChainId } from "~/types/enums/chain_id";
+import { ParamComparison } from "~/types/enums/zodiac-roles";
+
+export * from "./docWhitelist";
 
 /**
  * DoC Treasury Protection execution console — addresses, whitelist facts and
@@ -14,12 +31,20 @@ import { ChainId } from "~/types/enums/chain_id";
  *
  * The whitelist, in full:
  *
- *   1inch AggregationRouterV6 — `swap` (0x07ed2379) ONLY
- *     · desc.dstToken   (word 2) one-of the six supported assets
- *     · desc.dstReceiver(word 4) pinned to the Safe
- *     · srcToken, amount, minReturn, executor: unconstrained
+ *   1inch AggregationRouterV6
+ *     · as set up: `swap` (0x07ed2379) ONLY — desc.dstToken one-of the six
+ *       supported assets, desc.dstReceiver pinned to the Safe, and srcToken,
+ *       amount, minReturn, executor unconstrained; every other selector,
+ *       `unoswap` included, → FunctionNotAllowed. That routing program can
+ *       only be written by 1inch's pathfinder, which the 1inch web app no
+ *       longer lets a manager steer, and its free executor slot is a drain
+ *       path for a compromised key.
+ *     · after the whitelist proposal (docProposal.ts): `unoswapTo` and
+ *       `unoswapTo2` with `to` pinned to the Safe, `token` one-of the four
+ *       vault assets and the pools one-of DOC_POOLS by slot (see
+ *       DOC_UNOSWAP_RULES); `swap` revoked. readDocUnoswapGrant() tells the
+ *       console which of the two worlds it is in.
  *     · msg.value must be 0 (options None → SendNotAllowed)
- *     · every other selector, `unoswap` included, → FunctionNotAllowed
  *
  *   Aave v3 Pool
  *     · supply(asset, amount, onBehalfOf, ref) — onBehalfOf pinned to the Safe
@@ -34,62 +59,6 @@ import { ChainId } from "~/types/enums/chain_id";
  *                        approve it at all; WPOL can be bought, never sold
  *     · USDC.e         → never scoped as a target; same one-way street
  */
-
-export const DOC = {
-  CHAIN: ChainId.POLYGON,
-  EXPLORER: "https://polygonscan.com",
-  /** Roles v1 manager role. The modifier takes it as a uint16. */
-  ROLE: "1",
-  ADDR: {
-    fund: "0xBE0B0C435EA1156F76d3E116Fbd5606743ab179a",
-    safe: "0xfcF577A1b4364a55Af6C48804C8fF4a8463d7dC0",
-    roles: "0x04B0B7318c6e6F081E5a57D1A2e415cB5dcbe19F",
-    oneInch: "0x111111125421cA6dc452d289314280a0f8842A65",
-    aavePool: "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
-    /** Aave's own oracle: USD with 8 decimals for every reserve it lists. */
-    aaveOracle: "0xb023e699F5a33916Ea823A16485e259257cA8Bd1",
-    /** aPolDAI — rebasing, so its balance IS the DAI position. */
-    aDai: "0x82E64f49Ed5EC1bC6e43DAD4FC8Af9bb3A2312EE",
-    /** PAXG is not an Aave reserve, so its price comes from XAU/USD. */
-    xauFeed: "0x0C466540B2ee1a31b441671eac0ca886e051E410",
-  },
-  /** The only 1inch selector role 1 may call. */
-  /** The selector role 1 was originally scoped for. Kept for reference: it is
-   *  the aggregator path, and needs a solver-built routing blob. */
-  SWAP_SELECTOR: "0x07ed2379",
-};
-
-export interface DocToken {
-  symbol: string;
-  address: string;
-  decimals: number;
-  /** May be sold: role 1 can approve it to the 1inch router. */
-  sellable: boolean;
-  /** May be bought: it is one of the whitelisted `desc.dstToken` values. */
-  buyable: boolean;
-  /** Aave reserve — priced by Aave's oracle rather than the XAU feed. */
-  onAave: boolean;
-}
-
-/**
- * The assets this console manages.
- *
- * The vault's whitelist also permits buying WPOL and USDC.e, but neither can
- * ever be sold again — role 1 holds no approval for either — so a rebalancer
- * that offered them would be offering a one-way door. They are left out on
- * purpose. USDC.e still appears below as a routing hop, which is a different
- * thing: an intermediate leg settles inside the same transaction and is never
- * a position the vault holds.
- */
-export const DOC_TOKENS: DocToken[] = [
-  { symbol: "DAI", address: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063", decimals: 18, sellable: true, buyable: true, onAave: true },
-  { symbol: "WETH", address: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619", decimals: 18, sellable: true, buyable: true, onAave: true },
-  { symbol: "WBTC", address: "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6", decimals: 8, sellable: true, buyable: true, onAave: true },
-  { symbol: "PAXG", address: "0x553d3D295e0f695B9228246232eDF400ed3560B5", decimals: 18, sellable: true, buyable: true, onAave: false },
-];
-
-export const docToken = (address: string): DocToken | undefined =>
-  DOC_TOKENS.find((t) => t.address.toLowerCase() === (address || "").toLowerCase());
 
 const A = DOC.ADDR;
 
@@ -111,25 +80,7 @@ const IF = {
   feed: new ethers.Interface([
     "function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)",
   ]),
-  router: new ethers.Interface([
-    // Quote-only. `unoswap*` is not on role 1's whitelist, but eth_call from
-    // the Safe does not go through the modifier, so these still price a route.
-    "function unoswapTo(uint256 to,uint256 token,uint256 amount,uint256 minReturn,uint256 dex) returns (uint256 returnAmount)",
-    "function unoswapTo2(uint256 to,uint256 token,uint256 amount,uint256 minReturn,uint256 dex,uint256 dex2) returns (uint256 returnAmount)",
-    // The one selector role 1 may actually send.
-    "function swap(address executor,(address srcToken,address dstToken,address srcReceiver,address dstReceiver,uint256 amount,uint256 minReturnAmount,uint256 flags) desc,bytes data) payable returns (uint256 returnAmount,uint256 spentAmount)",
-  ]),
 };
-
-export const shortAddr = (a?: string) =>
-  a ? a.slice(0, 6) + "…" + a.slice(-4) : "—";
-
-/** Money for reading, never for maths — the bigint stays the source of truth. */
-export const fmtUnits = (v: bigint, decimals: number, dp = 4) =>
-  Number(ethers.formatUnits(v ?? 0n, decimals)).toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: dp,
-  });
 
 export const fmtUsd = (v: number) =>
   v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -161,30 +112,6 @@ export interface DocInner {
   data: string;
   sig: string;
   params: DocParam[];
-}
-
-/**
- * A route and its price, declared here because the calldata builder below
- * takes one. The machinery that finds and quotes them is further down, under
- * "Direct-pool routing".
- */
-export interface DocPool {
-  a: string;
-  b: string;
-  fee: number;
-  address: string;
-}
-
-export interface DocRouteHop {
-  pool: DocPool;
-  sell: string;
-  buy: string;
-}
-
-export interface DocRoute {
-  hops: DocRouteHop[];
-  /** Human reading of the path, e.g. "PAXG → USDC (0.30%) → WBTC (0.30%)". */
-  label: string;
 }
 
 /** One simulated swap: where it goes, what it sells, what the router returned. */
@@ -276,126 +203,6 @@ export const docInner = {
     ],
   }),
 };
-
-/* -------------------------------------------------------------------------- */
-/* Direct-pool routing                                                        */
-/* -------------------------------------------------------------------------- */
-
-/**
- * The 1inch router's `unoswap*` family takes the pools to trade through as
- * plain numbers, so a route can be built here rather than fetched from the
- * aggregator's solver. That is the whole reason this console needs no API key:
- * `swap()` carries an opaque, expiring, signed routing program, while
- * `unoswapTo(to, token, amount, minReturn, dex)` carries a pool address and
- * two flag bits.
- *
- * A "dex word" is a uint256 — the protocol in the top bits, a direction flag,
- * and the pool address in the low 160:
- *
- *   bit 253  Uniswap V3 (protocol 1)
- *   bit 247  zeroForOne — set when the token being sold is the pool's token0
- *
- * Uniswap V3 always orders a pool's tokens by address, so direction follows
- * from comparing the two addresses and nothing has to be read on chain. Same
- * encoding the sni-dca keeper runs on, re-verified here by quoting every pair.
- */
-const UNISWAP_V3_FLAG = 1n << 253n;
-const ZERO_FOR_ONE_FLAG = 1n << 247n;
-
-export const dexWord = (pool: string, sellToken: string, buyToken: string) => {
-  const zeroForOne = sellToken.toLowerCase() < buyToken.toLowerCase();
-  return UNISWAP_V3_FLAG | (zeroForOne ? ZERO_FOR_ONE_FLAG : 0n) | BigInt(pool);
-};
-
-/**
- * Tokens the console may route THROUGH without the vault holding them. Both
- * are dollar-pegged, and both legs settle in one transaction, so an
- * intermediate leg never leaves the vault exposed to it.
- */
-export const HOP_TOKENS: Record<string, string> = {
-  USDC: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
-  "USDC.e": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-};
-
-const addressOf = (symbol: string) =>
-  DOC_TOKENS.find((t) => t.symbol === symbol)?.address ?? HOP_TOKENS[symbol] ?? "";
-
-/**
- * The pools this console will trade through — swept from the Uniswap V3
- * factory, then filtered by what a quote actually returned at a $5,000 clip.
- * The shallow duplicates that priced 20-50% worse were dropped rather than
- * left in as candidates. Route choice still quotes every remaining candidate
- * on chain; this list only bounds where the money is allowed to go.
- */
-export const DOC_POOLS: DocPool[] = [
-  { a: "DAI", b: "USDC.e", fee: 100, address: "0x5645dCB64c059aa11212707fbf4E7F984440a8Cf" },
-  { a: "DAI", b: "USDC", fee: 100, address: "0xf369277650aD6654f25412ea8BFBD5942733BaBC" },
-  { a: "DAI", b: "WETH", fee: 3000, address: "0x6baD0f9a89Ca403bb91d253D385CeC1A2b6eca97" },
-  { a: "WETH", b: "USDC", fee: 500, address: "0xA4D8c89f0c20efbe54cBa9e7e7a7E509056228D9" },
-  { a: "WETH", b: "USDC.e", fee: 500, address: "0x45dDa9cb7c25131DF268515131f647d726f50608" },
-  { a: "WETH", b: "WBTC", fee: 500, address: "0x50eaEDB835021E4A108B7290636d62E9765cc6d7" },
-  { a: "WETH", b: "PAXG", fee: 10000, address: "0x0B1510C24Cf377A08258bc01DFBBc40035Ee3653" },
-  { a: "WBTC", b: "USDC.e", fee: 500, address: "0xeEF1A9507B3D505f0062f2be9453981255b503c8" },
-  { a: "WBTC", b: "USDC", fee: 3000, address: "0xe6Ba22265AeFe9dC392F544437ACCe2AEdF8ef36" },
-  { a: "WBTC", b: "USDC", fee: 500, address: "0x32FAE204835e08b9374493d6B4628FD1F87DD045" },
-  { a: "WBTC", b: "PAXG", fee: 3000, address: "0xe9Cb1Ea03C1F9643df263944f7CB3782E0C78312" },
-  { a: "PAXG", b: "USDC", fee: 3000, address: "0x2773d038a811e4C3591c76610aF22A98Fd1fccC3" },
-  { a: "PAXG", b: "USDC.e", fee: 3000, address: "0xcCA15D926B707119F6B74B559DF3aaeCc14f2D88" },
-  { a: "USDC.e", b: "USDC", fee: 100, address: "0xD36ec33c8bed5a9F7B6630855f1533455b98a418" },
-];
-
-const poolsBetween = (x: string, y: string) =>
-  DOC_POOLS.filter((p) => (p.a === x && p.b === y) || (p.a === y && p.b === x));
-
-const routeLabel = (src: string, hops: DocRouteHop[]) =>
-  hops.reduce(
-    (text, h) => `${text} → ${h.buy} (${(h.pool.fee / 10000).toFixed(2)}%)`,
-    src,
-  );
-
-/**
- * Every path from `src` to `dst` worth considering: the direct pools, then one
- * hop through a dollar-pegged intermediate. Two hops is the ceiling because
- * `unoswapTo2` is the widest variant being permitted — and because on these
- * assets a third hop never won a quote.
- */
-export const routeCandidates = (src: string, dst: string): DocRoute[] => {
-  const out: DocRoute[] = [];
-  for (const pool of poolsBetween(src, dst)) {
-    const hops = [{ pool, sell: src, buy: dst }];
-    out.push({ hops, label: routeLabel(src, hops) });
-  }
-  for (const mid of Object.keys(HOP_TOKENS)) {
-    if (mid === src || mid === dst) continue;
-    for (const first of poolsBetween(src, mid)) {
-      for (const second of poolsBetween(mid, dst)) {
-        const hops = [
-          { pool: first, sell: src, buy: mid },
-          { pool: second, sell: mid, buy: dst },
-        ];
-        out.push({ hops, label: routeLabel(src, hops) });
-      }
-    }
-  }
-  return out;
-};
-
-/** The router call a route turns into, before it is wrapped for the modifier. */
-export const encodeUnoswap = (
-  route: DocRoute,
-  src: DocToken,
-  amount: bigint,
-  minReturn: bigint,
-) => {
-  const words = route.hops.map((h) =>
-    dexWord(h.pool.address, addressOf(h.sell), addressOf(h.buy)),
-  );
-  const head = [BigInt(A.safe), BigInt(src.address), amount, minReturn];
-  return words.length === 1
-    ? IF.router.encodeFunctionData("unoswapTo", [...head, words[0]])
-    : IF.router.encodeFunctionData("unoswapTo2", [...head, words[0], words[1]]);
-};
-
 
 /* -------------------------------------------------------------------------- */
 /* Wrapping                                                                    */
@@ -918,160 +725,278 @@ export const minReturnFor = (quote: DocQuote, tolerancePct: number) =>
   (quote.amountOut * BigInt(Math.round((100 - tolerancePct) * 100))) / 10000n;
 
 /* -------------------------------------------------------------------------- */
-/* The one selector role 1 may send                                           */
+/* The whitelist grant                                                        */
 /* -------------------------------------------------------------------------- */
 
 /**
- * `swap` is the only entry point on the router role 1 may call, and its
- * routing program is written by 1inch's pathfinder. That program cannot be
- * generated here, and the vault's own history is not a template library
- * either: of the 47 swaps this Safe has executed, 40 no longer execute at all
- * against current pool state and only 3 survive a change of size.
- *
- * What the permission leaves open is everything except the destination —
- * `srcToken`, `amount`, `minReturn`, `executor` and the program itself are
- * unconstrained; `desc.dstToken` must be one of the six assets and
- * `desc.dstReceiver` must be the Safe. So a program built anywhere executes
- * here, which is exactly what Zodiac Pilot exploited: it captured what the
- * 1inch dApp would have sent from the Safe and replayed it through the
- * modifier. These helpers do the same thing without the extension — take that
- * calldata, prove it matches both the permission and the leg it is meant to
- * fill, and hand it to the modifier.
+ * "granted"     — role 1 may call unoswapTo and unoswapTo2 exactly as the
+ *                 proposal scopes them;
+ * "different"   — the entry points are scoped, but not to these rules, so
+ *                 the console must not build calls the modifier would refuse;
+ * "missing"     — not scoped at all: the proposal has not executed;
+ * "unreachable" — the modifier's log could not be read from any source.
  */
+export type DocGrantState = "granted" | "different" | "missing" | "unreachable";
 
-export interface DocSwapCalldata {
-  executor: string;
-  srcToken: string;
-  dstToken: string;
-  srcReceiver: string;
-  dstReceiver: string;
-  amount: bigint;
-  minReturn: bigint;
-  flags: bigint;
-  /** The pathfinder's routing program — opaque, and never edited here. */
-  program: string;
-}
+const sameSet = (a: string[], b: string[]) => {
+  const left = [...new Set(a.map((x) => x.toLowerCase()))].sort();
+  const right = [...new Set(b.map((x) => x.toLowerCase()))].sort();
+  return left.length === right.length && left.every((x, i) => x === right[i]);
+};
 
-/** What a leg of the plan expects the pasted calldata to do. */
-export interface DocSwapIntent {
-  sell: DocToken;
-  buy: DocToken;
-  amount: bigint;
-}
-
-export const parseDocSwap = (hex: string): DocSwapCalldata => {
-  const data = (hex ?? "").trim();
-  if (!/^0x[0-9a-fA-F]*$/.test(data)) throw new Error("That is not hex calldata.");
-  if (!data.toLowerCase().startsWith(DOC.SWAP_SELECTOR)) {
-    throw new Error(
-      `Wrong entry point: this calldata starts ${data.slice(0, 10)}, and role 1 may only call swap (${DOC.SWAP_SELECTOR}). ` +
-        "An unoswap or a permit2 variant will be refused by the modifier.",
-    );
-  }
-  let decoded;
+/**
+ * Reads the modifier's event log (explorer → Blockscout → RPCs) and compares
+ * role 1's scope for the two entry points with DOC_UNOSWAP_RULES.
+ */
+export const readDocUnoswapGrant = async (): Promise<DocGrantState> => {
+  let modifier;
   try {
-    decoded = IF.router.decodeFunctionData("swap", data);
-  } catch {
-    // Almost always a paste that lost its tail: the program is the longest
-    // part of the calldata and the easiest thing to clip.
-    throw new Error(
-      "This calldata is the right entry point but does not decode — it looks truncated. Copy the whole of it, including the routing program at the end.",
-    );
+    modifier = await fetchOnChainRolesV1(DOC.CHAIN, A.roles);
+  } catch (error) {
+    console.warn("Could not read the DoC modifier", error);
+    return "unreachable";
   }
-  const [executor, desc, program] = decoded;
-  return {
-    executor,
-    srcToken: desc.srcToken,
-    dstToken: desc.dstToken,
-    srcReceiver: desc.srcReceiver,
-    dstReceiver: desc.dstReceiver,
-    amount: desc.amount,
-    minReturn: desc.minReturnAmount,
-    flags: desc.flags,
-    program,
-  };
-};
+  const role = modifier?.roles.find((r) => String(r.name) === DOC.ROLE);
+  const target = role?.targets.find((t) => t.address.toLowerCase() === A.oneInch.toLowerCase());
+  if (!role || !target) return "missing";
 
-/** Assets the modifier will accept as `desc.dstToken`, from its own log. */
-const PERMITTED_DST = [
-  ...DOC_TOKENS.map((t) => t.address),
-  HOP_TOKENS["USDC.e"],
-  "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", // WPOL — buyable, never sellable
-];
-
-/**
- * Everything that would make the modifier reject this, said before the wallet
- * opens rather than as an opaque revert after signing. The first three are the
- * permission itself; the rest are the difference between valid calldata and
- * the calldata for THIS leg.
- */
-export const validateDocSwap = (
-  call: DocSwapCalldata,
-  intent: DocSwapIntent,
-): string[] => {
-  const problems: string[] = [];
-  const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
-
-  if (!PERMITTED_DST.some((a) => same(a, call.dstToken))) {
-    problems.push(
-      `The modifier only allows buying the six whitelisted assets, and this buys ${shortAddr(call.dstToken)}.`,
-    );
-  }
-  if (!same(call.dstReceiver, A.safe)) {
-    problems.push(
-      `Proceeds must land in the Safe. This sends them to ${shortAddr(call.dstReceiver)} — set the receiver to ${shortAddr(A.safe)} when you build the swap.`,
-    );
-  }
-  if (!same(call.srcToken, intent.sell.address)) {
-    problems.push(
-      `This leg sells ${intent.sell.symbol}, but the calldata sells ${docToken(call.srcToken)?.symbol ?? shortAddr(call.srcToken)}.`,
-    );
-  }
-  if (!same(call.dstToken, intent.buy.address)) {
-    problems.push(
-      `This leg buys ${intent.buy.symbol}, but the calldata buys ${docToken(call.dstToken)?.symbol ?? shortAddr(call.dstToken)}.`,
-    );
-  }
-  // A pathfinder quote is taken at a round number, so an exact match is too
-  // strict; a leg that is materially the wrong size is not.
-  if (intent.amount > 0n) {
-    const drift =
-      Number((call.amount * 10000n) / intent.amount) / 10000 - 1;
-    if (Math.abs(drift) > 0.02) {
-      problems.push(
-        `This leg sells ${fmtUnits(intent.amount, intent.sell.decimals)} ${intent.sell.symbol}, ` +
-          `but the calldata sells ${fmtUnits(call.amount, intent.sell.decimals)} — ${(drift * 100).toFixed(1)}% off.`,
-      );
+  const rules = DOC_UNOSWAP_RULES;
+  const check = (
+    selector: string,
+    dexSlots: { index: number; words: bigint[] }[],
+  ): DocGrantState => {
+    const fn = target.functions.find((f) => f.sighash.toLowerCase() === selector.toLowerCase());
+    if (!fn) return "missing";
+    if (fn.wildcarded) return "different";
+    const param = (index: number) => fn.parameters.find((p) => Number(p.index) === index);
+    const to = param(0);
+    if (!to || to.comparison !== ParamComparison.EQUAL_TO || !sameSet(to.comparisonValue, [rules.safeWord])) {
+      return "different";
     }
+    const token = param(1);
+    if (!token || token.comparison !== ParamComparison.ONE_OF || !sameSet(token.comparisonValue, rules.tokenWords)) {
+      return "different";
+    }
+    for (const slot of dexSlots) {
+      const dex = param(slot.index);
+      if (!dex || dex.comparison !== ParamComparison.ONE_OF || !sameSet(dex.comparisonValue, slot.words.map(wordHex))) {
+        return "different";
+      }
+    }
+    return "granted";
+  };
+
+  const states = [
+    check(UNOSWAP_TO_SELECTOR, [{ index: 4, words: rules.directWords }]),
+    check(UNOSWAP_TO2_SELECTOR, [
+      { index: 4, words: rules.firstHopWords },
+      { index: 5, words: rules.secondHopWords },
+    ]),
+  ];
+  if (states.every((s) => s === "granted")) return "granted";
+  if (states.every((s) => s === "missing")) return "missing";
+  return "different";
+};
+
+/* -------------------------------------------------------------------------- */
+/* Sequencing a plan into one transaction                                     */
+/* -------------------------------------------------------------------------- */
+
+/** One leg of the plan, as the sequencer needs to see it. */
+export interface DocLeg {
+  kind: "approve" | "aaveWithdraw" | "swap" | "aaveSupply";
+  /** The call as it stands. Swap and deposit legs are rebuilt from the sequence. */
+  inner: DocInner;
+  /** A swap leg: what it sells, for what, and through which route. */
+  swap?: {
+    route: DocRoute;
+    sell: DocToken;
+    buy: DocToken;
+    amountIn: bigint;
+    sellPrice: number;
+    buyPrice: number;
+  };
+  /** A deposit leg: the asset and the amount the plan asked for. */
+  supply?: { token: DocToken; planned: bigint };
+}
+
+export interface DocSequencedLeg {
+  inner: DocInner;
+  /** Set on a swap: priced against the state the legs before it leave behind. */
+  quote: DocQuote | null;
+  /** Why this leg cannot go out in the batch, if it cannot. */
+  problem: string | null;
+}
+
+/** Endpoints that serve eth_simulateV1 on Polygon, tried after the app's own. */
+const SIMULATE_FALLBACK_RPCS = ["https://polygon-bor-rpc.publicnode.com"];
+
+interface SimulatedCall {
+  ok: boolean;
+  returnData: string;
+}
+
+/**
+ * Run `calls` one after another, from the Safe, in a single simulated block
+ * on top of the latest Polygon state — the way they would run inside one
+ * batch. Nothing is sent and the modifier is not involved (the Safe is the
+ * sender), so this answers "what does each leg return, given the legs in
+ * front of it", which a plain eth_call per leg cannot.
+ */
+export const simulateFromSafe = async (calls: { to: string; data: string }[]): Promise<SimulatedCall[]> => {
+  const params = [
+    {
+      blockStateCalls: [
+        {
+          calls: calls.map((c) => ({ from: A.safe, to: c.to, data: c.data, gas: "0x4c4b40" })),
+        },
+      ],
+      validation: false,
+      traceTransfers: false,
+    },
+    "latest",
+  ];
+  const parse = (result: any): SimulatedCall[] => {
+    const out = result?.[0]?.calls;
+    if (!Array.isArray(out) || out.length !== calls.length) {
+      throw new Error("The simulation came back incomplete.");
+    }
+    return out.map((c: any) => ({ ok: c.status === "0x1", returnData: c.returnData ?? "0x" }));
+  };
+  try {
+    return parse(await rpcRequestOn(DOC.CHAIN, "eth_simulateV1", params));
+  } catch (firstError) {
+    for (const url of SIMULATE_FALLBACK_RPCS) {
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_simulateV1", params }),
+        });
+        const json = await response.json();
+        if (!json.error) return parse(json.result);
+      } catch {
+        // next endpoint
+      }
+    }
+    throw firstError;
   }
-  if (call.minReturn === 0n) {
-    problems.push(
-      "minReturn is zero, so this would accept any fill at all. Rebuild the swap with a slippage limit.",
-    );
-  }
-  return problems;
 };
 
 /**
- * The step this calldata becomes. The program is passed through byte for byte
- * — it is a signed-off artefact from the router's own pathfinder, and editing
- * any of it would only make the swap fail in the executor.
+ * Size a whole plan to go out as ONE transaction.
+ *
+ * Quoting each leg on its own overstates the later ones: the second clip of a
+ * PAXG sale meets a pool the first clip has already moved, and the deposit at
+ * the end is funded by swaps that hand back a little less than the plan's
+ * oracle estimate. Inside a single batch nothing can be re-priced between
+ * legs, so every number is fixed up front by simulating the legs in order:
+ *
+ *   · each swap is priced through EVERY listed route for its pair against the
+ *     state the legs before it leave behind, and takes the best — so clips
+ *     spread across pools as one pool gets moved, instead of all draining the
+ *     route that looked best before anything traded; its floor becomes that
+ *     price minus the operator's tolerance;
+ *   · the deposit is sized from the Safe's simulated balance at that point,
+ *     less everything the swaps in front of it are allowed to come in short
+ *     by — so it still fits if every one of them fills at its floor.
+ *
+ * A leg that would revert, or prices past the tolerance, is reported rather
+ * than sent: in one batch it would take every other leg down with it.
  */
-export const docOneInchSwap = (
-  call: DocSwapCalldata,
-  hex: string,
-  src: DocToken,
-  dst: DocToken,
-): DocInner => ({
-  to: A.oneInch,
-  data: hex.trim(),
-  sig: "AggregationRouterV6.swap(executor, desc, data)",
-  params: [
-    { k: "sell", v: `${fmtUnits(call.amount, src.decimals)} ${src.symbol}` },
-    { k: "buy", v: dst.symbol },
-    { k: "dstReceiver", v: `Safe ${shortAddr(A.safe)}`, pinned: true },
-    { k: "minReturn", v: `${fmtUnits(call.minReturn, dst.decimals)} ${dst.symbol}` },
-    { k: "executor", v: shortAddr(call.executor) },
-    { k: "route", v: `1inch program, ${(call.program.length - 2) / 2} bytes` },
-  ],
-});
+export const sequenceDocPlan = async (
+  legs: DocLeg[],
+  tolerancePct: number,
+): Promise<DocSequencedLeg[]> => {
+  /** The calls that run before the leg being priced, as they will in the batch. */
+  const prefix: { to: string; data: string }[] = [];
+  const lastResult = async (call: { to: string; data: string }) => {
+    const results = await simulateFromSafe([...prefix, call]);
+    return results[results.length - 1];
+  };
+  // How far below the simulated outcome each token may land once every swap
+  // into it fills at its floor rather than at the simulated price.
+  const shortfall: Record<string, bigint> = {};
+  const out: DocSequencedLeg[] = [];
+
+  for (const leg of legs) {
+    if (leg.kind === "swap" && leg.swap) {
+      const { sell, buy, amountIn, sellPrice, buyPrice } = leg.swap;
+      const priced = await Promise.all(
+        routeCandidates(sell.symbol, buy.symbol).map(async (route) => {
+          const data = encodeUnoswap(route, sell, amountIn, 1n);
+          const result = await lastResult({ to: A.oneInch, data });
+          return { route, data, amountOut: result.ok ? BigInt(result.returnData) : 0n };
+        }),
+      );
+      const best = priced.reduce<(typeof priced)[number] | null>(
+        (a, b) => (!a || b.amountOut > a.amountOut ? b : a),
+      null,
+      );
+      if (!best || best.amountOut <= 0n) {
+        out.push({
+          inner: leg.inner,
+          quote: null,
+          problem: `${sell.symbol} → ${buy.symbol} would revert at this point in the plan.`,
+        });
+        continue;
+      }
+      prefix.push({ to: A.oneInch, data: best.data });
+      const valueIn = Number(ethers.formatUnits(amountIn, sell.decimals)) * sellPrice;
+      const valueOut = Number(ethers.formatUnits(best.amountOut, buy.decimals)) * buyPrice;
+      const quote: DocQuote = {
+        route: best.route,
+        amountIn,
+        amountOut: best.amountOut,
+        slippagePct: valueIn ? ((valueOut - valueIn) / valueIn) * 100 : 0,
+      };
+      const minReturn = minReturnFor(quote, tolerancePct);
+      const key = buy.address.toLowerCase();
+      shortfall[key] = (shortfall[key] ?? 0n) + (best.amountOut - minReturn);
+      const inner = docInner.unoswap(sell, buy, quote, minReturn);
+      const invalid = validateDocUnoswap(inner.data, { sell, buy, amount: amountIn });
+      let problem: string | null = invalid[0] ?? null;
+      if (!problem && quote.slippagePct < -tolerancePct) {
+        problem =
+          `${sell.symbol} → ${buy.symbol} prices ${quote.slippagePct.toFixed(2)}% at this point in the plan, ` +
+          `past your ${tolerancePct}% limit. Raise the limit or rebuild the plan smaller.`;
+      }
+      out.push({ inner, quote, problem });
+      continue;
+    }
+
+    if (leg.kind === "aaveSupply" && leg.supply) {
+      const { token, planned } = leg.supply;
+      // The deposit's size is what this sequence leaves in the Safe, so the
+      // simulation reads the balance where the deposit would run.
+      const result = await lastResult({
+        to: token.address,
+        data: IF.erc20.encodeFunctionData("balanceOf", [A.safe]),
+      });
+      const simulated = result.ok ? BigInt(result.returnData) : 0n;
+      const safe = simulated - (shortfall[token.address.toLowerCase()] ?? 0n);
+      const amount = planned < safe ? planned : safe;
+      if (amount <= 0n) {
+        out.push({
+          inner: leg.inner,
+          quote: null,
+          problem: `The swaps in front of it leave no ${token.symbol} to deposit.`,
+        });
+        continue;
+      }
+      const inner = docInner.aaveSupply(token, amount);
+      prefix.push({ to: inner.to, data: inner.data });
+      out.push({ inner, quote: null, problem: null });
+      continue;
+    }
+
+    const result = await lastResult({ to: leg.inner.to, data: leg.inner.data });
+    if (result.ok) prefix.push({ to: leg.inner.to, data: leg.inner.data });
+    out.push({
+      inner: leg.inner,
+      quote: null,
+      problem: result.ok ? null : `${leg.inner.sig} would revert at this point in the plan.`,
+    });
+  }
+  return out;
+};
