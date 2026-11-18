@@ -1018,7 +1018,9 @@ const primaryAction = computed(() => {
       if (finalizeRef.value?.isDone) return undefined;
       return {
         label: "Finalize",
-        enabled: true,
+        // Off while a test-funds return permission is left open: see the
+        // step's own notice.
+        enabled: !finalizeRef.value?.isBlocked,
         loading: !!finalizeRef.value?.isFinalizing,
         run: () => finalizeRef.value?.finalize(),
       };

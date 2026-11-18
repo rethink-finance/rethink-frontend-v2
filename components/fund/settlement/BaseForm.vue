@@ -35,16 +35,28 @@
       <div v-if="validationError" class="request_deposit__error">
         {{ validationError }}
       </div>
-      <div class="request_deposit__caption">
-        Balance ·
+      <div
+        class="request_deposit__caption"
+        :class="{ 'request_deposit__caption--split': isOneToOne }"
+      >
+        <slot name="token0-label">
+          {{ token0BalanceLabel }}
+        </slot>
+        <span v-if="!isOneToOne"> · </span>
         <button
           type="button"
           class="request_deposit__balance_button"
           @click="setTokenValue(token0UserBalanceFormatted)"
         >
-          {{ token0UserBalanceFormatted }} {{ token0.symbol }}
+          {{ token0BalanceShown }} {{ token0.symbol }}
         </button>
       </div>
+    </div>
+
+    <!-- Between the two fields when they are two accounts, not two assets:
+         the arrow says the amount moves from one to the other. -->
+    <div v-if="isOneToOne" class="request_deposit__direction" aria-hidden="true">
+      ↓
     </div>
 
     <div class="request_deposit__field">
@@ -66,30 +78,45 @@
           </v-tooltip>
         </div>
         <div class="request_deposit__estimate">
-          ≈
-          <v-progress-circular
-            v-if="isExchangeRateLoading"
-            size="14"
-            width="2"
-            indeterminate
-          />
+          <template v-if="isOneToOne">
+            +{{ tokenValue || "0" }}
+          </template>
           <template v-else>
-            {{ calculatedToken1Value }}
+            ≈
+            <v-progress-circular
+              v-if="isExchangeRateLoading"
+              size="14"
+              width="2"
+              indeterminate
+            />
+            <template v-else>
+              {{ calculatedToken1Value }}
+            </template>
           </template>
         </div>
       </div>
-      <div class="request_deposit__caption">
-        Balance · {{ token1UserBalanceFormatted }} {{ token1.symbol }}
+      <div
+        class="request_deposit__caption"
+        :class="{ 'request_deposit__caption--split': isOneToOne }"
+      >
+        <slot name="token1-label">
+          {{ token1BalanceLabel }}
+        </slot>
+        <span v-if="!isOneToOne"> · </span>
+        <span>{{ token1BalanceShown }} {{ token1.symbol }}</span>
       </div>
-      <div v-if="isExchangeRateLoading" class="request_deposit__caption">
-        <v-skeleton-loader type="text" class="request_deposit__text_skeleton" />
-      </div>
-      <div v-else class="request_deposit__caption">
-        {{ exchangeRateText }}
-      </div>
+      <template v-if="!isOneToOne">
+        <div v-if="isExchangeRateLoading" class="request_deposit__caption">
+          <v-skeleton-loader type="text" class="request_deposit__text_skeleton" />
+        </div>
+        <div v-else class="request_deposit__caption">
+          {{ exchangeRateText }}
+        </div>
+      </template>
     </div>
 
-    <div class="buttons_container">
+    <!-- Left out only between two accounts; deposit and redeem keep the row. -->
+    <div v-if="!isOneToOne" class="buttons_container">
       <slot name="buttons" />
     </div>
   </div>
@@ -135,6 +162,24 @@ const props = defineProps({
   rules: {
     type: Array as PropType<RulesArray>,
     default: () => [],
+  },
+  /** Whose balance each caption is. Deposit and redeem show the user's. */
+  token0BalanceLabel: {
+    type: String,
+    default: "Balance",
+  },
+  token1BalanceLabel: {
+    type: String,
+    default: "Balance",
+  },
+  /**
+   * The same asset moving between two accounts rather than one asset priced
+   * in another: the second field shows the exact amount arriving, and there
+   * is no rate to quote.
+   */
+  isOneToOne: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -199,6 +244,23 @@ const token0UserBalanceFormatted = computed(() => {
 const token1UserBalanceFormatted = computed(() => {
   return formatTokenValue(props.token1UserBalance, props.token1.decimals,false);
 });
+
+/**
+ * What the captions read. Between two accounts the balances are often a
+ * whole wallet's worth of 18-decimal dust, so they are rounded and commified;
+ * clicking still types the exact balance. Deposit and redeem keep showing the
+ * exact figure they always have.
+ */
+const token0BalanceShown = computed(() =>
+  props.isOneToOne
+    ? formatTokenValue(props.token0UserBalance, props.token0.decimals, true, true)
+    : token0UserBalanceFormatted.value,
+);
+const token1BalanceShown = computed(() =>
+  props.isOneToOne
+    ? formatTokenValue(props.token1UserBalance, props.token1.decimals, true, true)
+    : token1UserBalanceFormatted.value,
+);
 
 const exchangeRateText = computed((): string => {
   return getExchangeRateText(props.exchangeRate, props.token0.symbol, props.token1.symbol)
@@ -316,6 +378,25 @@ const calculatedToken1Value = computed(() => {
   &__caption {
     font-family: $font-mono;
     font-size: 11.5px;
+    color: $color-steel-blue;
+
+    /* Between two accounts: who on the left, how much on the right. */
+    &--split {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.25rem 0.75rem;
+      flex-wrap: wrap;
+    }
+  }
+
+  /* Pulled into the gap between the fields, so the pair still reads as one
+     form rather than three stacked rows. */
+  &__direction {
+    margin: -0.75rem 0;
+    text-align: center;
+    font-size: 15px;
+    line-height: 1;
     color: $color-steel-blue;
   }
 
