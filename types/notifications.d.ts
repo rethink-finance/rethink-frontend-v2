@@ -4,7 +4,8 @@ import type { ChainId } from "~/types/enums/chain_id";
 export type NotificationKind =
   | "proposal_created"
   | "deposit_ready"
-  | "redemption_ready";
+  | "redemption_ready"
+  | "syc_distribution_ready";
 
 export interface INotification {
   id: number;
