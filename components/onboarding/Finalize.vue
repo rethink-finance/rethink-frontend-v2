@@ -120,101 +120,27 @@
           </p>
         </div>
 
+        <!--
+          Three steps in two columns: the test funds on the left, for the
+          whole height; on the right, what to do with them and then how to
+          check the result. One column, in order, on narrow screens.
+        -->
         <ol class="preflight__steps">
-          <li class="preflight__step">
+          <li class="preflight__step preflight__step--funds">
             <span class="preflight__step_number">1</span>
             <div class="preflight__step_body">
               <h3 class="preflight__step_title">
-                Send test {{ baseSymbol || "denomination asset" }}
+                Move test {{ baseSymbol || "funds" }}
               </h3>
               <p class="preflight__step_text">
-                A small amount from your wallet to the vault's Safe on
-                {{ chainName }}.
+                Send a small amount to the vault's Safe on {{ chainName }}.
+                Return it from here when you are done.
               </p>
 
-              <!--
-                The transfer itself, from the connected wallet: a plain ERC20
-                transfer to the Safe, so the test position can be opened
-                without leaving the flow. The address stays on the panel —
-                a wallet that is not the one connected here still needs it.
-              -->
-              <div class="send">
-                <div class="send__main">
-                  <label class="send__field">
-                    <input
-                      v-model="amount"
-                      class="send__input"
-                      type="text"
-                      inputmode="decimal"
-                      placeholder="0.00"
-                      aria-label="Amount to send"
-                      :disabled="isSending"
-                    >
-                    <span class="send__symbol">{{ baseSymbol || "Token" }}</span>
-                  </label>
-
-                  <div class="send__presets" role="group" aria-label="Preset amounts">
-                    <button
-                      v-for="preset in presets"
-                      :key="preset"
-                      type="button"
-                      class="send__preset"
-                      :class="{ 'send__preset--on': amount === preset }"
-                      :disabled="isSending"
-                      @click="amount = preset"
-                    >
-                      {{ preset }}
-                    </button>
-                  </div>
-
-                  <v-btn
-                    class="send__button bg-primary text-white"
-                    :loading="isSending"
-                    :disabled="!canSend"
-                    @click="sendDenominationAsset"
-                  >
-                    Send
-                  </v-btn>
-                </div>
-
-                <div class="send__meta">
-                  <span class="send__meta_item">
-                    <span class="send__meta_label">Balance</span>
-                    <span class="send__meta_value">
-                      {{ walletBalance !== undefined ? `${walletBalanceDisplay} ${baseSymbol}` : "—" }}
-                    </span>
-                    <button
-                      v-if="walletBalance !== undefined"
-                      type="button"
-                      class="send__meta_action"
-                      :disabled="isSending"
-                      @click="amount = walletBalanceFormatted"
-                    >
-                      Max
-                    </button>
-                  </span>
-
-                  <span class="send__meta_item">
-                    <span class="send__meta_label">To Safe</span>
-                    <span
-                      class="send__meta_value send__meta_value--address"
-                      :class="{ 'send__meta_value--pending': !safeAddress }"
-                      :title="safeAddress"
-                    >
-                      {{ safeAddress ? truncateAddressEllipsis(safeAddress) : "not initialized" }}
-                    </span>
-                    <button
-                      v-if="safeAddress"
-                      type="button"
-                      class="send__meta_action"
-                      :aria-label="safeCopied ? 'Copied' : 'Copy the Safe address'"
-                      @click="copySafeAddress"
-                    >
-                      {{ safeCopied ? "Copied" : "Copy" }}
-                    </button>
-                  </span>
-                </div>
-              </div>
+              <OnboardingTestFunds
+                class="preflight__step_content"
+                @return-role-change="isReturnRoleLeftOpen = $event"
+              />
             </div>
           </li>
 
@@ -224,11 +150,15 @@
               <h3 class="preflight__step_title">
                 Test run the strategy
               </h3>
+              <p class="preflight__step_text">
+                Make a few trades as the vault, by hand or in code.
+              </p>
 
-              <div class="paths">
+              <!-- Two ways in, as rows of one card: neither is the default. -->
+              <div class="paths preflight__step_content">
                 <!-- By hand, through Zodiac's own app: the wordmark is the
                      name, as on the permissions step's library. -->
-                <div class="paths__card">
+                <div class="paths__row">
                   <div class="paths__head">
                     <img
                       class="paths__logo"
@@ -281,7 +211,7 @@
                         </svg>
                         Vaults
                       </span>
-                      and import the Safe contract:
+                      and import the Safe:
                     </span>
                     <span class="paths__safe_row">
                       <span
@@ -294,9 +224,16 @@
                         v-if="safeAddress"
                         type="button"
                         class="paths__copy"
-                        :aria-label="safeCopied ? 'Copied' : 'Copy the Safe contract address'"
+                        :aria-label="safeCopied ? 'Copied' : 'Copy the Safe address'"
                         @click="copySafeAddress"
                       >
+                        <Icon
+                          :icon="safeCopied
+                            ? 'material-symbols:check-rounded'
+                            : 'material-symbols:content-copy-outline-rounded'"
+                          width="0.875rem"
+                          aria-hidden="true"
+                        />
                         {{ safeCopied ? "Copied" : "Copy" }}
                       </button>
                     </span>
@@ -304,7 +241,7 @@
                 </div>
 
                 <!-- Or by code, against the same role. -->
-                <div class="paths__card">
+                <div class="paths__row">
                   <div class="paths__head">
                     <span class="paths__mark">
                       <span class="paths__glyph" aria-hidden="true">
@@ -314,7 +251,7 @@
                     </span>
                     <a
                       class="paths__link"
-                      :href="DOCS_URL"
+                      :href="ALGO_DOCS_URL"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -334,24 +271,24 @@
             </div>
           </li>
 
-          <li class="preflight__step">
+          <li class="preflight__step preflight__step--check">
             <span class="preflight__step_number">3</span>
             <div class="preflight__step_body">
               <h3 class="preflight__step_title">
-                Check the simulated values
+                Check the NAV values
               </h3>
               <p class="preflight__step_text">
-                With dust amounts sitting in the test positions, go back to
-                NAV methods and confirm each method returns the right value.
+                With dust in the test positions, confirm each NAV method
+                returns the right simulated value.
               </p>
               <button
                 type="button"
-                class="paths__link paths__link--button"
+                class="preflight__back preflight__step_content"
                 @click="emit('go-to-step', OnboardingStep.NavMethods)"
               >
                 <Icon
                   icon="material-symbols:arrow-back-rounded"
-                  width="0.9375rem"
+                  width="1rem"
                   aria-hidden="true"
                 />
                 Back to NAV methods
@@ -365,16 +302,12 @@
 </template>
 
 <script setup lang="ts">
-import { ethers } from "ethers";
-import { ERC20 } from "assets/contracts/ERC20";
 import { useToastStore } from "~/store/toasts/toast.store";
 import { useAccountStore } from "~/store/account/account.store";
-import { useWeb3Store } from "~/store/web3/web3.store";
 import { useCreateFundStore } from "~/store/create-fund/createFund.store";
 import { useFundStore } from "~/store/fund/fund.store";
 import { networksMap } from "~/store/web3/networksMap";
 import { usePageNavigation } from "~/composables/routing/usePageNavigation";
-import { truncateAddressEllipsis } from "~/composables/addressUtils";
 import { OnboardingStep } from "~/types/enums/stepper_onboarding";
 import type { ChainId } from "~/types/enums/chain_id";
 import {
@@ -384,6 +317,7 @@ import {
   pickFirstNavRole,
   type IFirstNavRoute,
 } from "~/composables/onboarding/finalizeCalls";
+import { isReturnRoleOpen } from "~/composables/onboarding/returnRoleProbe";
 import {
   RolesVersion,
   detectRolesVersion,
@@ -413,7 +347,6 @@ const fundStore = useFundStore();
 const toastStore = useToastStore();
 const createFundStore = useCreateFundStore();
 const accountStore = useAccountStore();
-const web3Store = useWeb3Store();
 
 const { fundChainId, fundSettings, fundFactoryContract } =
   storeToRefs(createFundStore);
@@ -421,11 +354,54 @@ const { navigateToFundDetails } = usePageNavigation();
 
 /** Zodiac's own app: permissions and manual execution for any protocol. */
 const ZODIAC_APP_URL = "https://app.zodiac.eco/";
-const DOCS_URL = "https://docs.rethink.finance/rethink.finance";
+/** Running the strategy in code: the docs page on algorithmic and AI execution. */
+const ALGO_DOCS_URL = "https://docs.rethink.finance/execution/algo-ai";
 
 const isFetchingNewlyCreatedFundSettings = ref(false);
 const isFinalizingFundCreation = ref(false);
 const isFundCreateFinalized = ref(false);
+
+/**
+ * A test-funds return that stopped after granting its role. Finalizing then
+ * would hand the live vault a way to move that amount out — the factory can
+ * revoke it only until finalize — so the button waits until it is removed.
+ */
+const isReturnRoleLeftOpen = ref(false);
+const RETURN_ROLE_OPEN_MESSAGE =
+  "A test-funds return permission is still open. Remove it in step 1 before finalizing.";
+
+/**
+ * The same check at click time, straight from the chain. "unknown" when no
+ * RPC answers: that blocks too, since finalizing over an open permission
+ * cannot be undone.
+ */
+const returnRoleStateOnChain = async (): Promise<"open" | "closed" | "unknown"> => {
+  const account = accountStore.activeAccountAddress;
+  const rolesModAddress = createFundStore.fundInitCache?.rolesModifier;
+  const tokenAddress = fundSettings?.value?.baseToken;
+  if (!account || !tokenAddress || !rolesModAddress || isZeroAddress(rolesModAddress)) {
+    // No modifier yet means no permission could have been granted.
+    return "closed";
+  }
+  try {
+    const version = await detectRolesVersion(
+      fundChainId.value as ChainId,
+      rolesModAddress,
+      createFundStore.fundFactoryContractV2Used ? RolesVersion.V2 : RolesVersion.V1,
+    );
+    const open = await isReturnRoleOpen({
+      chainId: fundChainId.value as ChainId,
+      version: version === RolesVersion.V1 ? "V1" : "V2",
+      rolesModAddress,
+      member: account,
+      tokenAddress,
+    });
+    return open ? "open" : "closed";
+  } catch (error) {
+    console.warn("Could not check for an open return permission", error);
+    return "unknown";
+  }
+};
 
 const safeAddress = computed(() => fundSettings?.value?.safe ?? "");
 const baseSymbol = computed(() => fundSettings?.value?.baseSymbol ?? "");
@@ -433,135 +409,6 @@ const baseSymbol = computed(() => fundSettings?.value?.baseSymbol ?? "");
 const chainName = computed(
   () => networksMap[fundChainId.value as ChainId]?.chainName ?? "this network",
 );
-
-/**
- * The amounts offered as one click. A test position is meant to be small, so
- * the ladder is set by what the denomination asset is worth per unit rather
- * than by its decimals — three digits of USDC and three digits of WBTC are not
- * the same test.
- */
-const PRESETS_BY_SYMBOL: Record<string, string[]> = {
-  btc: ["0.001", "0.005", "0.01"],
-  eth: ["0.01", "0.05", "0.1"],
-  stable: ["1", "5", "10"],
-};
-
-const presetGroup = (symbol: string): keyof typeof PRESETS_BY_SYMBOL => {
-  const ticker = symbol.toUpperCase();
-  if (ticker.includes("BTC")) return "btc";
-  if (ticker.includes("ETH")) return "eth";
-  return "stable";
-};
-
-const presets = computed(() => PRESETS_BY_SYMBOL[presetGroup(baseSymbol.value)]);
-
-const amount = ref("");
-const isSending = ref(false);
-const walletBalance = ref<bigint | undefined>(undefined);
-
-const baseTokenAddress = computed(() => fundSettings?.value?.baseToken ?? "");
-const baseDecimals = computed<number | undefined>(
-  () => fundSettings?.value?.baseDecimals,
-);
-
-const baseTokenContract = computed(() => {
-  if (!baseTokenAddress.value || !fundChainId.value) return undefined;
-  return web3Store.getCustomContract(
-    fundChainId.value,
-    ERC20,
-    baseTokenAddress.value,
-  );
-});
-
-/** Uncommified and exact, so Max types a value the input accepts. */
-const walletBalanceFormatted = computed(() =>
-  formatTokenValue(walletBalance.value, baseDecimals.value, false),
-);
-
-/** What the line reads: commified, rounded — a balance, not a calldata. */
-const walletBalanceDisplay = computed(() =>
-  formatTokenValue(walletBalance.value, baseDecimals.value, true, true),
-);
-
-const amountWei = computed(() => {
-  if (baseDecimals.value === undefined) return 0n;
-  try {
-    return ethers.parseUnits(amount.value || "0", baseDecimals.value);
-  } catch {
-    // Mid-typing values ("0.", "1.2.3") land here; the button just stays off.
-    return 0n;
-  }
-});
-
-const canSend = computed(
-  () =>
-    !isSending.value &&
-    !!safeAddress.value &&
-    !!baseTokenContract.value &&
-    amountWei.value > 0n &&
-    (walletBalance.value === undefined || amountWei.value <= walletBalance.value),
-);
-
-const fetchWalletBalance = async () => {
-  const account = accountStore.activeAccountAddress;
-  if (!account || !baseTokenContract.value) {
-    walletBalance.value = undefined;
-    return;
-  }
-  try {
-    walletBalance.value = BigInt(
-      await web3Store.callWithRetry(fundChainId.value, () =>
-        baseTokenContract.value?.methods.balanceOf(account).call(),
-      ),
-    );
-  } catch (error: any) {
-    console.error("Failed reading the denomination asset balance", error);
-    walletBalance.value = undefined;
-  }
-};
-
-watch(
-  () => [accountStore.activeAccountAddress, baseTokenAddress.value],
-  () => fetchWalletBalance(),
-  { immediate: true },
-);
-
-const sendDenominationAsset = async () => {
-  if (!canSend.value || !baseTokenContract.value) return;
-  isSending.value = true;
-
-  try {
-    await baseTokenContract.value
-      .send("transfer", {}, safeAddress.value, amountWei.value)
-      .on("transactionHash", () => {
-        toastStore.addToast(
-          "The transaction has been submitted. Please wait for it to be confirmed.",
-        );
-      })
-      .on("receipt", (receipt: any) => {
-        if (receipt.status) {
-          toastStore.successToast(
-            `Sent ${amount.value} ${baseSymbol.value} to the vault's Safe.`,
-          );
-          amount.value = "";
-          fetchWalletBalance();
-        } else {
-          toastStore.errorToast("The transfer has failed.");
-        }
-        isSending.value = false;
-      })
-      .on("error", (error: any) => {
-        console.error("error sending the denomination asset", error);
-        isSending.value = false;
-        if (error?.code !== 4001) {
-          toastStore.errorToast("The transfer has failed.");
-        }
-      });
-  } catch (error: any) {
-    console.error(error);
-    isSending.value = false;
-  }
-};
 
 const safeCopied = ref(false);
 let safeCopiedTimer: ReturnType<typeof setTimeout> | undefined;
@@ -834,6 +681,22 @@ const finalizeCreateFund = async ({ skipFirstNav = false } = {}) => {
   isFinalizingFundCreation.value = true;
   hasBatchFailed.value = false;
 
+  if (isReturnRoleLeftOpen.value) {
+    isFinalizingFundCreation.value = false;
+    return toastStore.errorToast(RETURN_ROLE_OPEN_MESSAGE);
+  }
+  const returnRoleState = await returnRoleStateOnChain();
+  if (returnRoleState !== "closed") {
+    isFinalizingFundCreation.value = false;
+    if (returnRoleState === "open") {
+      isReturnRoleLeftOpen.value = true;
+      return toastStore.errorToast(RETURN_ROLE_OPEN_MESSAGE);
+    }
+    return toastStore.errorToast(
+      "Could not confirm that the test-funds return permission is removed. Check your connection and try again.",
+    );
+  }
+
   try {
     // Resolved again at click time: the wallet may have changed since mount.
     const plan = skipFirstNav ? undefined : await refreshFirstNavPlan();
@@ -932,6 +795,7 @@ defineExpose({
   finalize: () => finalizeCreateFund(),
   isFinalizing: isFinalizingFundCreation,
   isDone: isFundCreateFinalized,
+  isBlocked: isReturnRoleLeftOpen,
 });
 </script>
 
@@ -1091,19 +955,47 @@ defineExpose({
     }
   }
 
+  /* Step 1 holds the left column for its whole height; steps 2 and 3 stack
+     on the right. The funds form needs no more width than its amount and
+     button, so that column is capped and the other takes the rest. */
   &__steps {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
+    display: grid;
+    grid-template-columns: minmax(0, 23rem) minmax(0, 1fr);
+    grid-template-areas:
+      "funds run"
+      "funds check";
+    // Spare height from a tall step 1 goes under step 3, not between 2 and 3.
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    gap: 1.75rem 2.5rem;
     margin: 0;
     padding: 0;
     list-style: none;
+
+    @media (max-width: 900px) {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "funds"
+        "run"
+        "check";
+      grid-template-rows: none;
+      gap: 1.75rem;
+    }
   }
 
   &__step {
     display: flex;
     align-items: flex-start;
     gap: 0.875rem;
+    grid-area: run;
+
+    &--funds {
+      grid-area: funds;
+    }
+
+    &--check {
+      grid-area: check;
+    }
   }
 
   /* Same disc the Zodiac walkthrough numbers its steps with. */
@@ -1117,6 +1009,7 @@ defineExpose({
     margin-top: 1px;
     border: 1px solid $color-cyan-line;
     border-radius: 999px;
+    background: $color-cyan-tint;
     font-family: $font-mono;
     font-size: 12px;
     color: $color-cyan;
@@ -1125,9 +1018,47 @@ defineExpose({
   &__step_body {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.375rem;
     min-width: 0;
     flex: 1;
+  }
+
+  /* Whatever the step hands the user — a form, a card, a button — sits a
+     beat below its title and line of text. */
+  &__step_content {
+    margin-top: 0.625rem;
+  }
+
+  /* The way back to NAV methods: a real button, not a link in a sentence,
+     because going back is the step. */
+  &__back {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 0.5rem;
+    height: 36px;
+    padding: 0 0.875rem 0 0.75rem;
+    border: 1px solid $color-line-2;
+    border-radius: $default-border-radius;
+    background: $color-card-background;
+    font-size: 13px;
+    font-weight: 500;
+    color: $color-white;
+    cursor: pointer;
+    transition:
+      border-color $default-transition-time ease,
+      color $default-transition-time ease;
+
+    svg {
+      color: $color-cyan;
+    }
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      border-color: $color-cyan-line;
+      color: $color-cyan;
+    }
   }
 
   &__step_title {
@@ -1138,7 +1069,6 @@ defineExpose({
   }
 
   &__step_text {
-    max-width: 78ch;
     font-size: 13.5px;
     line-height: 1.6;
     color: $color-steel-blue;
@@ -1146,221 +1076,23 @@ defineExpose({
 
 }
 
-/* The transfer panel: an amount, three sizes of "small", and where it goes.
-   The Safe reads truncated but copies whole — it is also the way to send
-   from a wallet that is not the one connected here. */
-.send {
+/* The two ways to run the test, as rows of one card. */
+.paths {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.875rem;
   border: 1px solid $color-line-2;
   border-radius: $default-border-radius;
   background: $color-card-background;
 
-  &__main {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  &__field {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-    min-width: 180px;
-    max-width: 260px;
-    height: 40px;
-    padding: 0 0.875rem;
-    border: 1px solid $color-line-2;
-    border-radius: $default-border-radius;
-    background: $color-gray-light-transparent;
-    cursor: text;
-    transition: border-color $default-transition-time ease;
-
-    &:focus-within {
-      border-color: $color-cyan-line;
-    }
-  }
-
-  /* The global `:root input` rule sets a 2.5rem min-height and its own
-     padding, so height, min-height and padding are all restated here. */
-  &__input {
-    width: 100%;
-    min-width: 0;
-    height: 38px;
-    min-height: 38px;
-    padding: 0;
-    border: none;
-    background: none;
-    font-family: $font-mono;
-    font-size: 15px;
-    color: $color-white;
-
-    &::placeholder {
-      color: $color-steel-blue;
-      opacity: 0.6;
-    }
-
-    &:focus,
-    &:focus-visible {
-      outline: none;
-    }
-  }
-
-  &__symbol {
-    flex: none;
-    font-family: $font-mono;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    color: $color-steel-blue;
-  }
-
-  &__presets {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-  }
-
-  &__preset {
-    height: 32px;
-    padding: 0 0.75rem;
-    border: 1px solid $color-line-2;
-    border-radius: 999px;
-    background: none;
-    font-family: $font-mono;
-    font-size: 11.5px;
-    color: $color-steel-blue;
-    cursor: pointer;
-    transition:
-      border-color $default-transition-time ease,
-      background-color $default-transition-time ease,
-      color $default-transition-time ease;
-
-    &:hover,
-    &:focus-visible {
-      outline: none;
-      border-color: $color-cyan-line;
-      color: $color-white;
-    }
-
-    &--on {
-      border-color: $color-cyan-line;
-      background: $color-cyan-tint;
-      color: $color-cyan;
-    }
-  }
-
-  &__button {
-    height: 40px !important;
-    min-width: 96px;
-    margin-left: auto;
-    font-size: 13px;
-    letter-spacing: 0.02em;
-    text-transform: none;
-  }
-
-  /* Two facts under the form, pushed to the corners: what the wallet has,
-     where it goes. */
-  &__meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem 1.5rem;
-    flex-wrap: wrap;
-    padding-top: 0.75rem;
-    border-top: 1px solid $color-line;
-  }
-
-  &__meta_item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-  }
-
-  &__meta_label {
-    font-family: $font-mono;
-    font-size: 10.5px;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-  }
-
-  &__meta_value {
-    font-family: $font-mono;
-    font-size: 12px;
-    color: $color-white;
-
-    &--address {
-      color: $color-cyan;
-    }
-
-    &--pending {
-      color: $color-steel-blue;
-    }
-  }
-
-  &__meta_action {
-    flex: none;
-    padding: 0.125rem 0.4375rem;
-    border: 1px solid $color-line-2;
-    border-radius: $default-border-radius;
-    background: none;
-    font-family: $font-mono;
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: $color-steel-blue;
-    cursor: pointer;
-    transition:
-      border-color $default-transition-time ease,
-      color $default-transition-time ease;
-
-    &:hover,
-    &:focus-visible {
-      outline: none;
-      border-color: $color-cyan-line;
-      color: $color-white;
-    }
-  }
-
-  @media (max-width: 720px) {
-    &__field {
-      max-width: none;
-      flex-basis: 100%;
-    }
-
-    &__button {
-      margin-left: 0;
-    }
-  }
-}
-
-/* The two ways to run the test, side by side because neither is the
-   default — one proves the permissions, the other the valuation. */
-.paths {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 0.25rem;
-
-  @media (max-width: 900px) {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  &__card {
+  &__row {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding: 1rem;
-    border: 1px solid $color-line-2;
-    border-radius: $default-border-radius;
-    background: $color-card-background;
+    padding: 1rem 1.125rem;
+
+    + .paths__row {
+      border-top: 1px solid $color-line;
+    }
   }
 
   /* The card's name on the left, its way out on the right. */
@@ -1469,6 +1201,9 @@ defineExpose({
   }
 
   &__copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     flex: none;
     padding: 0;
     border: none;
@@ -1522,9 +1257,7 @@ defineExpose({
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .send__field,
-  .send__preset,
-  .send__meta_action,
+  .preflight__back,
   .paths__copy,
   .paths__link {
     transition: none;

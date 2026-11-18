@@ -237,7 +237,7 @@ const rpcRequest = async (
  * own (large) default, which is how an action that can never fit a real
  * transaction still "succeeds" in simulation.
  */
-const ethCallFrom = async (
+export const ethCallFrom = async (
   chainId: ChainId,
   from: string,
   to: string,
