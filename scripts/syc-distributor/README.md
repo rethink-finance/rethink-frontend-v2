@@ -71,12 +71,13 @@ wallets. `preview(holders)` shows what a report would send.
 ## Order of operations
 1. Store `role/role-calls-raw.txt` on the vault's Roles modifier (through the factory, before finalizing).
 2. Move the SNI left in the old Safe to the new one.
-3. Finalize and run the first NAV update in ONE transaction from the deployer (`src/tools/FinalizeAndMint.sol`, an
-   EIP-7702 delegate: `run([factory.finalizeCreateFund(), roles.execTransactionWithRole(vault, executeNAVUpdate(navExecutor),
-   defaultManagerRole)])`). Fork-tested: at zero supply a deposit takes the whole Safe, and a deposit request made between
-   finalize and the first NAV update is paid out by that update; once a NAV update exists, deposits only go through at the
-   next one, so nothing can be claimed before the mint. The deposit whitelist is no alternative: the vault takes settings
-   only from the governor.
+3. Finalize from the app's create flow. Its Finalize step sends finalizeCreateFund and the vault's first NAV update as
+   one atomic wallet batch (EIP-5792, `composables/onboarding/finalizeCalls.ts`); the preflight on that step must say
+   the NAV update runs in the same transaction. Fork-tested: at zero supply a deposit takes the whole Safe, and a deposit
+   request made between finalize and the first NAV update is paid out by that update; once a NAV update exists, deposits
+   only go through at the next one, so nothing can be claimed before the mint. Do not finalize from a wallet the step
+   reports as unable to batch, and do not use the "finalize without the NAV update" fallback. The deposit whitelist is no
+   alternative: the vault takes settings only from the governor.
 4. `node scripts/syc-distribution/weekly.mjs`, load `out/<date>/safe-transaction.json` in the admin multisig, sign and
    execute the one-off mint. Do not run another NAV update before it is in.
 5. Every week: the same script, the same steps. It mints what is owed in total minus what has been minted, so a skipped
