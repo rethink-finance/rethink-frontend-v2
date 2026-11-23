@@ -70,6 +70,11 @@ wallets. `preview(holders)` shows what a report would send.
 
 ## Order of operations
 1. Store `role/role-calls-raw.txt` on the vault's Roles modifier (through the factory, before finalizing).
+   Do not save anything from the app's Permissions page afterwards: a save there re-submits the page's whole permission
+   set and overwrites calls stored by hand. On 2026-11-23 a member change made that way rolled the admin multisig's
+   `assignRoles` scope back to a version without SYC-Distributor; `role/restore-admin-assignroles-scope.txt` is the
+   factory call that puts it back (deployer to factory, before finalizing). After any app save, re-read the modifier's
+   ScopeFunction events before going on.
 2. Move the SNI left in the old Safe to the new one.
 3. Finalize from the app's create flow. Its Finalize step sends finalizeCreateFund and the vault's first NAV update as
    one atomic wallet batch (EIP-5792, `composables/onboarding/finalizeCalls.ts`); the preflight on that step must say
