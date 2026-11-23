@@ -10,95 +10,165 @@
     </div>
 
     <p class="dist_lead">
-      Weekly SYC mint to sniETH depositors. The amounts refresh once a day; signers of the admin multisig are told
-      when a mint is due (switch on Telegram under the bell, signed in with your signer wallet).
+      SYC is minted to sniETH depositors by a contract, with nobody signing. It mints the SNI in the Safe that has no SYC
+      against it, split by each depositor's sniETH, and never more SYC than there is SNI.
     </p>
 
-    <div class="dist_row">
-      <v-btn
-        variant="outlined"
-        size="small"
-        :disabled="busy || loading"
-        @click="load"
-      >
-        {{ loading ? "Loading…" : "Refresh" }}
-      </v-btn>
-      <span v-if="dist" class="dist_made">Computed {{ madeText }}</span>
-    </div>
-    <div v-if="loadError" class="dist_notice" :class="{ 'dist_notice--bad': !warming }">
-      {{ loadError }}
-    </div>
-    <div v-if="dist && dist.total === 0n" class="dist_notice">
-      Nothing is due: every wallet has received what it is owed.
+    <div v-if="!distributor" class="dist_notice">
+      The distributor contract is not deployed yet.
     </div>
 
-    <template v-if="dist">
-      <div class="dist_table_wrap">
-        <table class="dist_table">
-          <thead>
-            <tr>
-              <th>Wallet</th>
-              <th>Owed in total</th>
-              <th>Already minted</th>
-              <th>Mint now</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in dist.rows" :key="row.wallet">
-              <td>
-                <a :href="`${SYC.EXPLORER}/address/${row.wallet}`" target="_blank" rel="noopener noreferrer">{{ shortAddress(row.wallet) }}</a>
-              </td>
-              <td>{{ syc(row.owed) }}</td>
-              <td>{{ syc(row.minted) }}</td>
-              <td class="dist_table__key">
-                {{ syc(row.mint) }}
-              </td>
-            </tr>
-            <tr class="dist_table__total">
-              <td>Total</td>
-              <td />
-              <td />
-              <td>{{ syc(dist.total) }} SYC</td>
-            </tr>
-          </tbody>
-        </table>
+    <template v-else>
+      <div v-if="loadError" class="dist_row">
+        <div class="dist_notice dist_notice--bad">
+          {{ loadError }}
+        </div>
+        <v-btn
+          variant="outlined"
+          size="small"
+          :disabled="loading"
+          @click="load"
+        >
+          {{ loading ? "Loading…" : "Try again" }}
+        </v-btn>
       </div>
 
-      <div v-if="chain" class="dist_facts">
-        <span class="dist_kv"><span>Allowance available</span><span>{{ syc(chain.available) }} SYC</span></span>
-        <span class="dist_kv"><span>SNI in the Safe</span><span>{{ syc(chain.safeSni) }}</span></span>
-        <span class="dist_kv"><span>SYC after this mint</span><span>{{ syc(chain.supply + dist.total) }}</span></span>
-      </div>
+      <template v-if="state">
+        <div class="dist_facts">
+          <span class="dist_kv"><span>Waiting</span><span>{{ syc(state.undistributed) }} SNI</span></span>
+          <span class="dist_kv"><span>SYC supply</span><span>{{ syc(state.supply) }}</span></span>
+          <span class="dist_kv"><span>SNI in the Safe</span><span>{{ syc(state.safeSni) }}</span></span>
+          <span class="dist_kv">
+            <span>Contract</span>
+            <a :href="`${SYC.EXPLORER}/address/${distributor}`" target="_blank" rel="noopener noreferrer">{{ shortAddress(distributor) }}</a>
+          </span>
+        </div>
 
-      <div v-for="problem in problems" :key="problem" class="dist_notice dist_notice--bad">
-        {{ problem }}
-      </div>
-      <div v-if="shortfall > 0n" class="dist_notice">
-        After this mint there would be {{ syc(shortfall) }} more SYC than SNI in the Safe.
-      </div>
+        <div
+          v-for="blocker in blockers"
+          :key="blocker"
+          class="dist_notice"
+        >
+          {{ blocker }}
+        </div>
 
-      <v-btn
-        class="bg-primary text-secondary dist_cta"
-        variant="flat"
-        :disabled="!canPropose"
-        @click="propose"
-      >
-        {{ buttonText }}
-      </v-btn>
+        <!-- Who gets what on the next run -->
+        <div class="dist_table_wrap">
+          <table class="dist_table">
+            <thead>
+              <tr>
+                <th>Depositor</th>
+                <th>Share</th>
+                <th>Next distribution</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in state.recipients" :key="r.wallet">
+                <td>
+                  <a :href="`${SYC.EXPLORER}/address/${r.wallet}`" target="_blank" rel="noopener noreferrer">{{ shortAddress(r.wallet) }}</a>
+                </td>
+                <td>{{ pct(r.share) }}</td>
+                <td class="dist_table__key">
+                  {{ syc(r.next) }} SYC
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <div v-if="act.error" class="dist_notice dist_notice--bad">
-        {{ act.error }}
-      </div>
-      <div v-if="act.done" class="dist_done">
-        <Icon icon="octicon:check-circle-fill-16" width="1rem" height="1rem" />
-        <span>{{ act.done }}</span>
-        <a
-          v-if="act.hash && !act.multisig"
-          :href="`${SYC.EXPLORER}/tx/${act.hash}`"
-          target="_blank"
-          rel="noopener noreferrer"
-        >view</a>
-      </div>
+        <div class="dist_row">
+          <v-btn
+            variant="outlined"
+            size="small"
+            :disabled="!canDistribute"
+            @click="distribute"
+          >
+            {{ buttonText }}
+          </v-btn>
+          <v-btn
+            variant="text"
+            size="small"
+            :disabled="loading"
+            @click="load"
+          >
+            {{ loading ? "Loading…" : "Refresh" }}
+          </v-btn>
+          <span class="dist_made">It runs by itself; this button is only a manual nudge.</span>
+        </div>
+        <div v-if="act.error" class="dist_notice dist_notice--bad">
+          {{ act.error }}
+        </div>
+        <div v-if="act.done" class="dist_done">
+          <Icon icon="octicon:check-circle-fill-16" width="1rem" height="1rem" />
+          <span>{{ act.done }}</span>
+          <a
+            v-if="act.hash"
+            :href="`${SYC.EXPLORER}/tx/${act.hash}`"
+            target="_blank"
+            rel="noopener noreferrer"
+          >view</a>
+        </div>
+
+        <!-- Every mint the contract has made -->
+        <div class="dist_history">
+          <div class="dist_history__title">
+            Mints
+            <span v-if="state.mintCount > mints.length">· latest {{ mints.length }} of {{ state.mintCount }}</span>
+          </div>
+          <div v-if="!mints.length" class="dist_notice">
+            No mints yet.
+          </div>
+          <div v-else class="dist_table_wrap">
+            <table class="dist_table">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>To</th>
+                  <th>SYC</th>
+                  <th>Transaction</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="row in historyRows"
+                  :key="row.key"
+                  :class="row.mint ? 'dist_table__group' : 'dist_table__detail'"
+                >
+                  <td>{{ row.mint ? when(row.mint.time) : "" }}</td>
+                  <td>
+                    <template v-if="row.mint">
+                      {{ row.mint.index === 0 ? "First issuance" : "Distribution" }}
+                    </template>
+                    <a
+                      v-else
+                      :href="`${SYC.EXPLORER}/address/${row.wallet}`"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >{{ shortAddress(row.wallet) }}</a>
+                  </td>
+                  <td>{{ syc(row.amount) }}</td>
+                  <td>
+                    <template v-if="row.mint">
+                      <a
+                        v-if="row.mint.tx"
+                        :href="`${SYC.EXPLORER}/tx/${row.mint.tx}`"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >{{ shortAddress(row.mint.tx) }}</a>
+                      <a
+                        v-else
+                        :href="`${SYC.EXPLORER}/block/${row.mint.block}`"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >block {{ row.mint.block }}</a>
+                    </template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
     </template>
   </div>
 </template>
@@ -107,193 +177,109 @@
 import { shortAddress } from "~/composables/execution/oneInchSwap";
 import { SYC, fmtUnits } from "~/composables/execution/sycConsole";
 import {
-  DIST_IF,
-  SYC_DIST,
-  buildMintCall,
-  distributionProblems,
-  distributionShortfall,
-  isContractAccount,
-  parseDistribution,
-  readDistributionChain,
-  type SycDistribution,
-  type SycDistributionChain,
+  buildDistributeCall,
+  distributionBlockers,
+  distributorAddress,
+  readDistributorState,
+  readMints,
+  type SycDistributorState,
+  type SycMint,
 } from "~/composables/execution/sycDistribution";
-import {
-  sendCuratorTransaction,
-  simulateCuratorTransaction,
-  type ICuratorRoute,
-} from "~/composables/permissions/useCuratorExecution";
-import { RolesVersion, type IRoleSimulationResult } from "~/composables/permissions/useRoleExecution";
-import { fetchSycDistribution } from "~/services/backend/sycDistribution";
+import { sendAsSafe } from "~/composables/permissions/useCuratorExecution";
+import { simulateDirectCall } from "~/composables/permissions/useRoleExecution";
 import { useAccountStore } from "~/store/account/account.store";
 
 /**
- * The weekly mint, proposed from the app. The connected account has to hold
- * the admin role on the vault's Roles modifier; today that is one multisig,
- * so a signer connects as that Safe (Safe{Wallet} or WalletConnect) and the
- * transaction lands in its queue for the other signers.
+ * The distributor contract, watched from the console: what is waiting, who
+ * gets what next, and every mint it has made. Minting needs nobody here: a
+ * keeper calls the contract. The one button is the same call, for a day the
+ * keeper is late; whoever presses it has no say in the amounts.
  */
 const accountStore = useAccountStore();
-const ADMIN_ROUTE: ICuratorRoute = {
-  chainId: SYC.CHAIN,
-  rolesModAddress: SYC.ADDR.roles,
-  role: SYC_DIST.ROLE,
-  version: RolesVersion.V2,
-};
+const distributor = distributorAddress();
 
 const syc = (wei: bigint) => fmtUnits(wei, 18, 2);
+const pct = (share: number) => (share > 0 && share < 0.0001 ? "< 0.01%" : `${(share * 100).toFixed(2)}%`);
+const when = (seconds: number) =>
+  new Date(seconds * 1000).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-/* ---------------------------------------------------------- distribution */
+/* ----------------------------------------------------------------- reads */
 
-const dist = ref<SycDistribution | null>(null);
+const state = ref<SycDistributorState | null>(null);
+const mints = ref<SycMint[]>([]);
 const loading = ref(false);
 const loadError = ref("");
-const warming = ref(false);
 const load = async () => {
-  if (loading.value) return;
+  if (!distributor || loading.value) return;
   loading.value = true;
-  loadError.value = "";
-  warming.value = false;
-  Object.assign(act, blank());
   try {
-    const answer = await fetchSycDistribution();
-    if (!answer.ok) {
-      dist.value = null;
-      warming.value = answer.warming;
-      loadError.value = answer.warming
-        ? "The backend is still computing the distribution. Try again in a few minutes."
-        : "The distribution is not available right now: the backend did not answer.";
-      return;
-    }
-    dist.value = parseDistribution(answer.text);
-    await refreshChain();
+    const next = await readDistributorState();
+    state.value = next;
+    mints.value = await readMints(next.mintCount);
+    loadError.value = "";
   } catch (error: any) {
-    dist.value = null;
-    loadError.value = error?.message || "The distribution could not be read.";
+    console.error(error);
+    loadError.value = "Could not read the distributor contract. Try again.";
   } finally {
     loading.value = false;
   }
 };
-const madeText = computed(() =>
-  dist.value
-    ? new Date(dist.value.generatedAt).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-    : "",
+onMounted(load);
+
+/** One table row per mint, followed by one per wallet it paid. */
+const historyRows = computed(() =>
+  mints.value.flatMap((mint) => [
+    { key: `mint:${mint.index}`, mint, wallet: "", amount: mint.total },
+    ...mint.rows.map((row) => ({ key: `${mint.index}:${row.wallet}`, mint: null, wallet: row.wallet, amount: row.amount })),
+  ]),
 );
 
-/* ----------------------------------------------------------------- chain */
-
-const chain = ref<SycDistributionChain | null>(null);
-const chainError = ref("");
-const refreshChain = async () => {
-  try {
-    chain.value = await readDistributionChain();
-    chainError.value = "";
-  } catch (error: any) {
-    console.error(error);
-    chainError.value = "Could not read the vault's state. Try again.";
-  }
-};
-onMounted(async () => {
-  await refreshChain();
-  await load();
+const blockers = computed(() => (state.value ? distributionBlockers(state.value) : []));
+const metaText = computed(() => {
+  if (!distributor) return "Not deployed";
+  if (!state.value) return "";
+  return state.value.mintCount === 1 ? "1 mint so far" : `${state.value.mintCount} mints so far`;
 });
 
-const metaText = computed(() => (chain.value ? `${syc(chain.value.available)} SYC allowance` : ""));
-const problems = computed(() => {
-  if (!dist.value) return [];
-  if (!chain.value) return chainError.value ? [chainError.value] : [];
-  return distributionProblems(dist.value, chain.value, Date.now());
-});
-const shortfall = computed(() => (dist.value && chain.value ? distributionShortfall(dist.value, chain.value) : 0n));
-
-/* ------------------------------------------------------------ membership */
-
-type Membership = "unknown" | "member" | "stranger";
-const membership = ref<Membership>("unknown");
-/** A mint to nobody: the admin role allows it, so only a wallet without the role is turned away at the door. */
-const probe = {
-  to: SYC.ADDR.fund,
-  data: DIST_IF.fund.encodeFunctionData("fundFlowsCall", [DIST_IF.flows.encodeFunctionData("mintToMany", [[], []])]),
-};
-watch(
-  () => accountStore.activeAccountAddress,
-  async (account) => {
-    membership.value = "unknown";
-    if (!account) return;
-    const result = await simulateCuratorTransaction(probe, ADMIN_ROUTE).catch(() => null);
-    if (account !== accountStore.activeAccountAddress || !result) return;
-    membership.value = result.noMembership ? "stranger" : "member";
-  },
-  { immediate: true },
-);
-
-/* --------------------------------------------------------------- propose */
+/* -------------------------------------------------------- manual nudge */
 
 type Phase = "idle" | "checking" | "signing" | "pending";
-const blank = () => ({ phase: "idle" as Phase, hash: "", error: "", done: "", multisig: false });
+const blank = () => ({ phase: "idle" as Phase, hash: "", error: "", done: "" });
 const act = reactive(blank());
-const busy = computed(() => act.phase !== "idle");
-
-const canPropose = computed(
-  () =>
-    !!dist.value &&
-    dist.value.total > 0n &&
-    !!chain.value &&
-    accountStore.isConnected &&
-    membership.value !== "stranger" &&
-    !problems.value.length &&
-    !busy.value &&
-    !act.done,
+const canDistribute = computed(
+  () => !!state.value && !blockers.value.length && accountStore.isConnected && act.phase === "idle",
 );
 const buttonText = computed(() => {
   if (act.phase === "checking") return "Checking…";
   if (act.phase === "signing") return "Confirm in your wallet…";
   if (act.phase === "pending") return "Waiting for the transaction…";
-  if (act.done) return "Done";
-  if (!accountStore.isConnected) return "Connect a wallet to propose";
-  if (membership.value === "stranger") return "Connect as the admin multisig";
-  return "Propose mint";
+  return "Distribute now";
 });
-
 const declined = (err: any) => {
   const message = err?.innerError?.message || err?.message || "";
   return err?.code === 4001 || err?.innerError?.code === 4001 || /user (denied|rejected)/i.test(message);
 };
-const explain = (simulation: IRoleSimulationResult): string => {
-  if (simulation.noMembership) {
-    return `${shortAddress(accountStore.activeAccountAddress || "")} does not hold the admin role. Connect as the admin multisig.`;
-  }
-  if (simulation.innerRevert) {
-    return `The role allows this mint, but the vault would refuse it right now${simulation.reason ? ": " + simulation.reason : "."}`;
-  }
-  return simulation.reason || "The Roles modifier refuses this mint.";
-};
 
-const propose = async () => {
+const distribute = async () => {
   const account = accountStore.activeAccountAddress;
-  if (!dist.value || !account || busy.value) return;
+  if (!state.value || !account || act.phase !== "idle") return;
   Object.assign(act, blank());
   try {
     act.phase = "checking";
-    if (!accountStore.connectedWalletWeb3) throw new Error("Connect your wallet.");
-    if (accountStore.connectedWalletChainId !== SYC.CHAIN) await accountStore.switchNetwork(SYC.CHAIN);
-    // The chain as it is now, not as it was when the file was loaded.
-    await refreshChain();
-    if (problems.value.length) throw new Error(problems.value[0]);
-
-    const call = buildMintCall(dist.value);
-    const simulation = await simulateCuratorTransaction(call, ADMIN_ROUTE);
-    if (!simulation.ok) throw new Error(explain(simulation));
-    act.multisig = await isContractAccount(account);
-
+    const call = buildDistributeCall();
+    // Someone, usually the keeper, may have distributed since this page loaded.
+    const simulation = await simulateDirectCall(SYC.CHAIN, account, call);
+    if (!simulation.ok) {
+      await load();
+      throw new Error(blockers.value[0] || simulation.reason || "The contract would refuse this right now.");
+    }
+    const amount = state.value.undistributed;
     act.phase = "signing";
     const sent = await new Promise<boolean>((resolve, reject) => {
-      sendCuratorTransaction(call, ADMIN_ROUTE)
+      sendAsSafe(SYC.CHAIN, call)
         .on("transactionHash", (hash: any) => {
           act.hash = String(hash);
-          // A multisig's transaction is mined only after the other signers confirm: proposing is the whole job here.
-          if (act.multisig) resolve(true);
-          else act.phase = "pending";
+          act.phase = "pending";
         })
         .on("receipt", (receipt: any) => {
           if (!receipt.status) reject(new Error("The transaction reverted on chain."));
@@ -302,10 +288,8 @@ const propose = async () => {
         .catch((err: any) => (declined(err) ? resolve(false) : reject(err)));
     });
     if (!sent) return;
-    act.done = act.multisig
-      ? `Proposed ${syc(dist.value.total)} SYC. The other signers confirm it in the Safe.`
-      : `Minted ${syc(dist.value.total)} SYC.`;
-    if (!act.multisig) await refreshChain();
+    act.done = `Distributed about ${syc(amount)} SYC.`;
+    await load();
   } catch (error: any) {
     console.error(error);
     act.error = error?.message || "There has been an error.";
@@ -313,7 +297,6 @@ const propose = async () => {
     act.phase = "idle";
   }
 };
-
 </script>
 
 <style scoped lang="scss">
@@ -331,7 +314,7 @@ const propose = async () => {
   font-size: 13px;
   line-height: 1.55;
   color: $color-steel-blue;
-  max-width: 70ch;
+  max-width: 78ch;
 }
 
 .dist_row {
@@ -401,9 +384,15 @@ const propose = async () => {
     color: $color-white !important;
   }
 
-  &__total td {
+  &__group td {
     color: $color-white;
     font-weight: 600;
+  }
+
+  &__detail td {
+    border-bottom-color: transparent;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
   }
 }
 
@@ -419,12 +408,16 @@ const propose = async () => {
   font-family: $font-mono;
   font-size: 12px;
 
-  span:first-child {
+  > :first-child {
     color: $color-steel-blue;
   }
 
-  span:last-child {
+  > :last-child {
     color: $color-white;
+  }
+
+  a {
+    color: $color-cyan;
   }
 }
 
@@ -443,13 +436,19 @@ const propose = async () => {
   }
 }
 
-.dist_cta.v-btn {
-  align-self: flex-start;
-  height: 44px;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
+.dist_history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+
+  &__title {
+    font-family: $font-mono;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: $color-steel-blue;
+  }
 }
 
 .dist_done {

@@ -1,133 +1,106 @@
 import { ethers } from "ethers";
 import { describe, expect, it } from "vitest";
-import fixture from "./mock_data/syc_distribution.json";
 import { SYC } from "~/composables/execution/sycConsole";
 import {
   DIST_IF,
-  SYC_DIST,
-  buildMintCall,
-  distributionProblems,
-  distributionShortfall,
-  parseDistribution,
-  type SycDistributionChain,
+  assembleMint,
+  buildDistributeCall,
+  distributionBlockers,
+  distributorAddress,
+  type SycDistributorState,
 } from "~/composables/execution/sycDistribution";
 
 const e = (n: number) => ethers.parseEther(String(n));
+const DISTRIBUTOR = "0x00000000000000000000000000000000000D1570";
 const A = "0x1271836313a2B692858F96D88118176E72d9eD74";
 const B = "0xC419021546FDfEa5e097Bd48951cF1c8ACF9769B";
-const file = (over: Record<string, unknown> = {}, wallets?: unknown[]) =>
-  JSON.stringify({
-    kind: "syc-distribution",
-    version: 1,
-    generatedAt: "2026-11-16T12:00:00.000Z",
-    chainId: 137,
-    fund: SYC.ADDR.fund,
-    roles: SYC.ADDR.roles,
-    roleKey: "adminRole",
-    supplyAtGeneration: e(1000).toString(),
-    wallets: wallets ?? [
-      { wallet: A, owed: e(900).toString(), minted: e(600).toString(), mint: e(300).toString() },
-      { wallet: B, owed: e(50).toString(), minted: e(50).toString(), mint: "0" },
-    ],
-    total: e(300).toString(),
-    ...over,
-  });
-const chain = (over: Partial<SycDistributionChain> = {}): SycDistributionChain => ({
-  supply: e(1000),
-  safeSni: e(2000),
-  available: e(50_000),
-  allowanceStored: true,
-  nextRefill: 0n,
-  finalized: true,
+const topic = (a: string) => ethers.zeroPadValue(a, 32);
+const TRANSFER = DIST_IF.token.getEvent("Transfer")!.topicHash;
+const minted = (to: string, amount: bigint, tx: string, address: string = SYC.ADDR.fund) => ({
+  address,
+  topics: [TRANSFER, topic(ethers.ZeroAddress), topic(to)],
+  data: ethers.toBeHex(amount, 32),
+  transactionHash: tx,
+});
+const marker = (tx: string) => ({ address: DISTRIBUTOR, topics: ["0x" + "11".repeat(32)], data: "0x", transactionHash: tx });
+const record = { time: 1_794_000_000n, blockNumber: 97_500_000n, total: e(34_000) };
+
+const state = (over: Partial<SycDistributorState> = {}): SycDistributorState => ({
+  seeded: true,
+  reportPending: false,
+  stale: false,
+  inProgress: false,
+  undistributed: e(34_000),
+  supply: e(3_000_000),
+  safeSni: e(3_034_000),
+  mintCount: 2,
+  recipients: [
+    { wallet: A, weight: e(2016), share: 0.984, next: e(33_468) },
+    { wallet: B, weight: e(32), share: 0.016, next: e(531) },
+  ],
   ...over,
 });
-const NOW = Date.parse("2026-11-16T15:00:00.000Z");
 
-describe("SYC distribution file", () => {
-  it("reads a well-formed file", () => {
-    const d = parseDistribution(file());
-    expect(d.total).toBe(e(300));
-    expect(d.rows.map((r) => r.mint)).toEqual([e(300), 0n]);
-    expect(d.supplyAtGeneration).toBe(e(1000));
+describe("SYC distributor: one mint from the contract's record and its block's logs", () => {
+  it("lists who received what, largest first, with the transaction", () => {
+    const mint = assembleMint(1, record, [minted(B, e(531), "0xaa"), marker("0xaa"), minted(A, e(33_468), "0xaa")], DISTRIBUTOR);
+    expect(mint).toMatchObject({ index: 1, time: 1_794_000_000, block: 97_500_000, total: e(34_000), tx: "0xaa" });
+    expect(mint.rows).toEqual([
+      { wallet: A, amount: e(33_468) },
+      { wallet: B, amount: e(531) },
+    ]);
   });
 
-  it.each([
-    ["not JSON", "nope", /not JSON/],
-    ["another kind of answer", file({ kind: "safe-batch" }), /not a distribution/],
-    ["another chain", file({ chainId: 1 }), /different vault/],
-    ["another vault", file({ fund: SYC.ADDR.safe }), /different vault/],
-    ["another modifier", file({ roles: SYC.ADDR.fund }), /different vault/],
-    ["another role", file({ roleKey: "defaultManagerRole" }), /different role/],
-    ["no wallets", file({}, []), /no wallets/],
-    ["a total that does not add up", file({ total: e(301).toString() }), /do not add up/],
-    ["an amount above what is owed", file({}, [{ wallet: A, owed: e(900).toString(), minted: e(600).toString(), mint: e(301).toString() }]), /owed minus/],
-    ["a wallet twice", file({ total: e(600).toString() }, [1, 2].map(() => ({ wallet: A, owed: e(900).toString(), minted: e(600).toString(), mint: e(300).toString() }))), /listed twice/],
-    ["a bad address", file({}, [{ wallet: "0x1234", owed: "1", minted: "0", mint: "1" }]), /not an address/],
-    ["the vault as a recipient", file({ total: "1" }, [{ wallet: SYC.ADDR.safe, owed: "1", minted: "0", mint: "1" }]), /vault itself/],
-    ["a decimal amount", file({}, [{ wallet: A, owed: "1.5", minted: "0", mint: "1.5" }]), /whole number/],
-    ["a negative amount", file({}, [{ wallet: A, owed: "-1", minted: "0", mint: "-1" }]), /whole number/],
-  ])("refuses %s", (_name, text, message) => {
-    expect(() => parseDistribution(text as string)).toThrow(message as RegExp);
+  it("leaves out SYC minted in the same block by something else", () => {
+    const deposit = minted("0x000000000000000000000000000000000000bEEF", e(500), "0xbb");
+    const mint = assembleMint(1, record, [deposit, minted(A, e(100), "0xaa"), marker("0xaa")], DISTRIBUTOR);
+    expect(mint.rows).toEqual([{ wallet: A, amount: e(100) }]);
   });
 
-  it("reads the backend's answer, extra fields and all, and a week with nothing due", () => {
-    const view = JSON.parse(file());
-    const d = parseDistribution(JSON.stringify({ ...view, scannedToBlock: 97435253, wethWaiting: "0", mintable: false, signers: [A], warnings: [] }));
-    expect(d.total).toBe(e(300));
-    const settled = parseDistribution(file({ total: "0" }, [{ wallet: A, owed: "5", minted: "5", mint: "0" }]));
-    expect(settled.total).toBe(0n);
+  it("ignores transfers that are not mints and tokens that are not SYC", () => {
+    const transfer = { ...minted(B, e(7), "0xaa"), topics: [TRANSFER, topic(A), topic(B)] };
+    const other = minted(B, e(9), "0xaa", "0xDc685aCC53CA2A760029Cab2F6a587482Aa9CF57");
+    const mint = assembleMint(1, record, [transfer, other, minted(A, e(100), "0xaa"), marker("0xaa")], DISTRIBUTOR);
+    expect(mint.rows).toEqual([{ wallet: A, amount: e(100) }]);
   });
 
-  it("builds fundFlowsCall(mintToMany) for the wallets that are due, in order", () => {
-    const call = buildMintCall(parseDistribution(file()));
-    expect(call.to).toBe(SYC.ADDR.fund);
-    const [inner] = DIST_IF.fund.decodeFunctionData("fundFlowsCall", call.data);
-    const [amounts, recipients] = DIST_IF.flows.decodeFunctionData("mintToMany", inner);
-    expect([...amounts]).toEqual([e(300)]);
-    expect([...recipients]).toEqual([A]);
-    expect(inner.slice(0, 10)).toBe("0x9d2fa7c8");
-    expect(call.data.slice(0, 10)).toBe("0xec68ac8d");
+  it("adds up a wallet that is listed twice", () => {
+    const mint = assembleMint(1, record, [minted(A, e(60), "0xaa"), minted(A, e(40), "0xaa"), marker("0xaa")], DISTRIBUTOR);
+    expect(mint.rows).toEqual([{ wallet: A, amount: e(100) }]);
   });
 
-  it("builds the same call as the weekly script wrote for the multisig", () => {
-    const call = buildMintCall(parseDistribution(JSON.stringify(fixture.distribution)));
-    expect(call.to).toBe(fixture.expected.to);
-    expect(call.data).toBe(fixture.expected.data);
-    expect(fixture.expected.value).toBe("0");
-    expect(fixture.expected.operation).toBe(0);
-    expect(fixture.expected.role).toBe(SYC_DIST.ROLE);
+  it("still shows the total and the time when the block's logs could not be read", () => {
+    const mint = assembleMint(0, record, [], DISTRIBUTOR);
+    expect(mint.tx).toBe("");
+    expect(mint.rows).toEqual([]);
+    expect(mint.total).toBe(e(34_000));
   });
 });
 
-describe("SYC distribution checks", () => {
-  const d = parseDistribution(file());
-
-  it("passes when the chain agrees with the file", () => {
-    expect(distributionProblems(d, chain(), NOW)).toEqual([]);
-    expect(distributionShortfall(d, chain())).toBe(0n);
+describe("SYC distributor: why nothing would be distributed", () => {
+  it("says nothing when a distribution is ready", () => {
+    expect(distributionBlockers(state())).toEqual([]);
   });
 
-  it("stops on a vault that is not finalized", () => {
-    expect(distributionProblems(d, chain({ finalized: false }), NOW).join(" ")).toMatch(/not finalized/);
+  it("lets a call through when there is a report to apply or batches to finish", () => {
+    expect(distributionBlockers(state({ reportPending: true, stale: true }))).toEqual([]);
+    expect(distributionBlockers(state({ inProgress: true }))).toEqual([]);
   });
 
-  it("stops when SYC was minted after the file was made", () => {
-    expect(distributionProblems(d, chain({ supply: e(1300) }), NOW).join(" ")).toMatch(/minted since/);
+  it("names the one reason that applies first", () => {
+    expect(distributionBlockers(state({ seeded: false }))[0]).toMatch(/first issuance/);
+    expect(distributionBlockers(state({ stale: true }))[0]).toMatch(/wait for a report/);
+    const idle = state({ undistributed: 0n, recipients: state().recipients.map((r) => ({ ...r, next: 0n })) });
+    expect(distributionBlockers(idle)[0]).toMatch(/Nothing is waiting/);
+  });
+});
+
+describe("SYC distributor: address and call", () => {
+  it("is not deployed until an address is configured", () => {
+    expect(distributorAddress()).toBe("");
   });
 
-  it("stops on figures older than two days", () => {
-    expect(distributionProblems(d, chain(), d.generatedAt + SYC_DIST.MAX_AGE_MS + 1).join(" ")).toMatch(/two days old/);
-    expect(distributionProblems(d, chain(), d.generatedAt + SYC_DIST.MAX_AGE_MS)).toEqual([]);
-  });
-
-  it("stops when the allowance is missing or too small", () => {
-    expect(distributionProblems(d, chain({ allowanceStored: false, available: 0n }), NOW).join(" ")).toMatch(/not stored/);
-    expect(distributionProblems(d, chain({ available: e(299) }), NOW).join(" ")).toMatch(/covers 299 SYC and this mint needs 300/);
-    expect(distributionProblems(d, chain({ available: e(300) }), NOW)).toEqual([]);
-  });
-
-  it("reports how much SNI the Safe would be short", () => {
-    expect(distributionShortfall(d, chain({ safeSni: e(1250) }))).toBe(e(50));
-    expect(distributionShortfall(d, chain({ safeSni: e(1300) }))).toBe(0n);
+  it("builds a bare distribute()", () => {
+    expect(buildDistributeCall().data).toBe(ethers.id("distribute()").slice(0, 10));
   });
 });

@@ -489,7 +489,7 @@
       </div>
     </div>
 
-    <!-- The weekly mint to depositors: the admin multisig's card, not an Executor's. -->
+    <!-- SYC minted to depositors by the distributor contract: what is waiting and every mint so far. -->
     <ExecutionSycDistribution />
   </div>
 </template>

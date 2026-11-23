@@ -1,178 +1,203 @@
 /**
- * SNI Yield Claim Vault: the weekly SYC mint to sniETH depositors.
+ * SNI Yield Claim Vault: SYC minted to sniETH depositors by the SycDistributor
+ * contract (scripts/syc-distributor).
  *
- * The amounts come from the backend (GET /syc-distribution/latest), which
- * keeps a running book of the Safes' WETH and SNI transfers. This module
- * reads that answer, refuses anything that does not add up, checks it against
- * the chain as it is now, and builds the one call the admin role may make:
+ * Nobody proposes or signs these mints. Anyone, normally a keeper, calls
+ * distribute(), and the contract mints the SNI that sits in the Safe without
+ * SYC issued against it, split by each depositor's sniETH. It can never mint
+ * more SYC than there is SNI in the Safe.
  *
- *   vault.fundFlowsCall( mintToMany(amounts, recipients) )
+ * A report of new sniETH balances from Ethereum is applied by the next call
+ * too, and a distribution to many wallets goes out in batches, one per call.
  *
- * sent through the Roles modifier under `adminRole`, every amount drawn from
- * the allowance "sycMint" (scripts/sni-roles-v2/gen-admin-mint.ts).
+ * This module reads the contract for the console: what is waiting, who gets
+ * what next, and every mint it has made. The mint log lives in the contract
+ * (mints()), so the history is two cheap reads per entry rather than a scan.
  */
 import { ethers } from "ethers";
 import { ethCallOn, rpcRequestOn } from "./rpc";
-import { IF, SYC, accruedAllowance, sycToken, type SycAllowance, type SycCall } from "./sycConsole";
+import { IF, SYC, sycToken, type SycCall } from "./sycConsole";
 
 export const SYC_DIST = {
-  ROLE: "adminRole",
-  ALLOWANCE: "sycMint",
-  /** The backend recomputes once a day; figures older than this mean it has stopped. */
-  MAX_AGE_MS: 2 * 86_400_000,
-  MAX_WALLETS: 200,
+  /** The SycDistributor on Polygon. Empty until it is deployed. */
+  DISTRIBUTOR: "",
+  /** Mints shown in the console, newest first. */
+  HISTORY: 20,
 } as const;
 
 export const DIST_IF = {
-  fund: new ethers.Interface([
-    "function fundFlowsCall(bytes flowCall)",
-    "function totalSupply() view returns (uint256)",
-    "function getFundSettings() view returns (tuple(uint256 depositFee,uint256 withdrawFee,uint256 performanceFee,uint256 managementFee,uint256 performaceHurdleRateBps,address baseToken,address safe,bool isExternalGovTokenInUse,bool isWhitelistedDeposits,address[] allowedDepositAddrs,address[] allowedManagers,address governanceToken,address fundAddress,address governor,string fundName,string fundSymbol,address[4] feeCollectors))",
+  distributor: new ethers.Interface([
+    "function seeded() view returns (bool)",
+    "function pendingReport() view returns (bytes32)",
+    "function weightsFresh() view returns (bool)",
+    "function roundAmount() view returns (uint256)",
+    "function undistributed() view returns (uint256)",
+    "function totalWeight() view returns (uint256)",
+    "function recipients() view returns (address[])",
+    "function weights() view returns (uint256[])",
+    "function preview() view returns (address[], uint256[])",
+    "function mintCount() view returns (uint256)",
+    "function mints(uint256 from, uint256 count) view returns ((uint64 time, uint64 blockNumber, uint128 total)[])",
+    "function distribute() returns (uint256)",
   ]),
-  flows: new ethers.Interface(["function mintToMany(uint256[] amounts,address[] recipients)"]),
+  token: new ethers.Interface([
+    "function totalSupply() view returns (uint256)",
+    "event Transfer(address indexed from, address indexed to, uint256 value)",
+  ]),
 };
+const TRANSFER_TOPIC = DIST_IF.token.getEvent("Transfer")!.topicHash;
+const ZERO_TOPIC = ethers.zeroPadValue(ethers.ZeroAddress, 32);
 
-export interface SycDistributionRow {
+export const distributorAddress = (): string =>
+  ethers.isAddress(SYC_DIST.DISTRIBUTOR) ? ethers.getAddress(SYC_DIST.DISTRIBUTOR) : "";
+
+export interface SycRecipient {
   wallet: string;
-  /** Everything this wallet is owed since its first deposit. */
-  owed: bigint;
-  /** What earlier distributions already minted to it. */
-  minted: bigint;
-  /** What this distribution mints. */
-  mint: bigint;
+  /** sniETH this wallet's share is based on. */
+  weight: bigint;
+  /** Fraction of every distribution, 0..1. */
+  share: number;
+  /** What the next distribution would mint to it. */
+  next: bigint;
 }
 
-export interface SycDistribution {
-  generatedAt: number;
-  /** SYC supply when it was computed; a different supply now means it is stale. */
-  supplyAtGeneration: bigint;
-  rows: SycDistributionRow[];
-  total: bigint;
-}
-
-const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
-const amount = (value: unknown, what: string): bigint => {
-  if (typeof value !== "string" || !/^\d{1,60}$/.test(value)) throw new Error(`${what} is not a whole number of wei.`);
-  return BigInt(value);
-};
-
-/** Read the backend's distribution. Throws with a sentence a signer can act on. */
-export const parseDistribution = (text: string): SycDistribution => {
-  let file: any;
-  try {
-    file = JSON.parse(text);
-  } catch {
-    throw new Error("The backend's answer is not a distribution (it is not JSON).");
-  }
-  if (file?.kind !== "syc-distribution" || file?.version !== 1) {
-    throw new Error("The backend's answer is not a distribution.");
-  }
-  if (file.chainId !== Number(SYC.CHAIN) || !same(String(file.fund), SYC.ADDR.fund) || !same(String(file.roles), SYC.ADDR.roles)) {
-    throw new Error("This distribution is for a different vault.");
-  }
-  if (file.roleKey !== SYC_DIST.ROLE) throw new Error("This distribution is for a different role.");
-  const generatedAt = Date.parse(file.generatedAt);
-  if (!Number.isFinite(generatedAt)) throw new Error("The distribution has no creation time.");
-  if (!Array.isArray(file.wallets) || !file.wallets.length) throw new Error("The distribution lists no wallets.");
-  if (file.wallets.length > SYC_DIST.MAX_WALLETS) throw new Error("The distribution lists too many wallets for one transaction.");
-
-  const reserved = [ethers.ZeroAddress, SYC.ADDR.fund, SYC.ADDR.safe, SYC.ADDR.roles];
-  const seen = new Set<string>();
-  const rows: SycDistributionRow[] = file.wallets.map((w: any, i: number) => {
-    const where = `Wallet ${i + 1}`;
-    if (typeof w?.wallet !== "string" || !ethers.isAddress(w.wallet)) throw new Error(`${where} is not an address.`);
-    const wallet = ethers.getAddress(w.wallet);
-    if (reserved.some((r) => same(r, wallet))) throw new Error(`${where} is the vault itself, not a depositor.`);
-    if (seen.has(wallet)) throw new Error(`${wallet} is listed twice.`);
-    seen.add(wallet);
-    const row = {
-      wallet,
-      owed: amount(w.owed, `${where}'s total`),
-      minted: amount(w.minted, `${where}'s minted amount`),
-      mint: amount(w.mint, `${where}'s amount`),
-    };
-    const due = row.owed > row.minted ? row.owed - row.minted : 0n;
-    if (row.mint !== due) throw new Error(`${where}'s amount is not what it is owed minus what it has received.`);
-    return row;
-  });
-  const total = rows.reduce((sum, r) => sum + r.mint, 0n);
-  if (total !== amount(file.total, "The total")) throw new Error("The amounts do not add up to the stated total.");
-  return { generatedAt, supplyAtGeneration: amount(file.supplyAtGeneration, "The supply"), rows, total };
-};
-
-/** The mint, as the vault's Safe makes it. Wallets with nothing due are left out. */
-export const buildMintCall = (d: SycDistribution): SycCall => {
-  const paid = d.rows.filter((r) => r.mint > 0n);
-  const mint = DIST_IF.flows.encodeFunctionData("mintToMany", [paid.map((r) => r.mint), paid.map((r) => r.wallet)]);
-  return { to: SYC.ADDR.fund, data: DIST_IF.fund.encodeFunctionData("fundFlowsCall", [mint]) };
-};
-
-export interface SycDistributionChain {
+export interface SycDistributorState {
+  /** The first issuance has been minted. */
+  seeded: boolean;
+  /** A report from Ethereum is waiting to be applied; distributions wait for it. */
+  reportPending: boolean;
+  /** No report has confirmed the sniETH balances for longer than the contract allows; distributions wait for one. */
+  stale: boolean;
+  /** A distribution to many wallets is part-way through its batches. */
+  inProgress: boolean;
+  /** SNI in the Safe with no SYC issued against it. */
+  undistributed: bigint;
   supply: bigint;
   safeSni: bigint;
-  /** What the allowance lets the admin role mint right now. */
-  available: bigint;
-  /** False while the allowance has never been stored on the modifier. */
-  allowanceStored: boolean;
-  nextRefill: bigint;
-  finalized: boolean;
+  mintCount: number;
+  recipients: SycRecipient[];
 }
 
-export const readDistributionChain = async (): Promise<SycDistributionChain> => {
-  const key = ethers.encodeBytes32String(SYC_DIST.ALLOWANCE);
-  const [supplyHex, sniHex, allowanceHex, settingsHex] = await Promise.all([
-    ethCallOn(SYC.CHAIN, SYC.ADDR.fund, DIST_IF.fund.encodeFunctionData("totalSupply")),
-    ethCallOn(SYC.CHAIN, sycToken("SNI").address, IF.erc20.encodeFunctionData("balanceOf", [SYC.ADDR.safe])),
-    ethCallOn(SYC.CHAIN, SYC.ADDR.roles, IF.roles.encodeFunctionData("allowances", [key])),
-    ethCallOn(SYC.CHAIN, SYC.ADDR.fund, DIST_IF.fund.encodeFunctionData("getFundSettings")).catch(() => ""),
-  ]);
-  const a = IF.roles.decodeFunctionResult("allowances", allowanceHex);
-  const allowance: SycAllowance = { refill: a.refill, maxRefill: a.maxRefill, period: a.period, balance: a.balance, timestamp: a.timestamp };
-  const { available, nextRefill } = accruedAllowance(allowance, BigInt(Math.floor(Date.now() / 1000)));
-  let finalized = false;
-  try {
-    // A vault that is still being set up has no Safe recorded and refuses every mint.
-    finalized = DIST_IF.fund.decodeFunctionResult("getFundSettings", settingsHex)[0].safe !== ethers.ZeroAddress;
-  } catch {
-    finalized = false;
-  }
+const read = async (fn: string, args: unknown[] = []) =>
+  DIST_IF.distributor.decodeFunctionResult(
+    fn,
+    await ethCallOn(SYC.CHAIN, distributorAddress(), DIST_IF.distributor.encodeFunctionData(fn, args)),
+  );
+
+export const readDistributorState = async (): Promise<SycDistributorState> => {
+  const [seeded, pending, fresh, round, undistributed, totalWeight, wallets, weights, preview, count, supplyHex, sniHex] =
+    await Promise.all([
+      read("seeded"),
+      read("pendingReport"),
+      read("weightsFresh"),
+      read("roundAmount"),
+      read("undistributed"),
+      read("totalWeight"),
+      read("recipients"),
+      read("weights"),
+      read("preview"),
+      read("mintCount"),
+      ethCallOn(SYC.CHAIN, SYC.ADDR.fund, DIST_IF.token.encodeFunctionData("totalSupply")),
+      ethCallOn(SYC.CHAIN, sycToken("SNI").address, IF.erc20.encodeFunctionData("balanceOf", [SYC.ADDR.safe])),
+    ]);
+  const total = totalWeight[0] as bigint;
+  const recipients: SycRecipient[] = [...(wallets[0] as string[])].map((wallet, i) => {
+    const weight = (weights[0] as bigint[])[i];
+    return {
+      wallet: ethers.getAddress(wallet),
+      weight,
+      share: total > 0n ? Number((weight * 1_000_000_000n) / total) / 1e9 : 0,
+      next: (preview[1] as bigint[])[i] ?? 0n,
+    };
+  });
   return {
+    seeded: Boolean(seeded[0]),
+    reportPending: pending[0] !== ethers.ZeroHash,
+    stale: !fresh[0],
+    inProgress: (round[0] as bigint) > 0n,
+    undistributed: undistributed[0] as bigint,
     supply: BigInt(supplyHex),
     safeSni: BigInt(sniHex),
-    available,
-    allowanceStored: allowance.period > 0n || allowance.balance > 0n,
-    nextRefill,
-    finalized,
+    mintCount: Number(count[0]),
+    recipients,
   };
 };
 
-const whole = (wei: bigint) => Number(ethers.formatEther(wei)).toLocaleString("en-US", { maximumFractionDigits: 2 });
+export interface SycMintRow {
+  wallet: string;
+  amount: bigint;
+}
 
-/** Reasons this distribution must not be proposed now. Empty when it may. */
-export const distributionProblems = (d: SycDistribution, chain: SycDistributionChain, nowMs: number): string[] => {
-  const problems: string[] = [];
-  if (!chain.finalized) problems.push("The vault is not finalized yet, so nothing can be minted.");
-  if (chain.supply !== d.supplyAtGeneration) {
-    problems.push("SYC has been minted since these figures were computed. They refresh once a day.");
-  } else if (nowMs - d.generatedAt > SYC_DIST.MAX_AGE_MS) {
-    problems.push("These figures are more than two days old: the backend has stopped refreshing them.");
+export interface SycMint {
+  /** Position in the contract's log; 0 is the first issuance. */
+  index: number;
+  /** Seconds. */
+  time: number;
+  block: number;
+  total: bigint;
+  /** Empty when the block's logs could not be read. */
+  tx: string;
+  rows: SycMintRow[];
+}
+
+/**
+ * One mint, from the contract's record and the logs of its block: the SYC
+ * Transfer events from the zero address in the transaction where the
+ * distributor itself emitted something. Another SYC mint that happens to land
+ * in the same block (a deposit) is in a different transaction and left out.
+ */
+export const assembleMint = (
+  index: number,
+  record: { time: bigint; blockNumber: bigint; total: bigint },
+  logs: { address: string; topics: string[]; data: string; transactionHash: string }[],
+  distributor: string,
+): SycMint => {
+  const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+  const tx = logs.find((log) => same(log.address, distributor))?.transactionHash ?? "";
+  const merged = new Map<string, bigint>();
+  for (const log of logs) {
+    if (!tx || !same(log.transactionHash, tx) || !same(log.address, SYC.ADDR.fund)) continue;
+    if (log.topics.length < 3 || log.topics[0] !== TRANSFER_TOPIC || log.topics[1] !== ZERO_TOPIC) continue;
+    const wallet = ethers.getAddress("0x" + log.topics[2].slice(26));
+    merged.set(wallet, (merged.get(wallet) ?? 0n) + BigInt(log.data));
   }
-  if (!chain.allowanceStored) {
-    problems.push("The mint allowance is not stored on the Roles modifier yet.");
-  } else if (chain.available < d.total) {
-    problems.push(`The allowance covers ${whole(chain.available)} SYC and this mint needs ${whole(d.total)}.`);
-  }
-  return problems;
+  const rows = [...merged].map(([wallet, amount]) => ({ wallet, amount }));
+  rows.sort((a, b) => (b.amount > a.amount ? 1 : b.amount < a.amount ? -1 : 0));
+  return { index, time: Number(record.time), block: Number(record.blockNumber), total: record.total, tx, rows };
 };
 
-/** SNI the Safe would be short of after the mint (1 SYC should be backed by 1 SNI). Zero when covered. */
-export const distributionShortfall = (d: SycDistribution, chain: SycDistributionChain): bigint => {
-  const after = chain.supply + d.total;
-  return after > chain.safeSni ? after - chain.safeSni : 0n;
+/** The latest mints, newest first. */
+export const readMints = async (mintCount: number, limit: number = SYC_DIST.HISTORY): Promise<SycMint[]> => {
+  if (!mintCount) return [];
+  const from = Math.max(0, mintCount - limit);
+  const [page] = await read("mints", [from, mintCount - from]);
+  const distributor = distributorAddress();
+  const mints = await Promise.all(
+    [...(page as any[])].map(async (record, i) => {
+      const block = ethers.toQuantity(record.blockNumber);
+      // Both contracts' logs of that one block: a single-block query is never refused for its range.
+      const logs = await rpcRequestOn(SYC.CHAIN, "eth_getLogs", [
+        { address: [SYC.ADDR.fund, distributor], fromBlock: block, toBlock: block },
+      ]).catch(() => []);
+      return assembleMint(from + i, record, Array.isArray(logs) ? logs : [], distributor);
+    }),
+  );
+  return mints.reverse();
 };
 
-/** A multisig proposes rather than sends: its transaction is mined only once the other signers confirm. */
-export const isContractAccount = async (account: string): Promise<boolean> => {
-  const code = await rpcRequestOn(SYC.CHAIN, "eth_getCode", [account, "latest"]);
-  return typeof code === "string" && code.length > 2;
+/** Why nothing would be distributed right now, in the order a reader would check. Empty when it would. */
+export const distributionBlockers = (state: SycDistributorState): string[] => {
+  if (!state.seeded) return ["The first issuance has not been minted yet."];
+  // Part-way through its batches: the next call simply continues.
+  if (state.inProgress) return [];
+  if (state.reportPending) return [];
+  if (state.stale) return ["The sniETH balances have not been confirmed from Ethereum recently; distributions wait for a report."];
+  if (state.recipients.every((r) => r.next === 0n)) return ["Nothing is waiting: every SNI in the Safe has SYC against it."];
+  return [];
 };
+
+/** The manual nudge. Anyone may send it; the contract decides the amounts. */
+export const buildDistributeCall = (): SycCall => ({
+  to: distributorAddress(),
+  data: DIST_IF.distributor.encodeFunctionData("distribute"),
+});
