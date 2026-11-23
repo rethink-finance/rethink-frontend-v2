@@ -71,14 +71,19 @@ wallets. `preview(holders)` shows what a report would send.
 ## Order of operations
 1. Store `role/role-calls-raw.txt` on the vault's Roles modifier (through the factory, before finalizing).
 2. Move the SNI left in the old Safe to the new one.
-3. `node scripts/syc-distribution/weekly.mjs`, load `out/<date>/safe-transaction.json` in the admin multisig and collect
-   the signatures. Finalize the vault and execute the mint straight after, before anyone can deposit: at zero supply the
-   first deposit would otherwise claim all the SNI in the Safe.
-4. Every week: the same script, the same steps. It mints what is owed in total minus what has been minted, so a skipped
+3. Finalize and run the first NAV update in ONE transaction from the deployer (`src/tools/FinalizeAndMint.sol`, an
+   EIP-7702 delegate: `run([factory.finalizeCreateFund(), roles.execTransactionWithRole(vault, executeNAVUpdate(navExecutor),
+   defaultManagerRole)])`). Fork-tested: at zero supply a deposit takes the whole Safe, and a deposit request made between
+   finalize and the first NAV update is paid out by that update; once a NAV update exists, deposits only go through at the
+   next one, so nothing can be claimed before the mint. The deposit whitelist is no alternative: the vault takes settings
+   only from the governor.
+4. `node scripts/syc-distribution/weekly.mjs`, load `out/<date>/safe-transaction.json` in the admin multisig, sign and
+   execute the one-off mint. Do not run another NAV update before it is in.
+5. Every week: the same script, the same steps. It mints what is owed in total minus what has been minted, so a skipped
    week is picked up by the next run.
-5. Governance (SYC holders, about 8 days) hands the Roles modifier to the Safe. From then on the admin multisig can
+6. Governance (SYC holders, about 8 days) hands the Roles modifier to the Safe. From then on the admin multisig can
    change members.
-6. Later: the reviewed contracts take the role (`node scripts/syc-distributor/deploy.mjs distributor`, then the
+7. Later: the reviewed contracts take the role (`node scripts/syc-distributor/deploy.mjs distributor`, then the
    reporter once the new sniETH vault is live).
 
 ## Tests
