@@ -6,6 +6,8 @@ export const RPCS = {
   1: ["https://mainnet.gateway.tenderly.co", "https://ethereum-rpc.publicnode.com", "https://eth.drpc.org"],
   137: ["https://polygon.gateway.tenderly.co", "https://polygon-bor-rpc.publicnode.com", "https://polygon.drpc.org"],
 };
+// SYC_RPC_137=http://127.0.0.1:8545 points a chain at one RPC only (a local fork, for a rehearsal).
+for (const chain of Object.keys(RPCS)) if (process.env[`SYC_RPC_${chain}`]) RPCS[chain] = [process.env[`SYC_RPC_${chain}`]];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const rpc = async (chain, method, params) => {
   let last;

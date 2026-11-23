@@ -136,8 +136,10 @@ const SNI = "0xDc685aCC53CA2A760029Cab2F6a587482Aa9CF57";
 const bal = async (a) => BigInt(await call(137, SNI, erc.encodeFunctionData("balanceOf", [a]), "latest"));
 const newSafeSni = await bal("0x3Fca31E56706b5461DB54DcfeeFda9912cbe5ddF"), oldSafeSni = await bal("0x979AeA92BbfC33BE4F3d4Cf328133d695B88952B");
 const H = new ethers.Interface(["function feedRatioTimesTwap(address,address,uint256,address,address,uint128,uint32) view returns (uint256)"]);
-const priceRaw = await call(137, "0x306565A88FF89de6D2711CFd923eC640b7428D6d", H.encodeFunctionData("feedRatioTimesTwap", ["0xF9680D99D6C9589e2a93a78A04A279e509205945", "0xfE4A8cc5b5B2366C1B58Bea3858e81843581b2F7", 3600, "0x9Ecb733A74B48eE31586c98986F0AA1eD5057c6A", "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", 1_000_000, 1800]), "latest");
-const sniPerWeth = BigInt(priceRaw);
+// Display only (the page's weekly estimate). A stale Chainlink feed must not stop the computation.
+let sniPerWeth = 0n;
+try { sniPerWeth = BigInt(await call(137, "0x306565A88FF89de6D2711CFd923eC640b7428D6d", H.encodeFunctionData("feedRatioTimesTwap", ["0xF9680D99D6C9589e2a93a78A04A279e509205945", "0xfE4A8cc5b5B2366C1B58Bea3858e81843581b2F7", 3600, "0x9Ecb733A74B48eE31586c98986F0AA1eD5057c6A", "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", 1_000_000, 1800]), "latest")); }
+catch (e) { console.log("WARNING SNI/WETH price read failed (display only):", String(e.message).slice(0, 120)); }
 
 // ---------- 6. report
 const total = Object.fromEntries(holders.map((h) => [h, incent[h] + yieldM[h]]));
