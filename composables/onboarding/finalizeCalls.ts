@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import type { WalletBatchCall } from "~/services/eip5792";
+import type { AtomicBatchStatus, WalletBatchCall } from "~/services/eip5792";
 
 /**
  * The calls behind the create flow's last button: finalizeCreateFund on the
@@ -144,4 +144,62 @@ export const pickFirstNavRole = async (
     }
   }
   return undefined;
+};
+
+/**
+ * How the finalize and the first NAV update can travel, from what the wallet
+ * reports about the connected account:
+ *
+ *   "atomic"      the account already executes batches (a smart account, or
+ *                 an EOA upgraded earlier), so one transaction is certain.
+ *   "upgrade"     the wallet batches only after switching the account to a
+ *                 smart account. It asks for that inside the confirmation and
+ *                 the user can refuse, or have the offer turned off, so one
+ *                 transaction is possible but not promised.
+ *   "sequential"  the wallet does not batch for this account on this chain.
+ *
+ * "ready" is deliberately not folded into "atomic": telling the user the NAV
+ * update "runs in the same transaction" when that still hinges on an account
+ * switch is how a finalize-only prompt reached a wallet that expected a batch.
+ */
+export type FirstNavDelivery = "atomic" | "upgrade" | "sequential";
+
+export const firstNavDeliveryFor = (
+  status: AtomicBatchStatus,
+): FirstNavDelivery => {
+  if (status === "supported") return "atomic";
+  if (status === "ready") return "upgrade";
+  return "sequential";
+};
+
+/**
+ * What became of the batch:
+ *
+ *   "success"           both calls landed in one transaction.
+ *   "stopped"           the user declined it, or it failed; toasts are up.
+ *   "upgrade_declined"  the wallet did not switch the account (refused in the
+ *                       confirmation, or switched off in its settings).
+ *   "unsupported"       the wallet turned the batch down outright.
+ */
+export type FinalizeBatchOutcome =
+  | "success"
+  | "stopped"
+  | "upgrade_declined"
+  | "unsupported";
+
+/**
+ * What the Finalize step does once the batch has answered. A batch the wallet
+ * would not take never turns into a transaction by itself: nothing has been
+ * sent at that point, and sending the finalize alone opens the window the
+ * batch exists to close. The step-by-step dialog opens instead and waits for
+ * a click on each confirmation.
+ */
+export type AfterFinalizeBatch = "finalized" | "stop" | "steps";
+
+export const afterFinalizeBatch = (
+  outcome: FinalizeBatchOutcome,
+): AfterFinalizeBatch => {
+  if (outcome === "success") return "finalized";
+  if (outcome === "stopped") return "stop";
+  return "steps";
 };
