@@ -78,7 +78,7 @@
           <div class="role_card__master">
             <span class="role_card__master_label">Enable all</span>
             <OnboardingToggle
-              :model-value="enabledIn(group) === group.permissions.length"
+              :model-value="enabledIn(group) === optionsOf(group).length"
               :label="`Enable all: ${group.title}`"
               @update:model-value="(value: boolean) => setGroup(group, value)"
             />
