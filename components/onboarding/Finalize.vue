@@ -63,22 +63,30 @@
           <p
             v-if="firstNavPlan"
             class="preflight__nav"
-            :class="{ 'preflight__nav--warn': firstNavPlan.mode !== 'atomic' }"
+            :class="{
+              'preflight__nav--warn':
+                firstNavPlan.mode === 'sequential' || firstNavPlan.mode === 'none',
+            }"
           >
             <Icon
-              :icon="firstNavPlan.mode === 'atomic'
-                ? 'material-symbols:verified-user-outline-rounded'
-                : 'material-symbols:warning-outline-rounded'"
+              :icon="FIRST_NAV_ICONS[firstNavPlan.mode]"
               width="1.125rem"
               aria-hidden="true"
             />
             <span v-if="firstNavPlan.mode === 'atomic'">
-              The first NAV update runs in the same transaction, so nobody can
-              deposit and take voting control ahead of it.
+              This account is a smart account, so the first NAV update runs in
+              the same transaction and nobody can deposit and take voting
+              control ahead of it.
+            </span>
+            <span v-else-if="firstNavPlan.mode === 'upgrade'">
+              Finalize and the first NAV update can go out as one transaction,
+              but only once this account is switched to a smart account. The
+              wallet asks for that switch when you finalize. If it is not
+              made, nothing is sent and the two are offered as separate steps.
             </span>
             <span v-else-if="firstNavPlan.mode === 'sequential'">
-              This wallet cannot batch transactions, so the first NAV update
-              follows as a second confirmation. Until it confirms, deposits
+              This wallet cannot batch for this account, so finalizing takes
+              two confirmations, shown step by step. Between them deposits
               settle instantly — a wallet with smart-account batching closes
               that gap.
             </span>
@@ -298,6 +306,15 @@
         </ol>
       </div>
     </template>
+
+    <!-- Outside the states above: it stays up while they change under it. -->
+    <OnboardingFinalizeStepsModal
+      v-model="isStepsOpen"
+      :reason="stepsReason"
+      :send-finalize="sendFinalizeAlone"
+      :send-first-nav="sendFirstNavAlone"
+      @finished="onStepsFinished"
+    />
   </div>
 </template>
 
@@ -311,12 +328,17 @@ import { usePageNavigation } from "~/composables/routing/usePageNavigation";
 import { OnboardingStep } from "~/types/enums/stepper_onboarding";
 import type { ChainId } from "~/types/enums/chain_id";
 import {
+  afterFinalizeBatch,
   buildFinalizeWithFirstNavCalls,
   encodeFirstNavUpdate,
+  firstNavDeliveryFor,
   firstNavRoleCandidates,
   pickFirstNavRole,
+  type FinalizeBatchOutcome,
+  type FirstNavDelivery,
   type IFirstNavRoute,
 } from "~/composables/onboarding/finalizeCalls";
+import type { FinalizeStepsReason } from "~/components/onboarding/FinalizeStepsModal.vue";
 import { isReturnRoleOpen } from "~/composables/onboarding/returnRoleProbe";
 import {
   RolesVersion,
@@ -336,6 +358,7 @@ import {
   waitForWalletCalls,
   WALLET_RPC_HEALTH_MESSAGE,
   WalletCallsTimeoutError,
+  type AtomicBatchStatus,
 } from "~/services/eip5792";
 
 const emit = defineEmits<{
@@ -431,15 +454,25 @@ onBeforeUnmount(() => {
  * How the first NAV update travels with the finalize:
  *
  *   "atomic"      one EIP-5792 batch — finalize and NAV update land together
- *                 or not at all.
- *   "sequential"  the wallet cannot batch; the NAV update is a second
- *                 transaction sent the moment the finalize confirms.
+ *                 or not at all. The account already batches.
+ *   "upgrade"     the same batch, if the wallet switches the account to a
+ *                 smart account inside the confirmation. Not a promise: the
+ *                 switch can be refused or turned off.
+ *   "sequential"  the wallet cannot batch; the two go out as separate
+ *                 confirmations in the step-by-step dialog.
  *   "none"        the connected wallet cannot run the NAV update at all, so
  *                 only the finalize goes out.
  */
 type FirstNavPlan =
-  | { mode: "atomic" | "sequential"; route: IFirstNavRoute }
+  | { mode: FirstNavDelivery; route: IFirstNavRoute }
   | { mode: "none"; reason: string };
+
+const FIRST_NAV_ICONS: Record<FirstNavPlan["mode"], string> = {
+  atomic: "material-symbols:verified-user-outline-rounded",
+  upgrade: "material-symbols:info-outline-rounded",
+  sequential: "material-symbols:warning-outline-rounded",
+  none: "material-symbols:warning-outline-rounded",
+};
 
 const { getNAVExecutorBeaconProxyAddress } = useContractAddresses();
 
@@ -509,18 +542,17 @@ const resolveFirstNavPlan = async (): Promise<FirstNavPlan> => {
   const route: IFirstNavRoute = { rolesModAddress, role, version };
 
   const provider = accountStore.connectedWallet?.provider;
-  let canBatch = false;
+  let status: AtomicBatchStatus = "unsupported";
   if (provider) {
     try {
-      canBatch =
-        (await getAtomicBatchStatus(provider, account, chainId)) !==
-        "unsupported";
+      status = await getAtomicBatchStatus(provider, account, chainId);
     } catch (error) {
       // The wallet's RPC is failing; the send will surface that on its own.
       console.warn("Batch capability probe failed", error);
     }
   }
-  return { mode: canBatch ? "atomic" : "sequential", route };
+  // "ready" and "supported" are different promises; see firstNavDeliveryFor.
+  return { mode: firstNavDeliveryFor(status), route };
 };
 
 const refreshFirstNavPlan = async () => {
@@ -585,25 +617,31 @@ const markFinalized = (message: string) => {
   createFundStore.clearFundLocalStorage();
 };
 
-type BatchOutcome = "success" | "unsupported" | "stopped";
+/** The fund's chain in the wallet, before anything is signed. */
+const ensureFundChain = async (): Promise<boolean> => {
+  const chainId = fundChainId.value as ChainId;
+  if (chainId === accountStore.connectedWalletChainId) return true;
+  try {
+    await accountStore.switchNetwork(chainId);
+    return true;
+  } catch (error) {
+    // switchNetwork has raised its own toast.
+    console.error("Network switch failed before finalizing", error);
+    return false;
+  }
+};
 
 /** Finalize and the first NAV update as one atomic wallet batch. */
-const sendFinalizeBatch = async (route: IFirstNavRoute): Promise<BatchOutcome> => {
+const sendFinalizeBatch = async (
+  route: IFirstNavRoute,
+): Promise<FinalizeBatchOutcome> => {
   const chainId = fundChainId.value as ChainId;
   const account = accountStore.activeAccountAddress;
   const provider = accountStore.connectedWallet?.provider;
   const factoryAddress = fundFactoryContract.value?.options?.address;
   if (!account || !provider || !factoryAddress) return "unsupported";
 
-  try {
-    if (chainId !== accountStore.connectedWalletChainId) {
-      await accountStore.switchNetwork(chainId);
-    }
-  } catch (error) {
-    // switchNetwork has raised its own toast.
-    console.error("Network switch failed before finalizing", error);
-    return "stopped";
-  }
+  if (!(await ensureFundChain())) return "stopped";
 
   let batchId: string;
   try {
@@ -618,10 +656,11 @@ const sendFinalizeBatch = async (route: IFirstNavRoute): Promise<BatchOutcome> =
       }),
     });
   } catch (error: any) {
-    // Declining the account upgrade is declining to batch, not to finalize.
-    if (isUpgradeRejectionError(error) || isBatchUnsupportedError(error)) {
-      return "unsupported";
-    }
+    // The account was not switched: refused in the confirmation, or the
+    // wallet has the offer turned off. Either way nothing was sent, and it
+    // is not consent to finalizing alone — the caller offers the steps.
+    if (isUpgradeRejectionError(error)) return "upgrade_declined";
+    if (isBatchUnsupportedError(error)) return "unsupported";
     if (isUserRejectionError(error)) {
       toastStore.addToast("Transaction was rejected.");
       return "stopped";
@@ -665,9 +704,57 @@ const sendFinalizeBatch = async (route: IFirstNavRoute): Promise<BatchOutcome> =
   return "stopped";
 };
 
+/**
+ * The two-confirmation path, in the step dialog every other multi-step flow
+ * uses. Opened when the wallet cannot batch, and when a batch it said it
+ * could send did not go out.
+ */
+const isStepsOpen = ref(false);
+const stepsReason = ref<FinalizeStepsReason>("wallet");
+const stepsRoute = ref<IFirstNavRoute | undefined>(undefined);
+
+const openSteps = (route: IFirstNavRoute, reason: FinalizeStepsReason) => {
+  stepsRoute.value = route;
+  stepsReason.value = reason;
+  isStepsOpen.value = true;
+};
+
+const sendFinalizeAlone = async (): Promise<boolean> => {
+  if (!fundFactoryContract.value || !(await ensureFundChain())) return false;
+  return settle(fundFactoryContract.value.send("finalizeCreateFund", {}, []));
+};
+
+const sendFirstNavAlone = async (): Promise<boolean> => {
+  const route = stepsRoute.value;
+  if (!route || !(await ensureFundChain())) return false;
+  return settle(
+    sendRoleExecution(
+      fundChainId.value as ChainId,
+      route.rolesModAddress,
+      { to: fundAddress.value, data: encodeFirstNavUpdate(navExecutorAddress.value) },
+      route.role,
+      route.version as RolesVersion,
+    ),
+  );
+};
+
+/** Step 1 has confirmed, so the vault is live whatever became of step 2. */
+const onStepsFinished = (navRecorded: boolean) => {
+  if (!navRecorded) {
+    toastStore.errorToast(
+      "The vault is finalized without its first NAV update. Deposits settle instantly until one is recorded — update NAV from the vault's NAV page now.",
+    );
+  }
+  markFinalized(
+    navRecorded
+      ? "Fund was created and its first NAV update recorded."
+      : "Fund was created successfully.",
+  );
+};
+
 const finalizeCreateFund = async ({ skipFirstNav = false } = {}) => {
   console.warn("finalizeCreateFund");
-  if (isFinalizingFundCreation.value) return;
+  if (isFinalizingFundCreation.value || isStepsOpen.value) return;
   if (!fundChainId.value) {
     return toastStore.errorToast("Fund chain ID not set.");
   }
@@ -702,46 +789,27 @@ const finalizeCreateFund = async ({ skipFirstNav = false } = {}) => {
     const plan = skipFirstNav ? undefined : await refreshFirstNavPlan();
     const route = plan && plan.mode !== "none" ? plan.route : undefined;
 
-    if (route && plan?.mode === "atomic") {
+    if (route && (plan?.mode === "atomic" || plan?.mode === "upgrade")) {
       const outcome = await sendFinalizeBatch(route);
-      if (outcome === "success") {
+      const next = afterFinalizeBatch(outcome);
+      if (next === "finalized") {
         return markFinalized(
           "Fund was created and its first NAV update recorded in one transaction.",
         );
       }
-      if (outcome === "stopped") return;
-      toastStore.addToast(
-        "This wallet cannot batch. Finalize first, then confirm the NAV update right after.",
-      );
+      if (next === "stop") return;
+      // The wallet would not batch and nothing has been sent. Finalizing
+      // alone is a different decision from the one the button announced, so
+      // it is put to the user as explicit steps instead of being sent.
+      return openSteps(route, outcome === "upgrade_declined" ? "declined" : "refused");
     }
 
-    const isFinalized = await settle(
-      fundFactoryContract.value.send("finalizeCreateFund", {}, []),
-    );
+    if (route) return openSteps(route, "wallet");
+
+    // No NAV update to pair it with: the finalize goes out by itself.
+    const isFinalized = await sendFinalizeAlone();
     if (!isFinalized) return toastStore.errorToast(FINALIZE_FAILED_TOAST);
-    if (!route) return markFinalized("Fund was created successfully.");
-
-    // Not atomic, so make the gap as short as it can be: the NAV update is
-    // prompted the moment the finalize is mined.
-    const isNavRecorded = await settle(
-      sendRoleExecution(
-        fundChainId.value as ChainId,
-        route.rolesModAddress,
-        { to: fundAddress.value, data: encodeFirstNavUpdate(navExecutorAddress.value) },
-        route.role,
-        route.version as RolesVersion,
-      ),
-    );
-    if (!isNavRecorded) {
-      toastStore.errorToast(
-        "The vault is finalized, but its first NAV update did not go through. Deposits settle instantly until one is recorded — update NAV from the vault's NAV page now.",
-      );
-    }
-    markFinalized(
-      isNavRecorded
-        ? "Fund was created and its first NAV update recorded."
-        : "Fund was created successfully.",
-    );
+    markFinalized("Fund was created successfully.");
   } catch (error: any) {
     console.error(error);
     toastStore.errorToast("There was an error finalizing the vault");

@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { ethers } from "ethers";
 import {
+  afterFinalizeBatch,
   buildFinalizeWithFirstNavCalls,
   encodeFirstNavExecution,
+  firstNavDeliveryFor,
   firstNavRoleCandidates,
   pickFirstNavRole,
 } from "../composables/onboarding/finalizeCalls";
+import { parseAtomicBatchStatus } from "../services/eip5792";
 
 const FACTORY = "0xD45e5D73bcD8625f8B5C4b1b6DD7Ca48Dd47F4F6";
 const FUND = "0xC868eAdf7DC14Cd48DC7B4A262b167a8C09b8007";
@@ -115,5 +118,44 @@ describe("pickFirstNavRole", () => {
     expect(
       await pickFirstNavRole(["a"], () => Promise.resolve({ ok: false })),
     ).toBeUndefined();
+  });
+});
+
+describe("firstNavDeliveryFor", () => {
+  it("promises one transaction only for an account that already batches", () => {
+    expect(firstNavDeliveryFor("supported")).toBe("atomic");
+  });
+
+  it("keeps an account that still needs the smart-account switch apart", () => {
+    // MetaMask's answer for a plain EOA on a chain it can upgrade on: the
+    // batch depends on a prompt the user may refuse.
+    const status = parseAtomicBatchStatus(
+      { "0x89": { atomic: { status: "ready" } } },
+      "0x89",
+    );
+    expect(status).toBe("ready");
+    expect(firstNavDeliveryFor(status)).toBe("upgrade");
+  });
+
+  it("splits into steps when the wallet reports nothing for the chain", () => {
+    // What MetaMask returns for a hardware account, or with smart-account
+    // suggestions dismissed: the chain is simply absent.
+    const status = parseAtomicBatchStatus(
+      { "0x1": { atomic: { status: "ready" } } },
+      "0x89",
+    );
+    expect(firstNavDeliveryFor(status)).toBe("sequential");
+  });
+});
+
+describe("afterFinalizeBatch", () => {
+  it("finalizes on a landed batch and stops on a rejected or failed one", () => {
+    expect(afterFinalizeBatch("success")).toBe("finalized");
+    expect(afterFinalizeBatch("stopped")).toBe("stop");
+  });
+
+  it("never falls through to a transaction when the wallet would not batch", () => {
+    expect(afterFinalizeBatch("upgrade_declined")).toBe("steps");
+    expect(afterFinalizeBatch("unsupported")).toBe("steps");
   });
 });
