@@ -32,9 +32,13 @@ import { ChainId } from "~/types/enums/chain_id";
  *   Uniswap NPM         increaseLiquidity, decreaseLiquidity(tokenId owned by
  *                         the Safe), collect(owned, recipient == Safe)
  *
- * Buyback-Executor (`Buyback-Executor`)
- *   1inch v6            the same unoswapTo2, amount ≤ 0.1 WETH and within the
- *                         allowance `sniBuybackWethDaily` (0.1 WETH per UTC day)
+ * Buyback-Executor (`Buyback-Executor`), since 2026-11-23 (tx 0xf6f5cd60…
+ * at block ~97816400, fork-tested in scripts/sni-roles-v2/gen-buyback-v2.ts)
+ *   1inch v6            the same unoswapTo2, amount ≤ 0.5 WETH and within the
+ *                         allowance `sniBuybackWethDaily` (0.5 WETH per UTC day)
+ *   SwapRouter02        exactInput(path one-of the four WETH → USDC → SNI
+ *                         paths, recipient == Safe, amountIn ≤ 0.5 WETH and
+ *                         within the same allowance) — the fallback route
  *
  * Not granted to any role, on purpose: 1inch swap() (caller-chosen executor
  * and srcReceiver), unoswapTo, multicall on either Uniswap contract, NPM
@@ -56,8 +60,8 @@ export const SYC = {
   /** Role 3, the buyback script. A custom role is named by its key. */
   BUYBACK_ROLE: "Buyback-Executor",
   BUYBACK_ALLOWANCE_KEY: bytes32("sniBuybackWethDaily"),
-  /** The most one buyback may spend, and the daily budget. */
-  BUYBACK_MAX: ethers.parseEther("0.1"),
+  /** The most one buyback may spend, and the daily budget shared by both of its routes. */
+  BUYBACK_MAX: ethers.parseEther("0.5"),
   ADDR: {
     fund: "0xC868eAdf7DC14Cd48DC7B4A262b167a8C09b8007",
     safe: "0x3Fca31E56706b5461DB54DcfeeFda9912cbe5ddF",
@@ -229,6 +233,9 @@ export const SYC_PATHS: string[] = WETH_USDC_FEES.flatMap((fee) => [
   packPath([WETH.address, fee, USDC.address, 3000, SNI.address]),
 ]).map((p) => p.toLowerCase());
 
+/** The four paths the buyback role may take through Uniswap: WETH → USDC → SNI. */
+export const SYC_BUY_PATHS = SYC_PATHS.filter((p) => p.startsWith(WETH.address.toLowerCase()));
+
 /** The one 1inch route the grants allow: WETH → USDC (0.05%) → SNI (0.3%). */
 export const SYC_ONEINCH_ROUTE = {
   token: WETH,
@@ -285,10 +292,19 @@ export const sycValidate = (call: SycCall, role: SycRole = "executor", ctx: SycV
   const problems: string[] = [];
 
   if (role === "buyback") {
-    if (!same(call.to, A.oneInch) || selector !== S.unoswapTo2) {
-      return ["The buyback role may only buy SNI with WETH through the pinned 1inch route."];
+    if (same(call.to, A.oneInch) && selector === S.unoswapTo2) return pinnedOneInchProblems(data, SYC.BUYBACK_MAX);
+    if (same(call.to, A.router02) && selector === S.exactInput) {
+      const [p] = IF.router02.decodeFunctionData("exactInput", data);
+      if (!SYC_BUY_PATHS.includes(String(p.path).toLowerCase())) {
+        problems.push("Through Uniswap, the buyback must be WETH → USDC (one pool) → SNI (0.3%).");
+      }
+      if (!same(p.recipient, A.safe)) problems.push(`Proceeds must land in the Safe, not ${shortAddress(p.recipient)}.`);
+      if ((p.amountIn as bigint) > SYC.BUYBACK_MAX) {
+        problems.push(`One buyback may spend at most ${ethers.formatEther(SYC.BUYBACK_MAX)} WETH.`);
+      }
+      return problems;
     }
-    return pinnedOneInchProblems(data, SYC.BUYBACK_MAX);
+    return ["The buyback role may only buy SNI with WETH: the pinned 1inch route, or Uniswap exactInput through USDC."];
   }
 
   const token = sycTokenAt(call.to);
@@ -995,9 +1011,9 @@ export const sycExplainDenial = (reason: string | undefined, role: SycRole = "ex
     return `The connected wallet is not ${ROLE_NAMES[role]} of this vault.`;
   }
   if (/status 5\b/.test(text)) return "A value is not one of those the permission allows (a token, spender or path).";
-  if (/status 9\b/.test(text)) return "One buyback may spend at most 0.1 WETH.";
+  if (/status 9\b/.test(text)) return `One buyback may spend at most ${ethers.formatEther(SYC.BUYBACK_MAX)} WETH.`;
   if (/status 16\b/.test(text)) return "The position is not owned by the Safe.";
-  if (/status 17\b/.test(text)) return "Today's 0.1 WETH buyback budget is already spent. It refills at 00:00 UTC.";
+  if (/status 17\b/.test(text)) return `Today's ${ethers.formatEther(SYC.BUYBACK_MAX)} WETH buyback budget is already spent. It refills at 00:00 UTC.`;
   return text || "The Roles modifier does not allow this for the connected wallet.";
 };
 

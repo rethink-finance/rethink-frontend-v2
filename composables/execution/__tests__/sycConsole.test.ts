@@ -6,6 +6,7 @@ import {
   SYC,
   SYC_ONEINCH_ROUTE,
   SYC_PATHS,
+  SYC_BUY_PATHS,
   SYC_POOLS,
   SYC_SELECTORS,
   SYC_SPENDERS,
@@ -139,13 +140,19 @@ describe("the console's constants are what the modifier stores", () => {
     for (const v of expected) expect(bb.values).toContain(v.toLowerCase());
   });
 
-  it("caps a buyback at 0.1 WETH and the shared daily allowance", () => {
-    const bb = scopeOf(BUYBACK, A.oneInch, SYC_SELECTORS.unoswapTo2)!;
-    // LessThan (18) 0.1 WETH + 1, WithinAllowance (28) on the allowance key.
-    expect(bb.operators).toContain(18);
-    expect(bb.operators).toContain(28);
-    expect(bb.values).toContain(ethers.zeroPadValue(ethers.toBeHex(SYC.BUYBACK_MAX + 1n), 32).toLowerCase());
-    expect(bb.values).toContain(SYC.BUYBACK_ALLOWANCE_KEY.toLowerCase());
+  it("caps a buyback at 0.5 WETH and the shared daily allowance, on both of its routes", () => {
+    for (const bb of [scopeOf(BUYBACK, A.oneInch, SYC_SELECTORS.unoswapTo2)!, scopeOf(BUYBACK, A.router02, SYC_SELECTORS.exactInput)!]) {
+      // LessThan (18) 0.5 WETH + 1, WithinAllowance (28) on the allowance key.
+      expect(bb.operators).toContain(18);
+      expect(bb.operators).toContain(28);
+      expect(bb.values).toContain(ethers.zeroPadValue(ethers.toBeHex(SYC.BUYBACK_MAX + 1n), 32).toLowerCase());
+      expect(bb.values).toContain(SYC.BUYBACK_ALLOWANCE_KEY.toLowerCase());
+    }
+    // Uniswap: only the four WETH → USDC → SNI paths, proceeds to the Safe.
+    const uni = scopeOf(BUYBACK, A.router02, SYC_SELECTORS.exactInput)!;
+    for (const path of SYC_BUY_PATHS) expect(uni.values).toContain(bytesWord(path));
+    expect(uni.values.filter((v) => v.length === bytesWord(SYC_BUY_PATHS[0]).length)).toHaveLength(4);
+    expect(uni.values).toContain(addressWord(A.safe));
     expect(stored.allowance.key).toBe(SYC.BUYBACK_ALLOWANCE_KEY.toLowerCase());
     expect(BigInt(stored.allowance.maxRefill)).toBe(SYC.BUYBACK_MAX);
   });
@@ -254,10 +261,16 @@ describe("calls the console builds pass the grants", () => {
     expect(c.recipient).toBe(A.safe);
   });
 
-  it("the buyback: the pinned route within 0.1 WETH", () => {
+  it("the buyback: the pinned 1inch route or Uniswap through USDC, within 0.5 WETH", () => {
     const route = sycOneInchRoute();
     expect(sycValidate(buildOneInchSwap({ route, amountIn: SYC.BUYBACK_MAX, minReturn: 1n }), "buyback")).toEqual([]);
-    expect(sycValidate(buildOneInchSwap({ route, amountIn: SYC.BUYBACK_MAX + 1n, minReturn: 1n }), "buyback").join(" ")).toMatch(/at most 0.1 WETH/);
+    expect(sycValidate(buildOneInchSwap({ route, amountIn: SYC.BUYBACK_MAX + 1n, minReturn: 1n }), "buyback").join(" ")).toMatch(/at most 0.5 WETH/);
+    expect(sycValidate(buildUniswapSwap({ route, amountIn: SYC.BUYBACK_MAX, minReturn: 1n }), "buyback")).toEqual([]);
+    expect(sycValidate(buildUniswapSwap({ route, amountIn: SYC.BUYBACK_MAX + 1n, minReturn: 1n }), "buyback").join(" ")).toMatch(/at most 0.5 WETH/);
+    // the reverse path and a single-pool swap are not the buyback's
+    const back = { ...route, hops: [...route.hops].reverse().map((h) => ({ ...h, sell: h.buy, buy: h.sell })) };
+    expect(sycValidate(buildUniswapSwap({ route: back, amountIn: 1n, minReturn: 1n }), "buyback").join(" ")).toMatch(/WETH → USDC/);
+    expect(sycValidate(buildUniswapSwap({ route: { ...route, hops: [route.hops[0]] }, amountIn: 1n, minReturn: 1n }), "buyback").join(" ")).toMatch(/may only buy SNI/);
   });
 });
 
@@ -310,7 +323,7 @@ describe("the validator refuses what the modifier refuses", () => {
 
   it("the buyback role may do nothing but the pinned buy", () => {
     expect(sycValidate(buildApprove(WETH, ONE_INCH_ROUTER_V6), "buyback")).not.toEqual([]);
-    expect(sycValidate(buildSwap("uniswap", { route, amountIn: 1n, minReturn: 1n }), "buyback")).not.toEqual([]);
+    expect(sycValidate(buildSwap("uniswap", { route: sycRoutesBetween(SNI, WETH)[0], amountIn: 1n, minReturn: 1n }), "buyback")).not.toEqual([]);
     expect(sycValidate(buildCollect(1n), "buyback")).not.toEqual([]);
   });
 });
@@ -397,7 +410,7 @@ describe("numbers and words", () => {
     expect(parsePct("1,5")).toBe(1.5);
     expect(parsePct("0")).toBeNull();
     expect(parsePct("51")).toBeNull();
-    expect(parseAmount("0.1", 18)).toBe(SYC.BUYBACK_MAX);
+    expect(parseAmount("0.5", 18)).toBe(SYC.BUYBACK_MAX);
     expect(parseAmount("abc", 18)).toBeNull();
   });
 
@@ -405,7 +418,7 @@ describe("numbers and words", () => {
     expect(sycExplainDenial("The connected wallet does not hold the role this action needs on this vault.", "buyback")).toMatch(/not a Buyback-Executor/);
     expect(sycExplainDenial("The connected wallet does not hold the role this action needs on this vault.")).toMatch(/not an Executor/);
     expect(sycExplainDenial("The Roles modifier denied this call (status 17).")).toMatch(/budget is already spent/);
-    expect(sycExplainDenial("The Roles modifier denied this call (status 9).")).toMatch(/at most 0.1 WETH/);
+    expect(sycExplainDenial("The Roles modifier denied this call (status 9).")).toMatch(/at most 0.5 WETH/);
     expect(sycExplainDenial("The Roles modifier denied this call (status 16).")).toMatch(/not owned by the Safe/);
   });
 });
