@@ -1,0 +1,268 @@
+[
+  {
+    "what": "anyone can act as the owner",
+    "state": "noticed",
+    "failing": [
+      "test_ownership",
+      "test_setReporter_onlyOnce_neverReplacedOrCleared",
+      "test_held_strangersCannotSteer"
+    ]
+  },
+  {
+    "what": "a mint can be re-entered",
+    "state": "noticed",
+    "failing": [
+      "test_held_callingBackInDuringAMintIsRefused"
+    ]
+  },
+  {
+    "what": "the first issuance can run twice",
+    "state": "noticed",
+    "failing": [
+      "test_seed_mintsTheFixedAmountsOnce"
+    ]
+  },
+  {
+    "what": "dust amounts are distributed",
+    "state": "noticed",
+    "failing": [
+      "test_exploit_dustMintsCannotFloodTheLog",
+      "test_held_noDoubleMintAfterSniLeavesAndReturns"
+    ]
+  },
+  {
+    "what": "distributions start before the first issuance",
+    "state": "noticed",
+    "failing": [
+      "test_distribute_waitsForTheSeed"
+    ]
+  },
+  {
+    "what": "old weights are used for ever",
+    "state": "noticed",
+    "failing": [
+      "test_exploit_aHolderThatLeftStopsEarningOnceTheWeightsAreTooOld",
+      "test_held_anUnchangedReportConfirmsTheWeights",
+      "test_held_theWeightAgeLimitIsExact"
+    ]
+  },
+  {
+    "what": "the supply is not checked after a mint",
+    "state": "noticed",
+    "failing": [
+      "test_distribute_refusesAVaultThatMintsMoreThanAsked"
+    ]
+  },
+  {
+    "what": "each wallet's receipt is not checked",
+    "state": "noticed",
+    "failing": [
+      "test_distribute_refusesAMintFee",
+      "test_exploit_aMintFeeCannotHideBehindARepeatedRecipient"
+    ]
+  },
+  {
+    "what": "the backing is not checked after a mint",
+    "state": "noticed",
+    "failing": [
+      "test_exploit_unbackedSupplyStillStopsTheFirstIssuance",
+      "test_seed_needsTheSniToBeInTheSafe"
+    ]
+  },
+  {
+    "what": "anyone can deliver a report",
+    "state": "noticed",
+    "failing": [
+      "test_held_strangersCannotSteer",
+      "test_report_onlyThroughTheBridgeAndFromTheReporter"
+    ]
+  },
+  {
+    "what": "a report from any Ethereum sender is taken",
+    "state": "noticed",
+    "failing": [
+      "test_held_strangersCannotSteer",
+      "test_report_ignoredUntilAReporterIsSet",
+      "test_report_onlyThroughTheBridgeAndFromTheReporter"
+    ]
+  },
+  {
+    "what": "an old report can be replayed",
+    "state": "noticed",
+    "failing": [
+      "test_report_onlyThroughTheBridgeAndFromTheReporter"
+    ]
+  },
+  {
+    "what": "an unchanged report does not confirm the weights",
+    "state": "noticed",
+    "failing": [
+      "test_held_anUnchangedReportConfirmsTheWeights"
+    ]
+  },
+  {
+    "what": "an unchanged report is treated as a change",
+    "state": "noticed",
+    "failing": [
+      "test_report_unchangedWeightsAreDropped",
+      "test_exploit_repeatingAnUnchangedReportCannotStallDistributions",
+      "test_held_anUnchangedReportConfirmsTheWeights"
+    ]
+  },
+  {
+    "what": "SNI waiting before a report goes by the new weights",
+    "state": "noticed",
+    "failing": [
+      "test_exploit_aChangedReportDoesNotNeedAHumanToApplyIt",
+      "test_held_aSecondReportBeforeTheFirstIsApplied",
+      "test_held_sniLeavingAfterAReportArrivedDoesNotBlockIt",
+      "test_keeper_waitsForAReportTooLargeToStore_thenAnyoneAppliesIt",
+      "test_report_endToEnd_newDepositorSharesOnlyInWhatArrivesAfter"
+    ]
+  },
+  {
+    "what": "any data is accepted as the pending report",
+    "state": "noticed",
+    "failing": [
+      "test_held_anAlteredReportIsRefused"
+    ]
+  },
+  {
+    "what": "weights can change in the middle of a distribution",
+    "state": "noticed",
+    "failing": [
+      "test_keeper_waitsForAReportTooLargeToStore_thenAnyoneAppliesIt"
+    ]
+  },
+  {
+    "what": "a wallet can be listed twice",
+    "state": "noticed",
+    "failing": [
+      "test_weights_badListsAreRefusedAtDeployment",
+      "test_exploit_aMintFeeCannotHideBehindARepeatedRecipient"
+    ]
+  },
+  {
+    "what": "a zero weight is accepted",
+    "state": "noticed",
+    "failing": [
+      "test_weights_badListsAreRefusedAtDeployment"
+    ]
+  },
+  {
+    "what": "the zero address is accepted",
+    "state": "noticed",
+    "failing": [
+      "test_weights_badListsAreRefusedAtDeployment"
+    ]
+  },
+  {
+    "what": "oversized weights are accepted",
+    "state": "noticed",
+    "failing": [
+      "test_weights_badListsAreRefusedAtDeployment",
+      "test_exploit_hugeWeightsCannotFreezeDistributions"
+    ]
+  },
+  {
+    "what": "more than 100 recipients are accepted",
+    "state": "noticed",
+    "failing": [
+      "test_weights_badListsAreRefusedAtDeployment"
+    ]
+  },
+  {
+    "what": "the reporter can be replaced",
+    "state": "noticed",
+    "failing": [
+      "test_setReporter_onlyOnce_neverReplacedOrCleared",
+      "test_exploit_theOwnerCannotRedirectDistributions"
+    ]
+  },
+  {
+    "what": "a distribution carries on after its SNI left",
+    "state": "noticed",
+    "failing": [
+      "test_held_sniLeavingMidDistributionNeverLeavesSycUnbacked"
+    ]
+  },
+  {
+    "what": "more is owed by the old weights than is there",
+    "state": "noticed",
+    "failing": [
+      "test_held_sniLeavingAfterAReportArrivedDoesNotBlockIt"
+    ]
+  },
+  {
+    "what": "everything is minted in one call, no batches",
+    "state": "noticed",
+    "failing": [
+      "testFuzz_held_batchesPayEveryWalletItsExactShare",
+      "test_exploit_aLargeDistributionGoesOutInBatches",
+      "test_held_sniLeavingMidDistributionNeverLeavesSycUnbacked",
+      "test_held_weightsCannotChangeInTheMiddleOfADistribution"
+    ]
+  },
+  {
+    "what": "the keeper is called when a call would revert",
+    "state": "noticed",
+    "failing": [
+      "test_exploit_aHolderThatLeftStopsEarningOnceTheWeightsAreTooOld"
+    ]
+  },
+  {
+    "what": "the keeper is called for a report nobody stored",
+    "state": "noticed",
+    "failing": [
+      "test_keeper_waitsForAReportTooLargeToStore_thenAnyoneAppliesIt"
+    ]
+  },
+  {
+    "what": "a holder can be listed twice in a report",
+    "state": "noticed",
+    "failing": [
+      "test_reporter_refusesDuplicatesAndDisorder"
+    ]
+  },
+  {
+    "what": "contracts are paid",
+    "state": "noticed",
+    "failing": [
+      "test_exploit_aContractHolderIsNotPaidAtAnAddressItDoesNotControl",
+      "test_reporter_treatsADelegatedWalletAsAWallet"
+    ]
+  },
+  {
+    "what": "dust balances are sent",
+    "state": "noticed",
+    "failing": [
+      "test_reporter_dropsBalancesBelowTheMinimum_butStillCountsThem",
+      "test_exploit_dustHoldersCannotMakeReportsImpossible"
+    ]
+  },
+  {
+    "what": "a report can leave holders out",
+    "state": "noticed",
+    "failing": [
+      "test_reporter_dropsBalancesBelowTheMinimum_butStillCountsThem",
+      "test_reporter_refusesAnIncompleteList",
+      "testFuzz_held_aHolderThatCountsCanNeverBeLeftOut",
+      "test_exploit_aWeiMovedInFrontOfAReportCannotBlockIt",
+      "test_held_reportCannotOmitOrRedirectAnotherHolder"
+    ]
+  },
+  {
+    "what": "a report can carry more than 100 recipients",
+    "state": "noticed",
+    "failing": [
+      "test_reporter_refusesMoreRecipientsThanTheDistributorTakes"
+    ]
+  },
+  {
+    "what": "a delegated wallet is treated as a contract",
+    "state": "noticed",
+    "failing": [
+      "test_reporter_treatsADelegatedWalletAsAWallet"
+    ]
+  }
+]

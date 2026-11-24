@@ -7,6 +7,7 @@
     <ExecutionDocConsole v-else-if="isDocVault" />
     <ExecutionSciEthConsole v-else-if="isSciEthVault" />
     <ExecutionIndefiConsole v-else-if="isIndefiVault" />
+    <ExecutionSycConsole v-else-if="isSycVault" />
 
     <!-- Any other HyperEVM vault: its Hyperliquid account — API wallets and
          the RETHINK referral — set up here instead of by script. The
@@ -240,6 +241,7 @@ import { useToastStore } from "~/store/toasts/toast.store";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import { useContractAddresses } from "~/composables/useContractAddresses";
 import { CRT_V2_ADDR } from "~/composables/execution/crtV2Vault";
+import { SYC } from "~/composables/execution/sycConsole";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
@@ -296,7 +298,16 @@ const isIndefiVault = computed(
     (fundStore.fund?.address || "").toLowerCase() === INDEFI_VAULT_ADDRESS &&
     fundStore.selectedFundChain === "0x2105",
 );
-const hasGuidedConsole = computed(() => isCrtV2Vault.value || isCrtVault.value || isDocVault.value || isSciEthVault.value || isIndefiVault.value);
+// The SNI Yield Claim Vault (Polygon, Roles v2): Executor swaps and positions
+// and the Buyback-Executor's daily buy, with the Uniswap and 1inch web apps
+// deliberately locked out (no multicall, no 1inch swap()). Its console builds
+// exactly the calls the grants accept.
+const isSycVault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === SYC.ADDR.fund.toLowerCase() &&
+    fundStore.selectedFundChain === SYC.CHAIN,
+);
+const hasGuidedConsole = computed(() => isCrtV2Vault.value || isCrtVault.value || isDocVault.value || isSciEthVault.value || isIndefiVault.value || isSycVault.value);
 const isHyperEvmVault = computed(() => fundStore.selectedFundChain === "0x3e7");
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);

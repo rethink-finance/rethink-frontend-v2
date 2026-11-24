@@ -1,0 +1,22 @@
+[profile.default]
+src = "src"
+out = "out"
+test = "test"
+libs = ["lib"]
+solc = "0.8.28"
+optimizer = true
+optimizer_runs = 200
+evm_version = "cancun"
+bytecode_hash = "none"
+cbor_metadata = false
+remappings = ["forge-std/=lib/forge-std/src/"]
+
+fs_permissions = [{ access = "read", path = "./role" }]
+# Off on purpose. With it on, forge turns `new SycDistributor(...)` in a test into a cheatcode call, and a test
+# that expects that deployment to revert then stops at that line and is reported as passing.
+dynamic_test_linking = false
+
+[invariant]
+runs = 256
+depth = 100
+fail_on_revert = false
