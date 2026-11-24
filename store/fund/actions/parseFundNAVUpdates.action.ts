@@ -3,6 +3,7 @@ import {
   decodeNavUpdateEntry,
 } from "~/composables/nav/navDecoder";
 
+import { sumRecordedNavValues } from "~/composables/nav/recordedNavValue";
 import { parseNAVMethod } from "~/composables/parseNavMethodDetails";
 import { useWeb3Store } from "~/store/web3/web3.store";
 import type { ChainId } from "~/types/enums/chain_id";
@@ -102,13 +103,15 @@ const updateNavMethodPastNavValue = async (
   navMethod.pastNavValueError = false;
 
   try {
-    const navCacheResult = await navCalculatorContract.methods[
-      calculatorMethod
-    ](fundAddress, navMethodIndex).call();
-    navMethod.pastNavValue = navCacheResult.reduce(
-      (acc: bigint, val: bigint) => acc + val,
-      0n,
+    // Retried, and on the next RPC if this one keeps failing: one refused
+    // request used to leave the row with a warning until the page was reloaded.
+    const navCacheResult = await web3Store.callWithRetry(fundChainId, () =>
+      navCalculatorContract.methods[calculatorMethod](
+        fundAddress,
+        navMethodIndex,
+      ).call(),
     );
+    navMethod.pastNavValue = sumRecordedNavValues(navCacheResult);
   } catch (error) {
     navMethod.pastNavValueError = true;
     console.error(
