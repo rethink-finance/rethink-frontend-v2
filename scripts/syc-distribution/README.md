@@ -32,6 +32,12 @@ mint role, dry-runs the mint and the permission, and writes `out/<date>/report.m
 (for the admin multisig's Transaction Builder). It sends nothing and needs no key. The exit code is 1 when the report has a
 "Needs attention" section, so a cron job can tell.
 
+The SYC vault's Execution App tab (Distribution card) does the same in the browser and files the mint with the admin
+Safe under one owner's signature, or downloads the same Transaction Builder file. It starts from this folder's result at
+Polygon block 97,866,642 (`SYC_MINT.BASE` in `composables/execution/sycMultisigMint.ts`) and reads only Polygon after
+it, since every sniETH weight is fixed after the 8 Sep 2026 incident. If `06-compute.mjs` ever changes what is owed
+before that block (an odd SNI mint counted as an incentive, a new sniETH vault), update `SYC_MINT.BASE` from a fresh run.
+
 Each week:
 1. Run it. Read `report.md`: the table, the checks, anything under "Needs attention".
 2. In the admin multisig open Apps > Transaction Builder, load `safe-transaction.json`, create the transaction, collect
