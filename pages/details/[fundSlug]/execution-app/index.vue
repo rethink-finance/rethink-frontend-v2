@@ -8,6 +8,7 @@
     <ExecutionSciEthConsole v-else-if="isSciEthVault" />
     <ExecutionIndefiConsole v-else-if="isIndefiVault" />
     <ExecutionSycConsole v-else-if="isSycVault" />
+    <ExecutionSniEthConsole v-else-if="isSniEthVault" />
 
     <!-- Any other HyperEVM vault: its Hyperliquid account — API wallets and
          the RETHINK referral — set up here instead of by script. The
@@ -242,6 +243,7 @@ import { useWeb3Store } from "~/store/web3/web3.store";
 import { useContractAddresses } from "~/composables/useContractAddresses";
 import { CRT_V2_ADDR } from "~/composables/execution/crtV2Vault";
 import { SYC } from "~/composables/execution/sycConsole";
+import { SNI as SNIETH } from "~/composables/execution/sniEthConsole";
 
 const fundStore = useFundStore();
 const web3Store = useWeb3Store();
@@ -307,7 +309,16 @@ const isSycVault = computed(
     (fundStore.fund?.address || "").toLowerCase() === SYC.ADDR.fund.toLowerCase() &&
     fundStore.selectedFundChain === SYC.CHAIN,
 );
-const hasGuidedConsole = computed(() => isCrtV2Vault.value || isCrtVault.value || isDocVault.value || isSciEthVault.value || isIndefiVault.value || isSycVault.value);
+// soonami Venture Staking I (sniETH, mainnet, Roles v1): the claim-rewards →
+// Across-to-Polygon routine, two presses from any role-1 wallet. Its bridge
+// permissions leave the SpokePool unpinned, so a raw calldata box beside it
+// would be a way to send the rewards anywhere.
+const isSniEthVault = computed(
+  () =>
+    (fundStore.fund?.address || "").toLowerCase() === SNIETH.ADDR.fund.toLowerCase() &&
+    fundStore.selectedFundChain === SNIETH.CHAIN,
+);
+const hasGuidedConsole = computed(() => isCrtV2Vault.value || isCrtVault.value || isDocVault.value || isSciEthVault.value || isIndefiVault.value || isSycVault.value || isSniEthVault.value);
 const isHyperEvmVault = computed(() => fundStore.selectedFundChain === "0x3e7");
 const loadingSubmitRawTXN = ref(false);
 const formSubmitRawTXNIsValid = ref(false);
