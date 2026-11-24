@@ -1,6 +1,7 @@
 import type IFund from "~/types/fund";
 import type { ChainId } from "~/types/enums/chain_id";
 import { useActionState } from "~/store/actionState.store";
+import { hasNoSharePrice } from "~/composables/fund/noShares";
 
 
 export function fetchFundLatestSnapshotAction(fund: IFund): Promise<IFund> {
@@ -113,11 +114,13 @@ const parseFundSnapshotResponse = (fund: IFund, data: any): IFund => {
   }
 
   const positionTypesCounts = fund?.positionTypeCounts?.length ? fund?.positionTypeCounts : data?.positionTypeCounts?.length ? data?.positionTypeCounts : [];
+  // No shares yet: the backend's 0 share price and -100% return are not figures.
+  const noSharePrice = hasNoSharePrice(data?.sharePrice, data?.totalSupply);
   return {
     ...fund,
     totalSimulatedNavCalculatedAt,
     totalSimulatedNavCalculatedAtISO: data?.calculatedAt,
-    sharePrice: data?.sharePrice,
+    sharePrice: noSharePrice ? undefined : data?.sharePrice,
     totalSimulatedNav: BigInt(data?.totalSimulatedNav || 0),
     totalSimulatedNavFormatted: data?.totalSimulatedNavFormatted,
     totalSimulatedNavUSD: data?.totalSimulatedNavUSD,
@@ -126,7 +129,7 @@ const parseFundSnapshotResponse = (fund: IFund, data: any): IFund => {
     totalDepositBalance: BigInt(data?.totalDepositBalance || 0),
     sharpeRatio: data?.sharpeRatio,
     lastNAVUpdateTotalNAV: data?.totalNAV,
-    cumulativeReturnPercent: data?.cumulativeReturnPercent,
+    cumulativeReturnPercent: noSharePrice ? undefined : data?.cumulativeReturnPercent,
     positionTypeCounts: positionTypesCounts,
     isNavUpdatesLoading: false,
   };

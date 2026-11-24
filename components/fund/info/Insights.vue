@@ -150,22 +150,26 @@
       </template>
     </div>
 
-    <div v-if="stakingRewards" class="fund_rewards">
+    <div v-if="rewardsLink" class="fund_rewards">
       <div class="fund_rewards__body">
         <div class="fund_rewards__label">
-          Rewards paid in {{ stakingRewards.rewardTokenSymbol }}
+          {{ rewardsLink.label }}
         </div>
         <p class="fund_rewards__text">
-          {{ stakingRewards.rewardNote }}
+          {{ rewardsLink.text }}
         </p>
       </div>
 
+      <!-- A full page load, not an in-app hop: the vault page and its store
+           are built around one vault per load, and moving to another vault in
+           place showed the new vault's header over the old one's figures. -->
       <NuxtLink
-        v-if="stakingRewards.rewardVaultUrl"
-        :to="stakingRewards.rewardVaultUrl"
+        v-if="rewardsLink.url"
+        :to="rewardsLink.url"
+        external
         class="fund_rewards__button"
       >
-        {{ stakingRewards.rewardActionLabel }}
+        {{ rewardsLink.actionLabel }}
       </NuxtLink>
       <!-- The rewards vault is not deployed yet. A disabled control says that
            plainly; a link to nowhere would not. -->
@@ -175,7 +179,7 @@
         class="fund_rewards__button fund_rewards__button--placeholder"
         disabled
       >
-        {{ stakingRewards.rewardActionLabel }}
+        {{ rewardsLink.actionLabel }}
         <span class="fund_rewards__soon">Coming soon</span>
       </button>
     </div>
@@ -195,6 +199,7 @@ import { ActionState } from "~/types/enums/action_state";
 import type IFund from "~/types/fund";
 import { useSettingsStore } from "~/store/settings/settings.store";
 import {
+  resolveRewardsLink,
   resolveStakingPerformance,
   resolveStakingRewards,
 } from "~/store/funds/config/stakingRewards.config";
@@ -269,6 +274,11 @@ const roundedApr = computed(() =>
  */
 const stakingRewards = computed(() =>
   resolveStakingRewards(props.fund?.chainId, props.fund?.address),
+);
+
+/** The strip that sends the reader to the vault on the other side of its rewards. */
+const rewardsLink = computed(() =>
+  resolveRewardsLink(props.fund?.chainId, props.fund?.address),
 );
 
 /** The same numbers the Discover table shows for this vault. */

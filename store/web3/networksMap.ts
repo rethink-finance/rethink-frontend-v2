@@ -244,6 +244,7 @@ const TOKEN_ADDRESS_TO_NAME: any = {
     "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359": "USDC",
     "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619": "WETH",
     "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063": "DAI",
+    "0xdc685acc53ca2a760029cab2f6a587482aa9cf57": "SNI",
   },
   [ChainId.ARBITRUM]: {
     "0xaf88d065e77c8cc2239327c5edb3a432268e5831": "USDC",

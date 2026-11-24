@@ -11,6 +11,7 @@
               selectedType === ChartType.SHARE_PRICE
           "
           :type-options="ChartTypesMap"
+          @update:selected="hasPickedType = true"
         />
       </div>
       <UiRangePills
@@ -51,6 +52,9 @@
             <h3 v-if="selectedType == ChartType.NAV">
               NAV data is currently not available.
             </h3>
+            <h3 v-else-if="selectedType == ChartType.SHARE_PRICE && noSharesYet">
+              No {{ fund?.fundToken?.symbol || "shares" }} issued yet, so there is no share price.
+            </h3>
             <h3 v-else-if="selectedType == ChartType.SHARE_PRICE">
               Share price data is currently not available.
             </h3>
@@ -87,6 +91,7 @@ import {
 } from "~/composables/monthlyReturns";
 import { abbreviateNumber } from "~/composables/abbreviateNumber";
 import { calculateSharePrice } from "~/composables/exchangeRate";
+import { isZeroSupply } from "~/composables/fund/noShares";
 import { useSettingsStore } from "~/store/settings/settings.store";
 import { resolveStakingRewards } from "~/store/funds/config/stakingRewards.config";
 
@@ -100,6 +105,8 @@ const props = defineProps<{
 }>();
 
 const selectedType = ref(ChartType.SHARE_PRICE);
+// Set once the viewer picks a chart; until then the chart may open on TVL.
+const hasPickedType = ref(false);
 
 const sharePriceItemsFromChain = ref([]) as Ref<number[]>;
 // Last visit's updates arrive with the fund when the page is served from
@@ -120,12 +127,12 @@ const valueShownInTypeSelector = computed(() => {
     );
   }
   if (selectedType.value === ChartType.SHARE_PRICE) {
+    // No price is a dash, not "0.00": a vault with no shares is not worth nothing.
+    const knownPrice = props.fund?.sharePrice || lastChartPoint.value?.y;
+    if (!knownPrice) return "–";
     // A share price is a price *in* something — carry the base asset with it,
     // the same way the NAV figure above does.
-    const price = abbreviateNumber(
-      props.fund?.sharePrice || lastChartPoint.value?.y || 0,
-      3,
-    );
+    const price = abbreviateNumber(knownPrice, 3);
     return `${price} ${props.fund?.baseToken?.symbol ?? ""}`.trim();
   }
 
@@ -509,6 +516,22 @@ const sharePriceChartPoints = computed<ChartPoint[]>(() => {
   points.sort((a, b) => a.timestamp - b.timestamp);
   return points;
 });
+
+/** The vault's share supply is known to be zero: NAV, but nothing to price. */
+const noSharesYet = computed(() => isZeroSupply(props.fund?.fundTokenTotalSupply));
+
+// A vault with nothing to plot as a share price (no shares yet, or no priced
+// update) but a NAV history opens on TVL, so the first thing it shows is a
+// chart and not an apology. The viewer's own pick always stands.
+watch(
+  () => [sharePriceChartPoints.value.length, navChartPoints.value.length] as const,
+  ([sharePricePoints, navPoints]) => {
+    if (hasPickedType.value) return;
+    selectedType.value =
+      !sharePricePoints && navPoints ? ChartType.NAV : ChartType.SHARE_PRICE;
+  },
+  { immediate: true },
+);
 
 // Selector depending on the chosen type
 const allChartPoints = computed<ChartPoint[]>(() =>
