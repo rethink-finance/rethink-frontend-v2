@@ -6,264 +6,46 @@
       Swaps and positions need the Executor role.
     </div>
 
-    <!-- ============================================================== Safe -->
-    <!-- The Safe's holdings on top, the stock every swap draws on and the mint is backed by. -->
-    <div class="brand_card syc_card syc_lp">
-      <div class="brand_card__head syc_head">
-        <div class="brand_card__eyebrow">
-          Safe
-        </div>
-        <div class="syc_head__right">
-          <div class="syc_fig syc_fig--inline">
-            <span class="syc_fig__value">{{ state ? fmtPrice(state.sniPriceUsdc) : "…" }} USDC</span>
-            <span class="syc_fig__label">per SNI</span>
-          </div>
-          <v-btn
-            variant="outlined"
-            size="small"
-            class="syc_refresh"
-            :loading="loading"
-            @click="refreshState"
-          >
-            Refresh
-          </v-btn>
-        </div>
-      </div>
-
-      <!-- The Safe's holdings, the stock every swap and position draws on. -->
-      <div class="syc_holdings">
-        <div v-for="t in SYC_TOKENS" :key="t.symbol" class="syc_fig">
-          <div class="syc_fig__value">
-            <ExecutionTokenMark :symbol="t.symbol" size="16px" />
-            {{ fmtBalance(t) }} {{ t.symbol }}
-          </div>
-          <div class="syc_fig__label">
-            {{ holdingOf(t) ? `$${fmtUsd(holdingOf(t)!.usd)}` : "in the Safe" }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Positions only when the Safe owns one: opening a new one is not granted, so an empty list has nothing to offer. -->
-      <div v-if="state?.positions.length" class="syc_sub">
-        Uniswap V3 positions
-      </div>
-      <div v-for="pos in state?.positions ?? []" :key="pos.tokenId.toString()" class="syc_pos">
-        <div class="syc_pos__head">
-          <span class="syc_pos__id">#{{ pos.tokenId.toString() }}</span>
-          <span class="syc_pos__pair">{{ positionPair(pos) }}</span>
-          <span class="syc_tag" :class="pos.inRange ? 'syc_tag--on' : 'syc_tag--off'">
-            {{ pos.liquidity === 0n ? "Empty" : pos.inRange ? "In range" : "Out of range" }}
-          </span>
-          <a
-            :href="positionUrl(pos)"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="syc_pos__link"
-          >Uniswap</a>
-        </div>
-        <div class="syc_pos__figs">
-          <div class="syc_fig">
-            <div class="syc_fig__value">
-              {{ fmtUnits(pos.amount0, tokenOf(pos.token0).decimals, 2) }} {{ tokenOf(pos.token0).symbol }}
-            </div>
-            <div class="syc_fig__label">
-              Liquidity
-            </div>
-          </div>
-          <div class="syc_fig">
-            <div class="syc_fig__value">
-              {{ fmtUnits(pos.amount1, tokenOf(pos.token1).decimals, 4) }} {{ tokenOf(pos.token1).symbol }}
-            </div>
-            <div class="syc_fig__label">
-              Liquidity
-            </div>
-          </div>
-          <div class="syc_fig">
-            <div class="syc_fig__value">
-              {{ fmtUnits(pos.collectable0, tokenOf(pos.token0).decimals, 4) }} {{ tokenOf(pos.token0).symbol }}
-            </div>
-            <div class="syc_fig__label">
-              Collectable
-            </div>
-          </div>
-          <div class="syc_fig">
-            <div class="syc_fig__value">
-              {{ fmtUnits(pos.collectable1, tokenOf(pos.token1).decimals, 4) }} {{ tokenOf(pos.token1).symbol }}
-            </div>
-            <div class="syc_fig__label">
-              Collectable
-            </div>
-          </div>
-          <div class="syc_fig syc_fig--wide">
-            <div class="syc_fig__value">
-              {{ rangeText(pos) }}
-            </div>
-            <div class="syc_fig__label">
-              Range, {{ tokenOf(pos.token0).symbol }} per {{ tokenOf(pos.token1).symbol }}
-            </div>
-          </div>
-        </div>
-        <div class="syc_pos__actions">
-          <v-btn
-            v-if="pos.collectable0 > 0n || pos.collectable1 > 0n"
-            variant="outlined"
-            size="small"
-            :disabled="!canExecutor"
-            @click="collectFees(pos)"
-          >
-            Collect
-          </v-btn>
-          <v-btn
-            v-if="pos.pool"
-            variant="outlined"
-            size="small"
-            :disabled="!canExecutor"
-            @click="openPanel(pos.tokenId, 'add')"
-          >
-            Add
-          </v-btn>
-          <v-btn
-            v-if="pos.liquidity > 0n"
-            variant="outlined"
-            size="small"
-            :disabled="!canExecutor"
-            @click="openPanel(pos.tokenId, 'remove')"
-          >
-            Remove
-          </v-btn>
-        </div>
-
-        <!-- Remove: decrease, then collect into the Safe -->
-        <div v-if="panel?.id === pos.tokenId && panel.kind === 'remove'" class="syc_panel">
-          <div class="syc_panel__row">
-            <div class="syc_chips">
-              <button
-                v-for="p in [25, 50, 75, 100]"
-                :key="p"
-                class="syc_chip"
-                :class="{ 'syc_chip--on': removePct === p }"
-                type="button"
-                @click="removePct = p"
-              >
-                {{ p }}%
-              </button>
-            </div>
-            <span class="syc_kv syc_kv--control">
-              <span>Max slippage</span>
-              <span><input
-                v-model="lpSlippage"
-                class="syc_small_input"
-                inputmode="decimal"
-                spellcheck="false"
-              >%</span>
-            </span>
-          </div>
-          <div class="syc_panel__row syc_panel__figs">
-            <div class="syc_fig">
-              <div class="syc_fig__value">
-                {{ fmtUnits(removePreview(pos).amount0, tokenOf(pos.token0).decimals, 4) }} {{ tokenOf(pos.token0).symbol }}
-              </div>
-              <div class="syc_fig__label">
-                Expected
-              </div>
-            </div>
-            <div class="syc_fig">
-              <div class="syc_fig__value">
-                {{ fmtUnits(removePreview(pos).amount1, tokenOf(pos.token1).decimals, 4) }} {{ tokenOf(pos.token1).symbol }}
-              </div>
-              <div class="syc_fig__label">
-                Expected
-              </div>
-            </div>
-          </div>
-          <v-btn
-            class="bg-primary text-secondary"
-            variant="flat"
-            size="small"
-            :disabled="!canExecutor || !lpSlippagePct"
-            @click="removeLiquidity(pos)"
-          >
-            Remove {{ removePct }}% and collect (2 transactions)
-          </v-btn>
-        </div>
-
-        <!-- Add: the other side paired at the current price, approvals folded in -->
-        <div v-if="panel?.id === pos.tokenId && panel.kind === 'add' && pos.pool" class="syc_panel">
-          <div class="syc_new__grid">
-            <label v-for="i in [0, 1]" :key="i" class="syc_field">
-              <span class="syc_field__label">{{ pos.pool.tokens[i].symbol }}</span>
-              <input
-                v-model="addText[i]"
-                class="syc_field__input"
-                inputmode="decimal"
-                placeholder="0"
-                spellcheck="false"
-                :disabled="addSide(pos) !== null && addSide(pos) !== i"
-                @input="addEdited = i as 0 | 1"
-              >
-              <span class="syc_field__unit">
-                Safe: {{ fmtBalance(pos.pool.tokens[i]) }}
-              </span>
-            </label>
-          </div>
-          <div class="syc_panel__row">
-            <span class="syc_kv syc_kv--control">
-              <span>Max slippage</span>
-              <span><input
-                v-model="lpSlippage"
-                class="syc_small_input"
-                inputmode="decimal"
-                spellcheck="false"
-              >%</span>
-            </span>
-            <span v-if="addProblem(pos)" class="syc_new__problem">{{ addProblem(pos) }}</span>
-          </div>
-          <v-btn
-            class="bg-primary text-secondary"
-            variant="flat"
-            size="small"
-            :disabled="!canExecutor || !addReady(pos)"
-            @click="addLiquidity(pos)"
-          >
-            {{ addButtonText(pos) }}
-          </v-btn>
-        </div>
-      </div>
-
-      <div v-if="lp.error" class="syc_notice syc_notice--bad">
-        {{ lp.error }}
-      </div>
-      <div v-if="lp.done" class="syc_done">
-        <Icon icon="octicon:check-circle-fill-16" width="1rem" height="1rem" />
-        <span>{{ lp.done }}</span>
-        <a
-          v-if="lp.hash"
-          :href="txUrl(lp.hash)"
-          target="_blank"
-          rel="noopener noreferrer"
-        >view</a>
-      </div>
-      <div v-else-if="lp.phase !== 'idle'" class="syc_pending">
-        <span>{{ lpStatusText }}</span>
-        <a
-          v-if="lp.hash"
-          :href="txUrl(lp.hash)"
-          target="_blank"
-          rel="noopener noreferrer"
-        >{{ shortAddress(lp.hash) }}</a>
-      </div>
-    </div>
-
     <div class="syc_grid">
       <!-- ================================================================ Swap -->
       <div class="brand_card syc_card syc_swap">
         <div class="brand_card__head syc_head">
           <div class="brand_card__eyebrow">
-            Swap
+            Safe
           </div>
-          <div class="brand_card__meta">
-            {{ totalUsdText }}
+          <div class="syc_head__right">
+            <span class="brand_card__meta">{{ totalUsdText }}</span>
+            <v-btn
+              variant="outlined"
+              size="small"
+              class="syc_refresh"
+              :loading="loading"
+              @click="refreshState"
+            >
+              Refresh
+            </v-btn>
           </div>
+        </div>
+
+        <!-- The Safe's holdings, right above the swap that draws on them. -->
+        <div class="syc_holdings">
+          <div v-for="t in SYC_TOKENS" :key="t.symbol" class="syc_holding">
+            <span class="syc_holding__token">
+              <ExecutionTokenMark :symbol="t.symbol" size="16px" />
+              {{ t.symbol }}
+            </span>
+            <span class="syc_holding__amount">{{ fmtBalance(t) }}</span>
+            <span class="syc_holding__usd">{{ holdingOf(t) ? `$${fmtUsd(holdingOf(t)!.usd)}` : "" }}</span>
+          </div>
+          <div class="syc_holding syc_holding--price">
+            <span>1 SNI</span>
+            <span>{{ state ? fmtPrice(state.sniPriceUsdc) : "…" }} USDC</span>
+            <span />
+          </div>
+        </div>
+
+        <div class="syc_sub">
+          Swap
         </div>
 
         <!-- Sell -->
@@ -481,6 +263,216 @@
           <a :href="txUrl(swap.hash)" target="_blank" rel="noopener noreferrer">
             {{ shortAddress(swap.hash) }} · waiting for the block
           </a>
+        </div>
+
+        <!-- Positions only when the Safe owns one: opening a new one is not granted, so an empty list has nothing to offer. -->
+        <div v-if="state?.positions.length" class="syc_sub">
+          Uniswap V3 positions
+        </div>
+        <div v-for="pos in state?.positions ?? []" :key="pos.tokenId.toString()" class="syc_pos">
+          <div class="syc_pos__head">
+            <span class="syc_pos__id">#{{ pos.tokenId.toString() }}</span>
+            <span class="syc_pos__pair">{{ positionPair(pos) }}</span>
+            <span class="syc_tag" :class="pos.inRange ? 'syc_tag--on' : 'syc_tag--off'">
+              {{ pos.liquidity === 0n ? "Empty" : pos.inRange ? "In range" : "Out of range" }}
+            </span>
+            <a
+              :href="positionUrl(pos)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="syc_pos__link"
+            >Uniswap</a>
+          </div>
+          <div class="syc_pos__figs">
+            <div class="syc_fig">
+              <div class="syc_fig__value">
+                {{ fmtUnits(pos.amount0, tokenOf(pos.token0).decimals, 2) }} {{ tokenOf(pos.token0).symbol }}
+              </div>
+              <div class="syc_fig__label">
+                Liquidity
+              </div>
+            </div>
+            <div class="syc_fig">
+              <div class="syc_fig__value">
+                {{ fmtUnits(pos.amount1, tokenOf(pos.token1).decimals, 4) }} {{ tokenOf(pos.token1).symbol }}
+              </div>
+              <div class="syc_fig__label">
+                Liquidity
+              </div>
+            </div>
+            <div class="syc_fig">
+              <div class="syc_fig__value">
+                {{ fmtUnits(pos.collectable0, tokenOf(pos.token0).decimals, 4) }} {{ tokenOf(pos.token0).symbol }}
+              </div>
+              <div class="syc_fig__label">
+                Collectable
+              </div>
+            </div>
+            <div class="syc_fig">
+              <div class="syc_fig__value">
+                {{ fmtUnits(pos.collectable1, tokenOf(pos.token1).decimals, 4) }} {{ tokenOf(pos.token1).symbol }}
+              </div>
+              <div class="syc_fig__label">
+                Collectable
+              </div>
+            </div>
+            <div class="syc_fig syc_fig--wide">
+              <div class="syc_fig__value">
+                {{ rangeText(pos) }}
+              </div>
+              <div class="syc_fig__label">
+                Range, {{ tokenOf(pos.token0).symbol }} per {{ tokenOf(pos.token1).symbol }}
+              </div>
+            </div>
+          </div>
+          <div class="syc_pos__actions">
+            <v-btn
+              v-if="pos.collectable0 > 0n || pos.collectable1 > 0n"
+              variant="outlined"
+              size="small"
+              :disabled="!canExecutor"
+              @click="collectFees(pos)"
+            >
+              Collect
+            </v-btn>
+            <v-btn
+              v-if="pos.pool"
+              variant="outlined"
+              size="small"
+              :disabled="!canExecutor"
+              @click="openPanel(pos.tokenId, 'add')"
+            >
+              Add
+            </v-btn>
+            <v-btn
+              v-if="pos.liquidity > 0n"
+              variant="outlined"
+              size="small"
+              :disabled="!canExecutor"
+              @click="openPanel(pos.tokenId, 'remove')"
+            >
+              Remove
+            </v-btn>
+          </div>
+
+          <!-- Remove: decrease, then collect into the Safe -->
+          <div v-if="panel?.id === pos.tokenId && panel.kind === 'remove'" class="syc_panel">
+            <div class="syc_panel__row">
+              <div class="syc_chips">
+                <button
+                  v-for="p in [25, 50, 75, 100]"
+                  :key="p"
+                  class="syc_chip"
+                  :class="{ 'syc_chip--on': removePct === p }"
+                  type="button"
+                  @click="removePct = p"
+                >
+                  {{ p }}%
+                </button>
+              </div>
+              <span class="syc_kv syc_kv--control">
+                <span>Max slippage</span>
+                <span><input
+                  v-model="lpSlippage"
+                  class="syc_small_input"
+                  inputmode="decimal"
+                  spellcheck="false"
+                >%</span>
+              </span>
+            </div>
+            <div class="syc_panel__row syc_panel__figs">
+              <div class="syc_fig">
+                <div class="syc_fig__value">
+                  {{ fmtUnits(removePreview(pos).amount0, tokenOf(pos.token0).decimals, 4) }} {{ tokenOf(pos.token0).symbol }}
+                </div>
+                <div class="syc_fig__label">
+                  Expected
+                </div>
+              </div>
+              <div class="syc_fig">
+                <div class="syc_fig__value">
+                  {{ fmtUnits(removePreview(pos).amount1, tokenOf(pos.token1).decimals, 4) }} {{ tokenOf(pos.token1).symbol }}
+                </div>
+                <div class="syc_fig__label">
+                  Expected
+                </div>
+              </div>
+            </div>
+            <v-btn
+              class="bg-primary text-secondary"
+              variant="flat"
+              size="small"
+              :disabled="!canExecutor || !lpSlippagePct"
+              @click="removeLiquidity(pos)"
+            >
+              Remove {{ removePct }}% and collect (2 transactions)
+            </v-btn>
+          </div>
+
+          <!-- Add: the other side paired at the current price, approvals folded in -->
+          <div v-if="panel?.id === pos.tokenId && panel.kind === 'add' && pos.pool" class="syc_panel">
+            <div class="syc_new__grid">
+              <label v-for="i in [0, 1]" :key="i" class="syc_field">
+                <span class="syc_field__label">{{ pos.pool.tokens[i].symbol }}</span>
+                <input
+                  v-model="addText[i]"
+                  class="syc_field__input"
+                  inputmode="decimal"
+                  placeholder="0"
+                  spellcheck="false"
+                  :disabled="addSide(pos) !== null && addSide(pos) !== i"
+                  @input="addEdited = i as 0 | 1"
+                >
+                <span class="syc_field__unit">
+                  Safe: {{ fmtBalance(pos.pool.tokens[i]) }}
+                </span>
+              </label>
+            </div>
+            <div class="syc_panel__row">
+              <span class="syc_kv syc_kv--control">
+                <span>Max slippage</span>
+                <span><input
+                  v-model="lpSlippage"
+                  class="syc_small_input"
+                  inputmode="decimal"
+                  spellcheck="false"
+                >%</span>
+              </span>
+              <span v-if="addProblem(pos)" class="syc_new__problem">{{ addProblem(pos) }}</span>
+            </div>
+            <v-btn
+              class="bg-primary text-secondary"
+              variant="flat"
+              size="small"
+              :disabled="!canExecutor || !addReady(pos)"
+              @click="addLiquidity(pos)"
+            >
+              {{ addButtonText(pos) }}
+            </v-btn>
+          </div>
+        </div>
+
+        <div v-if="lp.error" class="syc_notice syc_notice--bad">
+          {{ lp.error }}
+        </div>
+        <div v-if="lp.done" class="syc_done">
+          <Icon icon="octicon:check-circle-fill-16" width="1rem" height="1rem" />
+          <span>{{ lp.done }}</span>
+          <a
+            v-if="lp.hash"
+            :href="txUrl(lp.hash)"
+            target="_blank"
+            rel="noopener noreferrer"
+          >view</a>
+        </div>
+        <div v-else-if="lp.phase !== 'idle'" class="syc_pending">
+          <span>{{ lpStatusText }}</span>
+          <a
+            v-if="lp.hash"
+            :href="txUrl(lp.hash)"
+            target="_blank"
+            rel="noopener noreferrer"
+          >{{ shortAddress(lp.hash) }}</a>
         </div>
       </div>
 
@@ -1301,14 +1293,57 @@ onMounted(refreshState);
   }
 }
 
+/* One row per token: what the Safe holds, then what it is worth. */
 .syc_holdings {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem 1rem;
-  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem 0.875rem;
   border: 1px solid $color-line-2;
   border-radius: $default-border-radius;
   background: $color-card-background;
+}
+
+.syc_holding {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 6.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  font-family: $font-mono;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  border-bottom: 1px solid $color-line-2;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &__token {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: $color-white;
+  }
+
+  &__amount {
+    color: $color-white;
+    text-align: right;
+  }
+
+  &__usd {
+    color: $color-steel-blue;
+    text-align: right;
+    font-size: 12px;
+  }
+
+  &--price {
+    font-size: 11.5px;
+    color: $color-steel-blue;
+
+    > :nth-child(2) {
+      text-align: right;
+    }
+  }
 }
 
 .syc_empty {
