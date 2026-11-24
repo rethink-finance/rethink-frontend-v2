@@ -1,4 +1,19 @@
+import { buildFundSlug } from "~/composables/routing/fundSlug";
 import { ChainId } from "~/types/enums/chain_id";
+
+/** The two soonami vaults that point at each other. */
+const SOONAMI_VENTURE_STAKING = {
+  chainId: ChainId.ETHEREUM,
+  symbol: "sniETH",
+  address: "0xaC3D76E29f866702E17f571cccb15937E5A17303",
+};
+const SNI_YIELD_CLAIM_VAULT = {
+  chainId: ChainId.POLYGON,
+  symbol: "SYC",
+  address: "0xC868eAdf7DC14Cd48DC7B4A262b167a8C09b8007",
+};
+const vaultRoute = (vault: { chainId: ChainId; symbol: string; address: string }) =>
+  `/details/${buildFundSlug(vault.chainId, vault.symbol, vault.address)}`;
 
 /**
  * Some vaults do not keep the yield they earn. A native ETH staking vault, for
@@ -51,7 +66,52 @@ const stakingRewardsByVault: Record<string, IStakingRewardsConfig> = {
     rewardNote:
       "Yield is paid out as SNI in a separate vault, so this vault's ETH balance stays flat.",
     rewardActionLabel: "Claim SNI",
+    rewardVaultUrl: vaultRoute(SNI_YIELD_CLAIM_VAULT),
   },
+};
+
+/**
+ * The strip under a vault's stats that sends the reader to the vault on the
+ * other side of its rewards. A staking vault gets it from its rewards config
+ * above; a vault that only receives rewards (and reports its own return as
+ * usual) is listed here.
+ */
+export interface IRewardsLink {
+  label: string;
+  text: string;
+  actionLabel: string;
+  /** Empty while the other vault is not live: the button shows as coming soon. */
+  url?: string;
+}
+
+const rewardsLinksByVault: Record<string, IRewardsLink> = {
+  // SNI Yield Claim Vault: SYC is earned in soonami Venture Staking, not bought.
+  [`${ChainId.POLYGON}:0xc868eadf7dc14cd48dc7b4a262b167a8c09b8007`]: {
+    label: "Earn SYC by staking",
+    text: "Stake ETH in soonami Venture Staking to earn SYC, then claim SNI with it here.",
+    actionLabel: "Stake ETH",
+    url: vaultRoute(SOONAMI_VENTURE_STAKING),
+  },
+};
+
+/** The rewards strip for a vault, or undefined for vaults that have none. */
+export const resolveRewardsLink = (
+  chainId?: ChainId | string,
+  address?: string,
+): IRewardsLink | undefined => {
+  if (!chainId || !address) return undefined;
+  const key = `${chainId}:${address.toLowerCase()}`;
+
+  const staking = stakingRewardsByVault[key];
+  if (staking) {
+    return {
+      label: `Rewards paid in ${staking.rewardTokenSymbol}`,
+      text: staking.rewardNote,
+      actionLabel: staking.rewardActionLabel,
+      url: staking.rewardVaultUrl,
+    };
+  }
+  return rewardsLinksByVault[key];
 };
 
 export interface IResolvedStakingRewards extends IStakingRewardsConfig {

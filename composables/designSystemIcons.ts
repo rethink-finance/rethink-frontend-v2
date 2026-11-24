@@ -4,6 +4,7 @@ import chainEth from "~/assets/icons/chain-eth.png";
 import chainHype from "~/assets/icons/chain-hype.png";
 import chainPol from "~/assets/icons/chain-pol.png";
 import tokenPaxg from "~/assets/icons/token-paxg.png";
+import tokenSni from "~/assets/icons/token-sni.svg";
 import tokenUsdc from "~/assets/icons/token-usdc.png";
 import tokenUsdt from "~/assets/icons/token-usdt.png";
 import tokenWbtc from "~/assets/icons/token-wbtc.png";
@@ -56,6 +57,9 @@ const TOKEN_ICONS: Record<string, string> = {
   // vault's gold position reads like the rest of its holdings rather than
   // falling through to nothing.
   PAXG: tokenPaxg,
+  // Not a design-system mark either: soonami's green S on the app's #161616,
+  // drawn for the SNI Yield Claim Vault, whose base token it is.
+  SNI: tokenSni,
   USDC: tokenUsdc,
   USDT: tokenUsdt,
   WBTC: tokenWbtc,
