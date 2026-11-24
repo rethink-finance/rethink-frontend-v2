@@ -145,8 +145,8 @@
                 width="2"
                 indeterminate
               />
-              <span v-else :title="row.pastNavValue ? exactAmount(row.pastNavValue) : undefined">
-                {{ row.pastNavValue ? amountText(row.pastNavValue) : "-" }}
+              <span v-else :title="exactAmount(row.pastNavValue)">
+                {{ formatLastValue(row.pastNavValue) }}
               </span>
               <span v-if="row.pastNavValueError" class="nav_table__warn">
                 <Icon icon="octicon:question-16" width="0.875rem" />
@@ -454,6 +454,7 @@
 <script lang="ts">
 import { ethers } from "ethers";
 import { formatDisplayAmount } from "~/composables/formatters";
+import { hasRecordedNavValue } from "~/composables/nav/recordedNavValue";
 import AddressLink from "~/components/common/AddressLink.vue";
 import { useFundStore } from "~/store/fund/fund.store";
 import { useSettingsStore } from "~/store/settings/settings.store";
@@ -776,7 +777,7 @@ export default defineComponent({
       return this.amountText(totalNAV);
     },
     formattedTotalLastNAV() {
-      return this.amountText(this.navParts?.totalNAV || 0n);
+      return this.formatLastValue(this.navParts?.totalNAV);
     },
     totalNavMethodsSimulatedNAV() {
       // Sum simulated NAV value of all methods.
@@ -918,8 +919,12 @@ export default defineComponent({
         row.simulatedNavFormatted !== "N/A"
       );
     },
-    formatLastValue(value?: bigint): string {
-      if (!value) return "-";
+    /**
+     * A value the last NAV update recorded. Zero is a value and reads "0";
+     * the dash is only for a value that was never read.
+     */
+    formatLastValue(value?: bigint | string | number | null): string {
+      if (!hasRecordedNavValue(value)) return "-";
       return this.amountText(value);
     },
     /**
